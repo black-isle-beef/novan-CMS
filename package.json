@@ -1,0 +1,35 @@
+{
+  "name": "novan-CMS",
+  "version": "0.0.0",
+  "private": true,
+  "devDependencies": {
+    "@angular-devkit/core": "~22.1.0",
+    "@angular-devkit/schematics": "~22.1.0",
+    "@angular/build": "~22.1.0",
+    "@angular/cli": "~22.1.0",
+    "@angular/compiler-cli": "~22.1.0",
+    "@angular/language-service": "~22.1.0",
+    "@nx/angular": "^23.2.1",
+    "@nx/js": "23.2.1",
+    "@nx/web": "23.2.1",
+    "@schematics/angular": "~22.1.0",
+    "@swc/helpers": "~0.5.18",
+    "jsdom": "^27.1.0",
+    "nx": "23.2.1",
+    "tslib": "^2.3.0",
+    "typescript": "~6.0.3",
+    "vitest": "^4.0.8"
+  },
+  "dependencies": {
+    "@angular/common": "~22.1.0",
+    "@angular/compiler": "~22.1.0",
+    "@angular/core": "~22.1.0",
+    "@angular/forms": "~22.1.0",
+    "@angular/platform-browser": "~22.1.0",
+    "@angular/router": "~22.1.0",
+    "@black-isle-beef/novan-design-system": "^2.5.0",
+    "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1",
+    "rxjs": "~7.8.0"
+  }
+}

@@ -1,0 +1,87 @@
+<!--
+  `#ds-main-content` is the target of the header's "Skip to main content" link.
+-->
+<ds-header [navItems]="navItems">
+  <strong dsBrand>Novan CMS</strong>
+</ds-header>
+
+<main id="ds-main-content">
+  <ds-hero
+    variant="primary"
+    heading="Content management, made simple."
+    subheading="Novan CMS gives your team one place to create, manage and publish content across every site you run."
+  >
+    <a dsHeroCta class="btn btn-hero-light" href="#get-started">Get started</a>
+    <a dsHeroCta class="btn btn-hero-light" href="#features">Explore features</a>
+  </ds-hero>
+
+  <!-- Feature grid -->
+  <section
+    id="features"
+    class="ds-landing-page__section py-11 py-lg-14 px-4 px-md-8"
+    aria-labelledby="features-heading"
+  >
+    <div class="ds-landing-page__container">
+      <div class="text-center mb-8">
+        <h2 id="features-heading" class="h1 mb-3">Everything you need to run your content</h2>
+        <p class="lead text-muted mx-auto mb-0 ds-landing-page__lede">
+          From the first draft to the published page, Novan CMS keeps content structured, reviewed and ready to ship.
+        </p>
+      </div>
+
+      <div class="row g-4 g-lg-5">
+        @for (feature of features; track feature.title) {
+          <div class="col-12 col-sm-6 col-lg-3">
+            <article class="ds-landing-page__feature h-100 p-5">
+              <span class="ds-landing-page__feature-icon d-inline-flex mb-4" aria-hidden="true">
+                <i [class]="feature.icon"></i>
+              </span>
+              <h3 class="h5 mb-2">{{ feature.title }}</h3>
+              <p class="text-muted mb-0">{{ feature.description }}</p>
+            </article>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section
+    id="how-it-works"
+    class="ds-landing-page__section ds-landing-page__section--muted py-11 py-lg-14 px-4 px-md-8"
+    aria-labelledby="how-it-works-heading"
+  >
+    <div class="ds-landing-page__container">
+      <h2 id="how-it-works-heading" class="h1 text-center mb-8">How it works</h2>
+
+      <ol class="row g-4 g-lg-5 list-unstyled mb-0">
+        @for (step of steps; track step.title; let i = $index) {
+          <li class="col-12 col-md-4">
+            <article class="ds-landing-page__feature h-100 p-5">
+              <span class="ds-landing-page__feature-icon d-inline-flex mb-4 fw-bold" aria-hidden="true">{{ i + 1 }}</span>
+              <h3 class="h5 mb-2">{{ step.title }}</h3>
+              <p class="text-muted mb-0">{{ step.description }}</p>
+            </article>
+          </li>
+        }
+      </ol>
+    </div>
+  </section>
+
+  <!-- Closing call-to-action banner -->
+  <section
+    id="get-started"
+    class="ds-landing-page__cta-banner text-center py-12 px-4"
+    aria-labelledby="get-started-heading"
+  >
+    <div class="ds-landing-page__container">
+      <h2 id="get-started-heading" class="h1 mb-3">Ready to take control of your content?</h2>
+      <p class="lead mx-auto mb-6 ds-landing-page__lede">
+        Novan CMS is in active development. Get in touch to hear when it launches.
+      </p>
+      <a class="btn btn-hero-light btn-lg" href="mailto:hello@novan.example">Contact us</a>
+    </div>
+  </section>
+</main>
+
+<ds-footer organizationName="Novan Web Services" [linkGroups]="footerLinkGroups" />
