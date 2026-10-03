@@ -26,10 +26,18 @@ export class Shell implements OnInit {
     { initialValue: this.router.url },
   );
 
-  protected readonly navItems = computed<NavItem[]>(() => [
-    { label: 'Spaces', href: '/spaces', active: this.url().startsWith('/spaces') },
-    { label: 'Account', href: '/account', active: this.url().startsWith('/account') },
-  ]);
+  protected readonly navItems = computed<NavItem[]>(() => {
+    const spaceId = this.spaces.currentSpaceId();
+    const inSchema = this.url().includes('/schema');
+    return [
+      { label: 'Spaces', href: '/spaces', active: this.url().startsWith('/spaces') && !inSchema },
+      // Client roles never see the content model; the route guard and the API agree.
+      ...(spaceId && this.spaces.canModelCurrent()
+        ? [{ label: 'Schema', href: `/spaces/${spaceId}/schema`, active: inSchema }]
+        : []),
+      { label: 'Account', href: '/account', active: this.url().startsWith('/account') },
+    ];
+  });
 
   ngOnInit(): void {
     void this.spaces.load();

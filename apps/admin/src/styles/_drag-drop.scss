@@ -1,0 +1,34 @@
+// Angular CDK drag and drop (the schema field builder). The CDK moves the dragged element to <body>, so
+// these states cannot live in a component.
+
+.nv-drag-handle {
+  cursor: grab;
+}
+
+.cdk-drag-preview {
+  background-color: var(--ds-color-surface-body);
+  box-shadow: var(--ds-elevation-component-dropdown);
+  list-style: none;
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.4;
+}
+
+.cdk-drag-animating,
+.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cdk-drag-animating,
+  .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .cdk-drag-preview {
+    border: 0.0625rem solid CanvasText;
+  }
+}

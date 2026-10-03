@@ -1,5 +1,6 @@
 import { Route } from '@angular/router';
 import { accountRoute, authRoutes, requireSignedIn } from '@novan/admin-auth';
+import { schemaRoutes } from '@novan/admin-schema';
 import { spacesRoutes } from '@novan/admin-spaces';
 
 export const appRoutes: Route[] = [
@@ -8,7 +9,7 @@ export const appRoutes: Route[] = [
     path: '',
     canActivate: [requireSignedIn],
     loadComponent: () => import('./shell/shell').then((m) => m.Shell),
-    children: [{ path: '', pathMatch: 'full', redirectTo: 'spaces' }, ...spacesRoutes, accountRoute],
+    children: [{ path: '', pathMatch: 'full', redirectTo: 'spaces' }, ...spacesRoutes, ...schemaRoutes, accountRoute],
   },
   { path: '**', redirectTo: '' },
 ];
