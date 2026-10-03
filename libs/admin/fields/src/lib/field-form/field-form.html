@@ -1,0 +1,3 @@
+@for (field of visible(); track field.id) {
+  <nv-field [field]="field" [path]="childPath(field)" [value]="valueOf(field)" (valueChange)="set(field, $event)" />
+}

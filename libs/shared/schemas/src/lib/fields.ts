@@ -283,6 +283,11 @@ export interface EntrySchemaOptions {
    * shape (`_uid`, `_block`) and the field's `allowedBlocks`.
    */
   blockTypes?: readonly BlockTypeDef[];
+  /**
+   * Validate a draft: values may be incomplete (required fields empty, fewer characters or items than
+   * the minimum) but never malformed. Publishing validates without this.
+   */
+  draft?: boolean;
 }
 
 /** A block in a `blocks` field (docs/build/06-entries-versions.md). */
@@ -319,11 +324,23 @@ export function buildEntrySchema(fields: readonly FieldDef[], options: EntrySche
 
 class EntrySchemaBuilder {
   private readonly blockTypes: ReadonlyMap<string, BlockTypeDef> | null;
+  private readonly draft: boolean;
   private readonly nodes = new Map<string, z.ZodObject>();
   private readonly unions = new Map<string, z.ZodType<BlockNode>>();
 
   constructor(options: EntrySchemaOptions) {
     this.blockTypes = options.blockTypes ? new Map(options.blockTypes.map((type) => [type.apiId, type])) : null;
+    this.draft = options.draft ?? false;
+  }
+
+  /** Whether an empty value is an error here (never in a draft). */
+  private required(field: FieldDef): boolean {
+    return field.required && !this.draft;
+  }
+
+  /** A minimum length or count to enforce (none in a draft). */
+  private min(min: number | undefined): number | undefined {
+    return this.draft ? undefined : min;
   }
 
   object(fields: readonly FieldDef[]): z.ZodObject {
@@ -338,10 +355,10 @@ class EntrySchemaBuilder {
     if (field.type === 'boolean') {
       const value = z.boolean(typeError('true or false'));
       if (field.default !== undefined) return value.default(field.default);
-      return field.required ? value : value.nullish();
+      return this.required(field) ? value : value.nullish();
     }
     const value = this.value(field);
-    return field.required ? value : value.nullish();
+    return this.required(field) ? value : value.nullish();
   }
 
   /** Validator for a present value; emptiness counts as missing only when the field is required. */
@@ -386,14 +403,15 @@ class EntrySchemaBuilder {
 
   private text(field: FieldDefOf<'text'>): z.ZodType {
     const pattern = field.pattern ? compilePattern(field.pattern) : null;
+    const min = this.min(field.min);
     return z.string(typeError('text')).superRefine((value, ctx) => {
       if (value.trim() === '') {
-        if (field.required) ctx.addIssue({ code: 'custom', message: REQUIRED_MESSAGE });
+        if (this.required(field)) ctx.addIssue({ code: 'custom', message: REQUIRED_MESSAGE });
         return;
       }
       if (!field.multiline && /[\r\n]/.test(value)) ctx.addIssue({ code: 'custom', message: 'Use a single line.' });
-      if (field.min !== undefined && value.length < field.min) {
-        ctx.addIssue({ code: 'custom', message: `Use at least ${field.min} characters.` });
+      if (min !== undefined && value.length < min) {
+        ctx.addIssue({ code: 'custom', message: `Use at least ${min} characters.` });
       }
       if (field.max !== undefined && value.length > field.max) {
         ctx.addIssue({ code: 'custom', message: `Use ${field.max} characters or fewer.` });
@@ -409,7 +427,7 @@ class EntrySchemaBuilder {
 
     return proseMirrorDoc.superRefine((doc, ctx) => {
       if (isEmptyDoc(doc)) {
-        if (field.required) ctx.addIssue({ code: 'custom', message: REQUIRED_MESSAGE });
+        if (this.required(field)) ctx.addIssue({ code: 'custom', message: REQUIRED_MESSAGE });
         return;
       }
       walkProseMirror(doc, [], (node, path) => {
@@ -541,13 +559,14 @@ class EntrySchemaBuilder {
 
   /** An array that counts as empty when it has no items. */
   private list(field: FieldDef, item: z.ZodType, range: { min?: number; max?: number }) {
+    const min = this.min(range.min);
     return z.array(item, typeError('a list')).superRefine((values, ctx) => {
       if (values.length === 0) {
-        if (field.required) ctx.addIssue({ code: 'custom', message: REQUIRED_MESSAGE });
+        if (this.required(field)) ctx.addIssue({ code: 'custom', message: REQUIRED_MESSAGE });
         return;
       }
-      if (range.min !== undefined && values.length < range.min) {
-        ctx.addIssue({ code: 'custom', message: `Add at least ${range.min}.` });
+      if (min !== undefined && values.length < min) {
+        ctx.addIssue({ code: 'custom', message: `Add at least ${min}.` });
       }
       if (range.max !== undefined && values.length > range.max) {
         ctx.addIssue({ code: 'custom', message: `Add ${range.max} or fewer.` });

@@ -40,6 +40,9 @@ export class ProblemException extends HttpException {
   }
 }
 
+export const badRequest = (code: string, detail?: string, errors?: Record<string, string[]>): ProblemException =>
+  new ProblemException(HttpStatus.BAD_REQUEST, code, 'Bad request', detail, errors);
+
 export const unauthorized = (code: string, detail?: string): ProblemException =>
   new ProblemException(HttpStatus.UNAUTHORIZED, code, 'Unauthorized', detail);
 

@@ -1,0 +1,25 @@
+<div class="mb-3">
+  <label class="form-label" [for]="id()">
+    {{ field().label }}
+    @if (field().required) {
+      <span class="text-body-secondary">(required)</span>
+    }
+  </label>
+  <input
+    type="number"
+    class="form-control"
+    [id]="id()"
+    [class.is-invalid]="invalid()"
+    [value]="text()"
+    [attr.min]="field().min ?? null"
+    [attr.max]="field().max ?? null"
+    [attr.step]="field().integer ? 1 : 'any'"
+    [attr.inputmode]="field().integer ? 'numeric' : 'decimal'"
+    [disabled]="disabled()"
+    [attr.aria-describedby]="describedBy()"
+    [attr.aria-invalid]="invalid() || null"
+    [attr.aria-required]="field().required || null"
+    (input)="set($event)"
+  />
+  <nv-field-messages [help]="field().help" [hint]="hint()" [helpId]="helpId()" [errors]="errors()" [errorId]="errorId()" />
+</div>

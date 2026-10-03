@@ -1,0 +1,50 @@
+@if (field().multiple) {
+  <fieldset class="mb-3" [id]="id()" tabindex="-1" [attr.aria-describedby]="describedBy()">
+    <legend class="form-label fs-6 mb-1">
+      {{ field().label }}
+      @if (field().required) {
+        <span class="text-body-secondary">(required)</span>
+      }
+    </legend>
+    @for (option of field().options; track option.value) {
+      <div class="form-check">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          [id]="id() + '-' + $index"
+          [class.is-invalid]="invalid()"
+          [checked]="chosen().includes(option.value)"
+          [disabled]="disabled()"
+          (change)="toggle(option.value, $event)"
+        />
+        <label class="form-check-label" [for]="id() + '-' + $index">{{ option.label }}</label>
+      </div>
+    }
+    <nv-field-messages [help]="field().help" [helpId]="helpId()" [errors]="errors()" [errorId]="errorId()" />
+  </fieldset>
+} @else {
+  <div class="mb-3">
+    <label class="form-label" [for]="id()">
+      {{ field().label }}
+      @if (field().required) {
+        <span class="text-body-secondary">(required)</span>
+      }
+    </label>
+    <select
+      class="form-select"
+      [id]="id()"
+      [class.is-invalid]="invalid()"
+      [disabled]="disabled()"
+      [attr.aria-describedby]="describedBy()"
+      [attr.aria-invalid]="invalid() || null"
+      [attr.aria-required]="field().required || null"
+      (change)="choose($event)"
+    >
+      <option value="" [selected]="!selected()">{{ field().required ? 'Choose one' : 'None' }}</option>
+      @for (option of field().options; track option.value) {
+        <option [value]="option.value" [selected]="selected() === option.value">{{ option.label }}</option>
+      }
+    </select>
+    <nv-field-messages [help]="field().help" [helpId]="helpId()" [errors]="errors()" [errorId]="errorId()" />
+  </div>
+}

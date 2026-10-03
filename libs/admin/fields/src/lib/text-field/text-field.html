@@ -1,0 +1,36 @@
+<div class="mb-3">
+  <label class="form-label" [for]="id()">
+    {{ field().label }}
+    @if (field().required) {
+      <span class="text-body-secondary">(required)</span>
+    }
+  </label>
+  @if (field().multiline) {
+    <textarea
+      class="form-control"
+      rows="3"
+      [id]="id()"
+      [class.is-invalid]="invalid()"
+      [value]="text()"
+      [disabled]="disabled()"
+      [attr.aria-describedby]="describedBy()"
+      [attr.aria-invalid]="invalid() || null"
+      [attr.aria-required]="field().required || null"
+      (input)="set($event)"
+    ></textarea>
+  } @else {
+    <input
+      type="text"
+      class="form-control"
+      [id]="id()"
+      [class.is-invalid]="invalid()"
+      [value]="text()"
+      [disabled]="disabled()"
+      [attr.aria-describedby]="describedBy()"
+      [attr.aria-invalid]="invalid() || null"
+      [attr.aria-required]="field().required || null"
+      (input)="set($event)"
+    />
+  }
+  <nv-field-messages [help]="field().help" [hint]="hint()" [helpId]="helpId()" [errors]="errors()" [errorId]="errorId()" />
+</div>

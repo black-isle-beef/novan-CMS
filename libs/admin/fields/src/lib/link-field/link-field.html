@@ -1,0 +1,115 @@
+<fieldset class="mb-3" [id]="id()" tabindex="-1" [attr.aria-describedby]="describedBy()">
+  <legend class="form-label fs-6 mb-1">
+    {{ field().label }}
+    @if (field().required) {
+      <span class="text-body-secondary">(required)</span>
+    }
+  </legend>
+  <nv-field-messages [help]="field().help" [helpId]="helpId()" [errors]="errors()" [errorId]="errorId()" />
+
+  <div class="mb-2">
+    <label class="form-label" [for]="id() + '-type'">Link to</label>
+    <select
+      class="form-select"
+      [id]="id() + '-type'"
+      [class.is-invalid]="errorsAt('type').length"
+      [disabled]="disabled()"
+      [attr.aria-describedby]="errorsAt('type').length ? id() + '-type-error' : null"
+      (change)="setType($event)"
+    >
+      <option value="" [selected]="!link()">No link</option>
+      @for (option of types(); track option.type) {
+        <option [value]="option.type" [selected]="link()?.type === option.type">{{ option.label }}</option>
+      }
+    </select>
+    <nv-field-messages [helpId]="id() + '-type-help'" [errors]="errorsAt('type')" [errorId]="id() + '-type-error'" />
+  </div>
+
+  @if (link(); as current) {
+    @switch (current.type) {
+      @case ('internal') {
+        <div class="mb-2">
+          <label class="form-label" [for]="id() + '-entry'">Page</label>
+          <select
+            class="form-select"
+            [id]="id() + '-entry'"
+            [class.is-invalid]="errorsAt('entryId').length"
+            [disabled]="disabled()"
+            [attr.aria-describedby]="errorsAt('entryId').length ? id() + '-entry-error' : null"
+            (change)="setPart('entryId', $event)"
+          >
+            <option value="" [selected]="!current.entryId">Choose a page</option>
+            @for (page of pages(); track page.id) {
+              <option [value]="page.id" [selected]="current.entryId === page.id">{{ page.title }} ({{ page.path }})</option>
+            }
+          </select>
+          <nv-field-messages [helpId]="id() + '-entry-help'" [errors]="errorsAt('entryId')" [errorId]="id() + '-entry-error'" />
+        </div>
+        <div class="mb-2">
+          <label class="form-label" [for]="id() + '-anchor'">Section on the page <span class="text-body-secondary">(optional)</span></label>
+          <input
+            type="text"
+            class="form-control"
+            [id]="id() + '-anchor'"
+            [value]="current.anchor ?? ''"
+            [disabled]="disabled()"
+            [attr.aria-describedby]="id() + '-anchor-help'"
+            (input)="setPart('anchor', $event)"
+          />
+          <nv-field-messages help="The id of a heading to jump to, like team." [helpId]="id() + '-anchor-help'" [errors]="errorsAt('anchor')" [errorId]="id() + '-anchor-error'" />
+        </div>
+      }
+      @case ('external') {
+        <div class="mb-2">
+          <label class="form-label" [for]="id() + '-url'">Web address</label>
+          <input
+            type="url"
+            class="form-control"
+            inputmode="url"
+            autocomplete="off"
+            [id]="id() + '-url'"
+            [class.is-invalid]="errorsAt('url').length"
+            [value]="current.url ?? ''"
+            [disabled]="disabled()"
+            [attr.aria-describedby]="id() + '-url-help' + (errorsAt('url').length ? ' ' + id() + '-url-error' : '')"
+            [attr.aria-invalid]="errorsAt('url').length > 0 || null"
+            (input)="setPart('url', $event)"
+          />
+          <nv-field-messages help="Starting with https://" [helpId]="id() + '-url-help'" [errors]="errorsAt('url')" [errorId]="id() + '-url-error'" />
+        </div>
+      }
+      @case ('email') {
+        <div class="mb-2">
+          <label class="form-label" [for]="id() + '-email'">Email address</label>
+          <input
+            type="email"
+            class="form-control"
+            autocomplete="off"
+            [id]="id() + '-email'"
+            [class.is-invalid]="errorsAt('email').length"
+            [value]="current.email ?? ''"
+            [disabled]="disabled()"
+            [attr.aria-describedby]="errorsAt('email').length ? id() + '-email-error' : null"
+            [attr.aria-invalid]="errorsAt('email').length > 0 || null"
+            (input)="setPart('email', $event)"
+          />
+          <nv-field-messages [helpId]="id() + '-email-help'" [errors]="errorsAt('email')" [errorId]="id() + '-email-error'" />
+        </div>
+      }
+    }
+    <div class="mb-2">
+      <label class="form-label" [for]="id() + '-text'">Link text <span class="text-body-secondary">(optional)</span></label>
+      <input
+        type="text"
+        class="form-control"
+        [id]="id() + '-text'"
+        [class.is-invalid]="errorsAt('text').length"
+        [value]="current.text ?? ''"
+        [disabled]="disabled()"
+        [attr.aria-describedby]="id() + '-text-help'"
+        (input)="setPart('text', $event)"
+      />
+      <nv-field-messages help="What people click, like Contact us." [helpId]="id() + '-text-help'" [errors]="errorsAt('text')" [errorId]="id() + '-text-error'" />
+    </div>
+  }
+</fieldset>

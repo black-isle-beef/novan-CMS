@@ -1,0 +1,17 @@
+@if (help() || hint()) {
+  <div class="form-text" [id]="helpId()">
+    @if (help(); as text) {
+      {{ text }}
+    }
+    @if (hint(); as text) {
+      {{ text }}
+    }
+  </div>
+}
+@if (errors().length) {
+  <div class="invalid-feedback d-block" [id]="errorId()">
+    @for (message of errors(); track $index) {
+      <span class="d-block"><span class="visually-hidden">Error: </span>{{ message }}</span>
+    }
+  </div>
+}

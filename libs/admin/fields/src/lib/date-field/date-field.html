@@ -1,0 +1,21 @@
+<div class="mb-3">
+  <label class="form-label" [for]="id()">
+    {{ field().label }}
+    @if (field().required) {
+      <span class="text-body-secondary">(required)</span>
+    }
+  </label>
+  <input
+    class="form-control"
+    [type]="field().withTime ? 'datetime-local' : 'date'"
+    [id]="id()"
+    [class.is-invalid]="invalid()"
+    [value]="text()"
+    [disabled]="disabled()"
+    [attr.aria-describedby]="describedBy()"
+    [attr.aria-invalid]="invalid() || null"
+    [attr.aria-required]="field().required || null"
+    (change)="set($event)"
+  />
+  <nv-field-messages [help]="field().help" [hint]="hint()" [helpId]="helpId()" [errors]="errors()" [errorId]="errorId()" />
+</div>

@@ -28,9 +28,16 @@ export class Shell implements OnInit {
 
   protected readonly navItems = computed<NavItem[]>(() => {
     const spaceId = this.spaces.currentSpaceId();
-    const inSchema = this.url().includes('/schema');
+    const section = /^\/spaces\/[^/]+\/(content|members|schema)(\/|$)/.exec(this.url())?.[1] ?? null;
+    const inSchema = section === 'schema';
     return [
-      { label: 'Spaces', href: '/spaces', active: this.url().startsWith('/spaces') && !inSchema },
+      { label: 'Spaces', href: '/spaces', active: this.url().startsWith('/spaces') && section === null },
+      ...(spaceId && this.spaces.currentSpace()
+        ? [
+            { label: 'Content', href: `/spaces/${spaceId}/content`, active: section === 'content' },
+            { label: 'People', href: `/spaces/${spaceId}/members`, active: section === 'members' },
+          ]
+        : []),
       // Client roles never see the content model; the route guard and the API agree.
       ...(spaceId && this.spaces.canModelCurrent()
         ? [{ label: 'Schema', href: `/spaces/${spaceId}/schema`, active: inSchema }]

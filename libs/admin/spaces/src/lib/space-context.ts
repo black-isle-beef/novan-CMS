@@ -4,6 +4,7 @@ import type { SpaceSummary } from '@novan/shared-schemas';
 import { firstValueFrom } from 'rxjs';
 import { ManagementApi } from './management-api';
 import { problemMessage } from './problem';
+import { canEditContent, canPublishContent } from './can-edit-content';
 import { canModel } from './can-model';
 
 /** The spaces the signed-in user can open, and the one they are working in. */
@@ -23,6 +24,16 @@ export class SpaceContext {
   /** Whether the user can see and change the current space's content model (admin, developer, agency staff). */
   readonly canModelCurrent = computed(
     () => this.currentSpace() !== null && canModel(this.currentSpace()?.role, this.auth.agencyStaff()),
+  );
+
+  /** Whether the user can save drafts in the current space (authors and up, agency staff). */
+  readonly canEditCurrent = computed(
+    () => this.currentSpace() !== null && canEditContent(this.currentSpace()?.role, this.auth.agencyStaff()),
+  );
+
+  /** Whether the user can publish in the current space (editors and up, agency staff). */
+  readonly canPublishCurrent = computed(
+    () => this.currentSpace() !== null && canPublishContent(this.currentSpace()?.role, this.auth.agencyStaff()),
   );
 
   async load(): Promise<void> {

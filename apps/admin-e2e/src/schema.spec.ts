@@ -26,7 +26,7 @@ test.describe('@schema', () => {
 
     await signInAsAgency(page);
     await page.getByRole('link', { name: 'Demo site' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'People' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();
 
     // The seeded model is listed.
     await page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Schema' }).click();
@@ -77,12 +77,13 @@ test.describe('@schema', () => {
   test('an editor sees no schema link and cannot open the schema screens', async ({ page }) => {
     await signIn(page, client);
     await page.getByRole('link', { name: 'Demo site' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'People' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Schema' })).toHaveCount(0);
 
+    // Blocked schema screens send the editor to the space's home, its content.
     for (const path of ['schema', 'schema/new/content-type', 'schema/block-types/hero']) {
       await page.goto(`/spaces/${demoSpaceId}/${path}`);
-      await expect(page.getByRole('heading', { level: 1, name: 'People' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();
     }
   });
 });

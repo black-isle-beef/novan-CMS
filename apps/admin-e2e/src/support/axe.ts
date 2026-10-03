@@ -6,6 +6,8 @@ const wcag22aa = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 /** Runs axe on the current page and fails with a readable list of any violations. */
 export async function expectNoAxeViolations(page: Page): Promise<void> {
+  // A dialog that is still fading in is part transparent, which axe reports as low contrast.
+  await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
   const { violations } = await new AxeBuilder({ page }).withTags(wcag22aa).analyze();
   const summary = violations.map(
     (violation) => `${violation.id}: ${violation.help} -> ${violation.nodes.map((node) => node.target.join(' ')).join(', ')}`,

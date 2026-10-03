@@ -1,10 +1,11 @@
 // `npm run db:pull`: introspect the database with drizzle-kit and write libs/api/db/src/schema.ts.
 //
-// drizzle-kit pull (0.31) has two defects this script corrects:
+// drizzle-kit pull (0.31) has defects this script corrects:
 // - tables referenced in `auth` are used but never declared, so `users` is imported from ./auth-schema;
 // - composite foreign keys get their column lists paired in the wrong order, so they are rebuilt
 //   from pg_constraint, which keeps the declared pairing;
-// - an empty array default (`'{}'`) is read as `[""]`, so those columns get `.default([])`.
+// - an empty array default (`'{}'`) is read as `[""]`, so those columns get `.default([])`;
+// - an empty text default (`''`) is written as the unterminated `.default(')`, so it becomes `.default("")`.
 // Its relations.ts inherits the composite-key bug, so it is not kept.
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -60,6 +61,13 @@ for (const column of emptyArrayDefaults) {
   if (!source.includes(wrong)) throw new Error(`Array default of ${column.name} not found in ${pulled}`);
   source = source.replaceAll(wrong, `("${column.name}").array().default([])`);
 }
+
+source = source.replaceAll(".default(')", '.default("")');
+
+// Tables whose foreign keys point at each other (entries and entry_versions) make TypeScript infer `any`
+// unless the extra-config callbacks declare their return type.
+source = source.replaceAll('(table) => [', '(table): PgTableExtraConfigValue[] => [');
+source = source.replace(/(import \{ sql \} from "drizzle-orm"\n)/, `import type { PgTableExtraConfigValue } from "drizzle-orm/pg-core"\n$1`);
 
 if (/\busers\.id\b/.test(source)) {
   source = source.replace(/(import \{ sql \} from "drizzle-orm"\n)/, `$1import { users } from "./auth-schema"\n`);

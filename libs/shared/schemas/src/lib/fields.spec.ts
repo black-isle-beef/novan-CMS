@@ -529,4 +529,58 @@ describe('buildEntrySchema', () => {
       expect(any.safeParse({ body: [{ _uid: uid(1), _block: 'cta' }] }).success).toBe(true);
     });
   });
+
+  describe('drafts', () => {
+    const fields = defs(
+      { id: 't', apiId: 'title', label: 'Title', type: 'text', required: true, min: 5, max: 10 },
+      { id: 'r', apiId: 'body', label: 'Body', type: 'richText', required: true },
+      { id: 'n', apiId: 'count', label: 'Count', type: 'number', required: true },
+      { id: 'f', apiId: 'flag', label: 'Flag', type: 'boolean', required: true },
+      {
+        id: 'g',
+        apiId: 'items',
+        label: 'Items',
+        type: 'group',
+        required: true,
+        multiple: true,
+        min: 2,
+        fields: [{ id: 'gt', apiId: 'label', label: 'Label', type: 'text', required: true }],
+      },
+    );
+    const draft = buildEntrySchema(fields, { draft: true });
+    const full = buildEntrySchema(fields);
+
+    it('accepts incomplete data: empty required fields, too few characters or items', () => {
+      const incomplete = { title: 'Hi', body: doc(), items: [{ label: '' }] };
+      expect(issues(draft, incomplete)).toEqual([]);
+      expect(issues(draft, {})).toEqual([]);
+      expect(issues(full, incomplete)).toEqual([
+        'title: Use at least 5 characters.',
+        `body: ${REQUIRED_MESSAGE}`,
+        `count: ${REQUIRED_MESSAGE}`,
+        `flag: ${REQUIRED_MESSAGE}`,
+        `items.0.label: ${REQUIRED_MESSAGE}`,
+        'items: Add at least 2.',
+      ]);
+    });
+
+    it('still rejects malformed values', () => {
+      expect(issues(draft, { title: 'Far too long a title', count: 'three', flag: 'yes', items: 'none' })).toEqual([
+        'title: Use 10 characters or fewer.',
+        'count: Expected a number.',
+        'flag: Expected true or false.',
+        'items: Expected a list.',
+      ]);
+    });
+
+    it('relaxes required fields inside blocks too', () => {
+      const blockTypes: BlockTypeDef[] = [
+        { apiId: 'hero', fields: defs({ id: 'h', apiId: 'heading', label: 'Heading', type: 'text', required: true }) },
+      ];
+      const body = defs({ id: 'b', apiId: 'body', label: 'Body', type: 'blocks', allowedBlocks: ['hero'] });
+      const data = { body: [{ _uid: uid(1), _block: 'hero' }] };
+      expect(issues(buildEntrySchema(body, { blockTypes, draft: true }), data)).toEqual([]);
+      expect(issues(buildEntrySchema(body, { blockTypes }), data)).toEqual([`body.0.heading: ${REQUIRED_MESSAGE}`]);
+    });
+  });
 });
