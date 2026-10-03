@@ -35,6 +35,29 @@ Migration `0006_entries.sql`:
    - Rich text field using Tiptap, configured from the field's allowed marks/nodes, output as ProseMirror JSON.
 3. Every publish/unpublish/restore writes an audit event.
 
+## Decisions made during this package
+
+- **Drafts may be incomplete, never malformed.** `buildEntrySchema(fields, { draft: true })` skips required
+  fields and minimum lengths and counts but keeps every other rule; publishing validates in full. Saving
+  and autosave use the draft rules, so "invalid data cannot be saved" means malformed data.
+- **The one exception to immutable versions is autosave.** The author's own autosaved version may have its
+  `data` overwritten while it is the entry's current, unpublished version and under two minutes old. A
+  trigger (`entry_versions_guard`) enforces this for every role, the table owner included; nothing else
+  about a version can change, and versions are deleted only with their entry or space.
+- **Slugs live on the entry.** When the content type has a top-level `slug` text field (the seeded `page`
+  type does), the entry's slug follows it on every save, and the published address changes on the next
+  publish. Moving an entry or renaming or moving a folder changes published addresses straight away.
+- **Publishing and the bin need an editor in the database too**, not only in the API: an `entries_guard`
+  trigger refuses status, published-version and `deleted_at` changes from authors. Renaming, moving and
+  deleting folders also need an editor, because they move published pages.
+- **Version restore** (`POST entries/:id/restore/:versionId`) and **restore from the bin**
+  (`POST entries/:id/restore`) are separate routes. Moving an entry is `POST entries/:id/move`, so it does
+  not create a version.
+- Events: `entry.published` and `entry.unpublished` (binning a published entry counts) go out on the
+  in-process `ContentEvents` bus after commit.
+- The admin's space home is now **Content**, and the header gains **Content** and **People** links.
+- Media fields take an asset id and alternative text until the media library (07) adds a picker.
+
 ## Out of scope
 
 Visual editor (12), review workflow and scheduling (13, 17), locales (16).
@@ -49,6 +72,6 @@ npx nx e2e admin-e2e --grep @content   # create page with 3 blocks, publish, edi
 
 ## Definition of done
 
-- [ ] Versions are immutable; publish and restore are pointer moves + `published_content` copy
-- [ ] Invalid data cannot be saved or published (API test per field type)
-- [ ] Author cannot publish; editor can
+- [x] Versions are immutable; publish and restore are pointer moves + `published_content` copy
+- [x] Invalid data cannot be saved or published (API test per field type)
+- [x] Author cannot publish; editor can
