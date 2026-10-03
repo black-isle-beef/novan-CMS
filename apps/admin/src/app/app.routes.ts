@@ -1,10 +1,14 @@
 import { Route } from '@angular/router';
+import { accountRoute, authRoutes, requireSignedIn } from '@novan/admin-auth';
+import { spacesRoutes } from '@novan/admin-spaces';
 
 export const appRoutes: Route[] = [
-  { path: '', pathMatch: 'full', redirectTo: 'sign-in' },
+  ...authRoutes,
   {
-    path: 'sign-in',
-    title: 'Sign in | Novan CMS',
-    loadComponent: () => import('./sign-in/sign-in-page').then((m) => m.SignInPage),
+    path: '',
+    canActivate: [requireSignedIn],
+    loadComponent: () => import('./shell/shell').then((m) => m.Shell),
+    children: [{ path: '', pathMatch: 'full', redirectTo: 'spaces' }, ...spacesRoutes, accountRoute],
   },
+  { path: '**', redirectTo: '' },
 ];

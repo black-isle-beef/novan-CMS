@@ -1,0 +1,63 @@
+<nv-auth-layout heading="Sign in">
+  @if (error(); as message) {
+    <ds-alert variant="danger" class="mb-4">{{ message }}</ds-alert>
+  }
+  @if (linkSentTo(); as sentTo) {
+    <ds-alert variant="success" title="Check your email" class="mb-4">
+      We have sent a sign-in link to {{ sentTo }}. It works once and expires in an hour.
+    </ds-alert>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="mb-3">
+      <label for="sign-in-email" class="form-label">Email</label>
+      <input
+        id="sign-in-email"
+        type="email"
+        class="form-control"
+        formControlName="email"
+        autocomplete="username"
+        required
+        [class.is-invalid]="invalid('email')"
+        [attr.aria-invalid]="invalid('email')"
+        [attr.aria-describedby]="invalid('email') ? 'sign-in-email-error' : null"
+      />
+      @if (invalid('email')) {
+        <div id="sign-in-email-error" class="invalid-feedback">
+          Enter your email address, like name&#64;example.com.
+        </div>
+      }
+    </div>
+
+    @if (mode() === 'password') {
+      <div class="mb-4">
+        <label for="sign-in-password" class="form-label">Password</label>
+        <input
+          id="sign-in-password"
+          type="password"
+          class="form-control"
+          formControlName="password"
+          autocomplete="current-password"
+          required
+          [class.is-invalid]="invalid('password')"
+          [attr.aria-invalid]="invalid('password')"
+          [attr.aria-describedby]="invalid('password') ? 'sign-in-password-error' : null"
+        />
+        @if (invalid('password')) {
+          <div id="sign-in-password-error" class="invalid-feedback">Enter your password.</div>
+        }
+      </div>
+    }
+
+    <button type="submit" class="btn btn-primary w-100" [disabled]="busy()" [attr.aria-busy]="busy()">
+      {{ mode() === 'password' ? 'Sign in' : 'Email me a sign-in link' }}
+    </button>
+  </form>
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+    <button type="button" class="btn btn-link px-0" (click)="toggleMode()">
+      {{ mode() === 'password' ? 'Email me a sign-in link instead' : 'Use my password instead' }}
+    </button>
+    <a routerLink="/forgot-password">Forgotten your password?</a>
+  </div>
+</nv-auth-layout>

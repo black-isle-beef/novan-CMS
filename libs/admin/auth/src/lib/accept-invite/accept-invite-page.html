@@ -1,0 +1,12 @@
+<nv-auth-layout heading="Welcome to Novan CMS">
+  @if (auth.signedIn()) {
+    <p>
+      You are signing in as <strong>{{ auth.email() }}</strong
+      >. Choose a password to finish setting up your account.
+    </p>
+    <nv-set-password-form submitLabel="Save password and continue" (saved)="saved()" />
+  } @else {
+    <p>This invite link is invalid or has expired. Ask the person who invited you to send a new one.</p>
+    <p class="mb-0">Already set up your account? <a routerLink="/sign-in">Sign in</a></p>
+  }
+</nv-auth-layout>

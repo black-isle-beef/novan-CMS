@@ -1,5 +1,4 @@
--- Baseline guarantees of migrations 0001-0002, before any RLS policies exist (package 03 adds
--- policies and the cross-tenant tests in tenancy.test.sql).
+-- Baseline guarantees of migrations 0001-0002: constraints, triggers and RLS being enabled.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(17);
@@ -81,7 +80,8 @@ select lives_ok(
   'deleting a space still cascades'
 );
 
--- Without policies, a signed-in member of the demo space sees nothing.
+-- A token without the space claims added by the access token hook (0003) grants nothing beyond the
+-- user's own profile. Cross-tenant policy tests live in tenancy.test.sql.
 set local role authenticated;
 select set_config(
   'request.jwt.claims',
@@ -94,7 +94,11 @@ select is_empty('select 1 from public.spaces', 'authenticated cannot read spaces
 select is_empty('select 1 from public.environments', 'authenticated cannot read environments');
 select is_empty('select 1 from public.roles', 'authenticated cannot read roles');
 select is_empty('select 1 from public.members', 'authenticated cannot read members');
-select is_empty('select 1 from public.profiles', 'authenticated cannot read profiles');
+select results_eq(
+  'select user_id from public.profiles',
+  $$values ('00000000-0000-4000-8000-000000000002'::uuid)$$,
+  'authenticated reads only its own profile'
+);
 select is_empty('select 1 from public.audit_events', 'authenticated cannot read audit events');
 
 reset role;

@@ -1,0 +1,45 @@
+<h1 class="mb-4">Your account</h1>
+
+<dl class="row mb-5">
+  <dt class="col-sm-3">Email</dt>
+  <dd class="col-sm-9">{{ auth.email() }}</dd>
+</dl>
+
+<section aria-labelledby="two-step-heading" class="col-lg-7">
+  <h2 id="two-step-heading" class="h4">Two-step verification</h2>
+  <p>
+    Ask for a code from an authenticator app as well as your password when you sign in.
+    @if (auth.agencyStaff()) {
+      Agency staff must keep it turned on.
+    }
+  </p>
+
+  @if (error(); as message) {
+    <ds-alert variant="danger" class="mb-3">{{ message }}</ds-alert>
+  }
+  @if (status(); as message) {
+    <ds-alert variant="success" class="mb-3">{{ message }}</ds-alert>
+  }
+
+  @if (factors(); as list) {
+    @if (list.length) {
+      <ul class="list-group mb-3">
+        @for (factor of list; track factor.id) {
+          <li class="list-group-item">Authenticator app, added {{ factor.created_at | date: 'longDate' }}</li>
+        }
+      </ul>
+    } @else {
+      <p>Two-step verification is off.</p>
+    }
+
+    @if (enrolling()) {
+      <nv-totp-enrolment (verified)="enrolled()" />
+    } @else {
+      <ds-button variant="primary" (pressed)="startEnrolment()">
+        {{ list.length ? 'Add another authenticator app' : 'Turn on two-step verification' }}
+      </ds-button>
+    }
+  } @else if (!error()) {
+    <ds-spinner label="Loading two-step verification settings" />
+  }
+</section>

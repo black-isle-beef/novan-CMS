@@ -33,10 +33,21 @@ select
 from auth.users u
 where u.email in ('agency@novan.test', 'client@novan.test');
 
+-- The auth.users trigger already created both profiles; mark the agency user as staff.
 insert into public.profiles (user_id, display_name, is_agency_staff)
 values
   ('00000000-0000-4000-8000-000000000001', 'Agency User', true),
-  ('00000000-0000-4000-8000-000000000002', 'Client User', false);
+  ('00000000-0000-4000-8000-000000000002', 'Client User', false)
+on conflict (user_id) do update
+  set display_name = excluded.display_name, is_agency_staff = excluded.is_agency_staff;
+
+-- Agency staff need a second factor (AAL2). Verified TOTP factor with a known secret, so local
+-- sign-in and e2e tests can generate codes: any authenticator app accepts this base32 secret.
+insert into auth.mfa_factors (id, user_id, friendly_name, factor_type, status, secret, created_at, updated_at)
+values (
+  '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000001',
+  'Seeded authenticator', 'totp', 'verified', 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP', now(), now()
+);
 
 -- ---------------------------------------------------------------------------
 -- Organisation and space (the space trigger creates `main` and the default roles)

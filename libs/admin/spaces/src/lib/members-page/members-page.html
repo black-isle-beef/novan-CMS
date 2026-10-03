@@ -1,0 +1,134 @@
+<h1 class="mb-1">People</h1>
+<p class="lead text-muted mb-4">
+  Who can sign in to {{ context.currentSpace()?.name ?? 'this space' }}, and what they can do.
+</p>
+
+@if (actionError(); as message) {
+  <ds-alert variant="danger" class="mb-3">{{ message }}</ds-alert>
+}
+@if (status(); as message) {
+  <ds-alert variant="success" class="mb-3">{{ message }}</ds-alert>
+}
+
+@if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (members(); as list) {
+  <div class="table-responsive mb-5">
+    <table class="table align-middle">
+      <caption class="visually-hidden">
+        People with access
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Role</th>
+          @if (context.canManageCurrent()) {
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (member of list; track member.userId) {
+          <tr>
+            <th scope="row" class="fw-normal">
+              {{ nameOf(member) }}
+              @if (isYou(member)) {
+                <ds-badge variant="info" class="ms-1">You</ds-badge>
+              }
+            </th>
+            <td>
+              @if (context.canManageCurrent()) {
+                <label class="visually-hidden" [for]="'role-' + member.userId">Role for {{ nameOf(member) }}</label>
+                <select
+                  #roleSelect
+                  class="form-select form-select-sm w-auto"
+                  [id]="'role-' + member.userId"
+                  (change)="changeRole(member, roleSelect)"
+                >
+                  @for (option of roleOptions; track option.key) {
+                    <option [value]="option.key" [selected]="option.key === member.role">{{ option.label }}</option>
+                  }
+                </select>
+              } @else {
+                {{ roleLabel(member.role) }}
+              }
+            </td>
+            @if (context.canManageCurrent()) {
+              <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger" (click)="confirmRemove(member)">
+                  Remove<span class="visually-hidden"> {{ nameOf(member) }}</span>
+                </button>
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (context.canManageCurrent()) {
+    <section aria-labelledby="invite-heading" class="col-lg-7">
+      <h2 id="invite-heading" class="h4">Invite someone</h2>
+      <p>We will email them a link to set a password and sign in.</p>
+
+      <form [formGroup]="inviteForm" (ngSubmit)="invite()" novalidate>
+        <div class="mb-3">
+          <label for="invite-email" class="form-label">Email</label>
+          <input
+            id="invite-email"
+            type="email"
+            class="form-control"
+            formControlName="email"
+            autocomplete="off"
+            required
+            [class.is-invalid]="inviteEmailInvalid()"
+            [attr.aria-invalid]="inviteEmailInvalid()"
+            [attr.aria-describedby]="inviteEmailInvalid() ? 'invite-email-error' : null"
+          />
+          @if (inviteEmailInvalid()) {
+            <div id="invite-email-error" class="invalid-feedback">
+              Enter their email address, like name&#64;example.com.
+            </div>
+          }
+        </div>
+
+        <fieldset class="mb-4">
+          <legend class="form-label fs-6">Role</legend>
+          @for (option of roleOptions; track option.key) {
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                formControlName="role"
+                [id]="'invite-role-' + option.key"
+                [value]="option.key"
+                [attr.aria-describedby]="'invite-role-' + option.key + '-hint'"
+              />
+              <label class="form-check-label" [for]="'invite-role-' + option.key">{{ option.label }}</label>
+              <div class="form-text mt-0" [id]="'invite-role-' + option.key + '-hint'">{{ option.description }}</div>
+            </div>
+          }
+        </fieldset>
+
+        <button type="submit" class="btn btn-primary" [disabled]="inviting()" [attr.aria-busy]="inviting()">
+          Send invite
+        </button>
+      </form>
+    </section>
+  }
+} @else {
+  <ds-spinner label="Loading people" />
+}
+
+<ds-modal
+  [open]="removing() !== null"
+  (openChange)="!$event && removing.set(null)"
+  [heading]="removeHeading()"
+  size="sm"
+>
+  <p class="mb-0">They will no longer be able to sign in to this space. You can invite them again later.</p>
+  <div dsModalFooter class="d-flex justify-content-end gap-2">
+    <ds-button variant="secondary" (pressed)="removing.set(null)">Cancel</ds-button>
+    <ds-button variant="danger" (pressed)="remove()">Remove</ds-button>
+  </div>
+</ds-modal>

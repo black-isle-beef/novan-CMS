@@ -1,0 +1,55 @@
+<h1 class="mb-4">Create a space</h1>
+
+<div class="col-lg-7">
+  <p>A space holds one client's site: its pages, media and the people who can edit them.</p>
+
+  @if (error(); as message) {
+    <ds-alert variant="danger" class="mb-4">{{ message }}</ds-alert>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="mb-3">
+      <label for="space-name" class="form-label">Client or site name</label>
+      <input
+        id="space-name"
+        type="text"
+        class="form-control"
+        formControlName="name"
+        autocomplete="organization"
+        required
+        (input)="nameChanged()"
+        [class.is-invalid]="invalid('name')"
+        [attr.aria-invalid]="invalid('name')"
+        [attr.aria-describedby]="invalid('name') ? 'space-name-error' : null"
+      />
+      @if (invalid('name')) {
+        <div id="space-name-error" class="invalid-feedback">Enter a name of up to 120 characters.</div>
+      }
+    </div>
+
+    <div class="mb-4">
+      <label for="space-slug" class="form-label">Short name</label>
+      <input
+        id="space-slug"
+        type="text"
+        class="form-control"
+        formControlName="slug"
+        autocomplete="off"
+        spellcheck="false"
+        required
+        (input)="slugChanged()"
+        aria-describedby="space-slug-hint"
+        [class.is-invalid]="invalid('slug')"
+        [attr.aria-invalid]="invalid('slug')"
+      />
+      <div id="space-slug-hint" [class]="invalid('slug') ? 'invalid-feedback' : 'form-text'">
+        Used in web addresses. Lowercase letters, numbers and single hyphens, for example acme-ltd.
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary" [disabled]="busy()" [attr.aria-busy]="busy()">Create space</button>
+      <a routerLink="/spaces" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </form>
+</div>

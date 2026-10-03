@@ -29,13 +29,24 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
   },
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'npx nx run admin:serve',
-    url: 'http://localhost:4200',
-    reuseExistingServer: true,
-    cwd: workspaceRoot,
-  },
+  /* Run the admin and the API before starting the tests (local Supabase must already be running). */
+  webServer: [
+    {
+      command: 'npx nx run admin:serve',
+      url: 'http://localhost:4200',
+      reuseExistingServer: true,
+      cwd: workspaceRoot,
+    },
+    {
+      command: 'npx nx run api:serve',
+      url: 'http://localhost:3000/health',
+      reuseExistingServer: true,
+      cwd: workspaceRoot,
+      timeout: 180_000,
+    },
+  ],
+  // Browsers run one after another: each signs the seeded agency user in with MFA, and Supabase Auth
+  // ends that user's other password-only sessions when a second factor is verified.
   projects: [
     {
       name: 'chromium',
@@ -45,11 +56,13 @@ export default defineConfig({
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
+      dependencies: ['chromium'],
     },
 
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+      dependencies: ['firefox'],
     },
 
     // Uncomment for mobile browsers support

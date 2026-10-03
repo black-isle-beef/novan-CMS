@@ -1,0 +1,19 @@
+<div class="mb-4">
+  <label [for]="fieldId()" class="form-label">6-digit code</label>
+  <input
+    [id]="fieldId()"
+    type="text"
+    class="form-control"
+    inputmode="numeric"
+    autocomplete="one-time-code"
+    maxlength="6"
+    required
+    [formControl]="control()"
+    [class.is-invalid]="showError()"
+    [attr.aria-invalid]="showError()"
+    [attr.aria-describedby]="showError() ? fieldId() + '-error' : null"
+  />
+  @if (showError()) {
+    <div [id]="fieldId() + '-error'" class="invalid-feedback">Enter the 6 digits shown in your authenticator app.</div>
+  }
+</div>
