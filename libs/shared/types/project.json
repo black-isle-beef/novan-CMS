@@ -5,5 +5,21 @@
   "projectType": "library",
   "tags": ["scope:shared", "type:util"],
   "// targets": "to see all targets run: nx show project shared-types --web",
-  "targets": {}
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/shared/types",
+        "main": "libs/shared/types/src/index.ts",
+        "tsConfig": "libs/shared/types/tsconfig.lib.json"
+      }
+    },
+    "db:types": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx supabase gen types typescript --local --schema public > libs/shared/types/src/lib/database.types.ts"
+      }
+    }
+  }
 }
