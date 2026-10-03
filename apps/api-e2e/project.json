@@ -1,0 +1,17 @@
+{
+  "name": "api-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "tags": ["scope:api", "type:app"],
+  "implicitDependencies": ["api"],
+  "targets": {
+    "e2e": {
+      "executor": "@nx/vitest:test",
+      "dependsOn": ["api:build", "api:serve"],
+      "options": {
+        "configFile": "apps/api-e2e/vitest.config.mts",
+        "watch": false
+      }
+    }
+  }
+}

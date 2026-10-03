@@ -14,7 +14,12 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "strict": false,
-    "paths": {}
+    "paths": {
+      "@novan/shared-types": ["./libs/shared/types/src/index.ts"],
+      "@novan/shared-schemas": ["./libs/shared/schemas/src/index.ts"],
+      "@novan/cms-angular": ["./libs/cms-angular/src/index.ts"],
+      "@novan/blocks": ["./libs/blocks/src/index.ts"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }
