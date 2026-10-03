@@ -23,6 +23,19 @@ updates:
         patterns:
           - 'nx'
           - '@nx/*'
+      # NestJS packages peer-depend on the same major version.
+      nestjs:
+        patterns:
+          - '@nestjs/*'
+      # @vitest/* packages pin vitest to the exact same version.
+      vitest:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+    ignore:
+      # Types must match the Node runtime (24, see .nvmrc); move them with a Node upgrade.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directories:
