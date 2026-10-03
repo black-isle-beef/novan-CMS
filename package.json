@@ -85,7 +85,7 @@
     "@angular/ssr": "~22.1.0",
     "@black-isle-beef/novan-design-system": "^2.5.0",
     "@nestjs/common": "^11.0.0",
-    "@nestjs/core": "^11.0.0",
+    "@nestjs/core": "^12.1.2",
     "@nestjs/platform-express": "^11.0.0",
     "@supabase/supabase-js": "^2.117.2",
     "bootstrap": "^5.3.8",
