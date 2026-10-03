@@ -103,5 +103,11 @@
     "reflect-metadata": "^0.2.0",
     "rxjs": "~7.8.0",
     "zod": "^4.6.5"
+  },
+  "overrides": {
+    "@nx/nest": {
+      "@nestjs/common": "$@nestjs/common",
+      "@nestjs/core": "$@nestjs/core"
+    }
   }
 }
