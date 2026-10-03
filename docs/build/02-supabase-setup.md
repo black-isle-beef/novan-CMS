@@ -43,7 +43,7 @@ npx nx test api          # DbModule test: serviceDb can select from spaces; user
 
 ## Definition of done
 
-- [ ] Fresh clone + `db:start` + `db:reset` gives a working seeded database
-- [ ] Every table has RLS enabled (`select relname from pg_class where relrowsecurity = false and relnamespace = 'public'::regnamespace` returns nothing)
-- [ ] Drizzle schema and generated types match the migrations
-- [ ] `.env.example` complete
+- [x] Fresh clone + `db:start` + `db:reset` gives a working seeded database
+- [x] Every table has RLS enabled (`select relname from pg_class where relrowsecurity = false and relnamespace = 'public'::regnamespace and relkind in ('r', 'p')` returns nothing; without the `relkind` filter indexes are listed too)
+- [x] Drizzle schema and generated types match the migrations
+- [x] `.env.example` complete

@@ -10,7 +10,12 @@
     "build": "nx run-many -t build",
     "test": "nx run-many -t test",
     "lint": "nx run-many -t lint",
-    "e2e": "nx run-many -t e2e"
+    "e2e": "nx run-many -t e2e",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:test": "supabase test db",
+    "db:types": "nx run shared-types:db:types",
+    "db:pull": "node libs/api/db/tools/pull-schema.mjs"
   },
   "devDependencies": {
     "@angular-devkit/core": "~22.1.0",
@@ -45,6 +50,7 @@
     "@vitest/coverage-v8": "~4.1.0",
     "angular-eslint": "^22.1.0",
     "autoprefixer": "^10.4.0",
+    "drizzle-kit": "^0.31.11",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-playwright": "^1.6.2",
@@ -54,6 +60,7 @@
     "nx": "23.2.1",
     "postcss": "^8.4.5",
     "prettier": "~3.6.2",
+    "supabase": "^2.119.0",
     "supertest": "^7.3.1",
     "tslib": "^2.3.0",
     "typescript": "~6.0.3",
@@ -80,7 +87,9 @@
     "@nestjs/platform-express": "^11.0.0",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
+    "drizzle-orm": "^0.45.3",
     "express": "^4.21.2",
+    "postgres": "^3.4.9",
     "reflect-metadata": "^0.2.0",
     "rxjs": "~7.8.0",
     "zod": "^4.6.5"
