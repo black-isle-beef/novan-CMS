@@ -1,18 +1,34 @@
 [CmdletBinding()]
 param(
     [switch]$Fix,
-    [switch]$Build
+    [switch]$Build,
+    # Project roots relative to the repository root (e.g. apps/admin, libs/admin/auth). Default: apps/*, libs/*.
+    [string[]]$Projects
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
-$sourceRoots = @(
-    Get-ChildItem -Path (Join-Path $repoRoot 'apps'), (Join-Path $repoRoot 'libs') -Directory -ErrorAction SilentlyContinue |
-        ForEach-Object { Join-Path $_.FullName 'src' } |
-        Where-Object { Test-Path $_ }
-)
+if ($Projects) {
+    $sourceRoots = @(
+        $Projects | ForEach-Object { Join-Path (Join-Path $repoRoot $_) 'src' } | Where-Object { Test-Path $_ }
+    )
+}
+else {
+    $sourceRoots = @(
+        Get-ChildItem -Path (Join-Path $repoRoot 'apps'), (Join-Path $repoRoot 'libs') -Directory -ErrorAction SilentlyContinue |
+            ForEach-Object { Join-Path $_.FullName 'src' } |
+            Where-Object { Test-Path $_ }
+    )
+}
+if ($sourceRoots.Count -eq 0) {
+    Write-Host 'PASS: no source folders to scan.' -ForegroundColor Green
+    exit 0
+}
+
+# Paths are compared with forward slashes so the audit behaves the same on Windows and Linux (CI).
+function ConvertTo-SlashPath([string]$Path) { $Path -replace '\\', '/' }
 $globalStyleEntryPoints = @(
     $sourceRoots | ForEach-Object { Join-Path $_ 'styles.scss' } | Where-Object { Test-Path $_ }
 )
@@ -25,8 +41,8 @@ function Get-SourceFiles {
         $file = $_
         $includeExtensions -contains $_.Extension.ToLowerInvariant() -and
         $file.Name -notmatch '\.(spec|stories)\.ts$' -and
-        $file.FullName -notmatch '\\styles\\tokens\\|\\lib\\tokens\\' -and
-        @($excludedDirectories | Where-Object { $file.FullName -like "*\$_\*" }).Count -eq 0
+        (ConvertTo-SlashPath $file.FullName) -notmatch '/styles/tokens/|/lib/tokens/' -and
+        @($excludedDirectories | Where-Object { (ConvertTo-SlashPath $file.FullName) -like "*/$_/*" }).Count -eq 0
     }
 }
 
@@ -38,7 +54,7 @@ function Add-Finding {
         [string]$Details
     )
 
-    $relativePath = $File.FullName.Substring($repoRoot.Length + 1)
+    $relativePath = ConvertTo-SlashPath $File.FullName.Substring($repoRoot.Length + 1)
     $findings.Add([pscustomobject]@{
         File = $relativePath
         Rule = $Rule
@@ -100,7 +116,7 @@ foreach ($file in $componentFiles) {
 $componentStyleFiles = @($files | Where-Object {
     $_.Extension -in @('.scss', '.css') -and
     $_.FullName -notin $globalStyleEntryPoints -and
-    $_.DirectoryName -notmatch '\\src\\styles(?:\\|$)'
+    (ConvertTo-SlashPath $_.DirectoryName) -notmatch '/src/styles(?:/|$)'
 })
 foreach ($file in $componentStyleFiles) {
     Add-Finding -File $file -Rule 'Global component styles' -Pattern $file.Name -Details 'Component stylesheets must live under the appropriate global styles directory.'
@@ -118,8 +134,9 @@ foreach ($file in $htmlFiles) {
 }
 
 if ($Fix) {
-    if (Test-Path (Join-Path $repoRoot 'node_modules/.bin/prettier.cmd')) {
-        & (Join-Path $repoRoot 'node_modules/.bin/prettier.cmd') --write '{apps,libs}/*/src/**/*.{ts,html,scss,css}' | Out-Host
+    $prettier = Join-Path $repoRoot ($(if ($env:OS -eq 'Windows_NT') { 'node_modules/.bin/prettier.cmd' } else { 'node_modules/.bin/prettier' }))
+    if (Test-Path $prettier) {
+        & $prettier --write '{apps,libs}/*/src/**/*.{ts,html,scss,css}' | Out-Host
         if ($LASTEXITCODE -ne 0) {
             throw "Prettier failed with exit code $LASTEXITCODE."
         }
@@ -144,7 +161,7 @@ else {
 if ($Build) {
     Push-Location $repoRoot
     try {
-        & npx.cmd nx run-many -t build
+        & $(if ($env:OS -eq 'Windows_NT') { 'npx.cmd' } else { 'npx' }) nx run-many -t build
         if ($LASTEXITCODE -ne 0) {
             throw "Angular build failed with exit code $LASTEXITCODE."
         }

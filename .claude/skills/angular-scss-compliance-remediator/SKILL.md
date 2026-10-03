@@ -28,11 +28,13 @@ If the user passed an argument, treat it as the scope (an app, a route, or a com
 
 ## Step 1: Ingest and Categorize
 
-Run the bundled audit from the repository root. It scans `apps/*/src` and `libs/*/src`. Do not replace it with an improvised audit or claim audit results without running it.
+Run the bundled audit from the repository root. It scans `apps/*/src` and `libs/*/src`, or the `src` folders of the project roots passed with `-Projects`. Do not replace it with an improvised audit or claim audit results without running it.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/skills/angular-scss-compliance-remediator/audit.ps1
 ```
+
+To audit every Angular project, including nested libraries such as `libs/admin/*`, run `tools/ci/audit-angular.ps1` (CI runs it with `-Affected`).
 
 Capture the complete output, then supplement it with a manual review of the categories the script cannot detect, and group every finding under these categories:
 

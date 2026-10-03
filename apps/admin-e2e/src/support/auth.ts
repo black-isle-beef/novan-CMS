@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { TOTP } from 'otpauth';
+import { expectNoAxeViolations } from './axe';
 
 /** Seeded local users (supabase/seed.sql). */
 export const agency = { email: 'agency@novan.test', password: 'password123' };
@@ -21,6 +22,7 @@ export async function signIn(page: Page, user: { email: string; password: string
 export async function signInAsAgency(page: Page): Promise<void> {
   await signIn(page, agency);
   await expect(page.getByRole('heading', { level: 1, name: 'Two-step verification' })).toBeVisible();
+  await expectNoAxeViolations(page);
   await page.getByLabel('6-digit code').fill(agencyTotp.generate());
   await page.getByRole('button', { name: 'Verify' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Spaces' })).toBeVisible();

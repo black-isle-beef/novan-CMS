@@ -1,0 +1,200 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  # nrwl/nx-set-shas reads earlier workflow runs to find the last successful `main` commit.
+  actions: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NX_NO_CLOUD: true
+
+jobs:
+  lint-test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: lint-test-build
+      - run: npx nx affected -t lint test build --parallel=3
+
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: database
+      - name: Supabase CLI version from package-lock.json
+        id: supabase-version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/supabase'].version")" >> "$GITHUB_OUTPUT"
+      - uses: supabase/setup-cli@v3
+        with:
+          version: ${{ steps.supabase-version.outputs.version }}
+      # Postgres, Auth and Storage only: Auth and Storage own the `auth` and `storage` schemas the migrations use.
+      - name: Start Supabase
+        run: supabase start -x realtime,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      - run: supabase db reset
+      - name: pgTAP tests
+        run: supabase test db
+      - name: Schema lint
+        run: supabase db lint --level warning --fail-on warning
+      - name: Generated database types are up to date
+        run: |
+          npm run db:types
+          git diff --exit-code -- libs/shared/types/src/lib/database.types.ts \
+            || { echo "::error::database.types.ts is out of date. Run 'npm run db:types' and commit the result."; exit 1; }
+
+  audits:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: audits
+      - name: SCSS and Angular compliance audit (affected Angular projects)
+        shell: pwsh
+        run: ./tools/ci/audit-angular.ps1 -Affected
+
+  e2e:
+    needs: database
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: e2e
+      - name: Supabase CLI version from package-lock.json
+        id: supabase-version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/supabase'].version")" >> "$GITHUB_OUTPUT"
+      - uses: supabase/setup-cli@v3
+        with:
+          version: ${{ steps.supabase-version.outputs.version }}
+      # The admin needs Auth behind the gateway (kong), Mailpit for invite emails, and REST/Storage for the API.
+      - name: Start Supabase
+        run: supabase start -x realtime,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      # The API reads .env.local (apps/api/src/main.ts); fill it from the local stack, as a developer would.
+      - name: Write .env.local
+        run: |
+          supabase status -o json | jq -r '
+            "DATABASE_URL=\(.DB_URL)",
+            "SUPABASE_URL=\(.API_URL)",
+            "SUPABASE_ANON_KEY=\(.ANON_KEY)",
+            "SUPABASE_SERVICE_ROLE_KEY=\(.SERVICE_ROLE_KEY)",
+            "SUPABASE_JWT_SECRET=\(.JWT_SECRET)",
+            "API_PORT=3000",
+            "ADMIN_URL=http://localhost:4200",
+            "MAILPIT_URL=\(.MAILPIT_URL)"
+          ' > .env.local
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Playwright browser cache
+        id: playwright-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium firefox webkit
+      # Each e2e target starts what it needs: the admin and API dev servers (Playwright webServer / Nx
+      # continuous tasks). One project at a time, because admin-e2e and api-e2e share the API port.
+      - name: e2e (Playwright + axe)
+        run: npx nx affected -t e2e --parallel=1
+      - name: Upload Playwright traces and reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-${{ github.run_id }}
+          path: dist/.playwright/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # Scans the commits in this PR or push for live (verified) and unverifiable credentials.
+      - uses: trufflesecurity/trufflehog@v3.97.9
+        with:
+          extra_args: --results=verified,unknown
+
+  # Non-blocking: reports high and critical advisories in production dependencies as a PR comment.
+  # Not a required check; the job goes red so the finding is visible, but merging is not blocked.
+  npm-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: npm audit
+        id: audit
+        run: |
+          set +e
+          npm audit --omit=dev --audit-level=high > npm-audit.txt 2>&1
+          echo "exit-code=$?" >> "$GITHUB_OUTPUT"
+          cat npm-audit.txt
+      - name: Comment on the PR
+        # Fork PRs get a read-only token, so they only see the job result.
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v9
+        env:
+          AUDIT_EXIT_CODE: ${{ steps.audit.outputs.exit-code }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const marker = '<!-- ci:npm-audit -->';
+            const failed = process.env.AUDIT_EXIT_CODE !== '0';
+            const report = fs.readFileSync('npm-audit.txt', 'utf8').trim().slice(-60000);
+            const body = failed
+              ? `${marker}\n### npm audit: high or critical advisories in production dependencies\n\nThis check does not block merging.\n\n\`\`\`\n${report}\n\`\`\``
+              : `${marker}\n### npm audit: no high or critical advisories in production dependencies`;
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existing = comments.find((comment) => comment.body?.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else if (failed) {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+      - name: Fail when advisories were found
+        if: steps.audit.outputs.exit-code != '0'
+        run: |
+          echo "::warning title=npm audit::High or critical advisories in production dependencies (non-blocking)."
+          exit 1

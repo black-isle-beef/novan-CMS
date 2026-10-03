@@ -1,0 +1,31 @@
+name: Set up workspace
+description: Node 24, npm ci, the Nx cache and the base/head SHAs for `nx affected`.
+
+inputs:
+  cache-name:
+    description: Names this job's slice of the Nx cache, so parallel jobs do not overwrite each other.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: .nvmrc
+        cache: npm
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci
+
+    - name: Nx cache
+      uses: actions/cache@v6
+      with:
+        path: .nx/cache
+        key: nx-${{ runner.os }}-${{ inputs.cache-name }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+        restore-keys: |
+          nx-${{ runner.os }}-${{ inputs.cache-name }}-${{ hashFiles('package-lock.json') }}-
+          nx-${{ runner.os }}-${{ inputs.cache-name }}-
+
+    # Sets NX_BASE and NX_HEAD: the last successful `main` run for pushes, the merge base for PRs.
+    - uses: nrwl/nx-set-shas@v5
