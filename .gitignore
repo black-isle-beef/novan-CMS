@@ -9,7 +9,6 @@
 
 # Node modules and dependency files
 /node_modules/
-/package-lock.json
 /yarn.lock
 
 # Environment files
@@ -35,3 +34,5 @@ yarn-error.log*
 .angular
 
 __screenshots__/
+
+vitest.config.*.timestamp*

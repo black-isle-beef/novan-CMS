@@ -1,0 +1,10 @@
+{
+  "name": "starter-site-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/starter-site-e2e/src",
+  "implicitDependencies": ["starter-site"],
+  "// targets": "to see all targets run: nx show project starter-site-e2e --web",
+  "targets": {},
+  "tags": ["scope:site", "type:app"]
+}

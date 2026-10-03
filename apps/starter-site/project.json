@@ -1,0 +1,87 @@
+{
+  "name": "starter-site",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "site",
+  "sourceRoot": "apps/starter-site/src",
+  "tags": ["scope:site", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/starter-site",
+        "browser": "apps/starter-site/src/main.ts",
+        "tsConfig": "apps/starter-site/tsconfig.app.json",
+        "inlineStyleLanguage": "scss",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/starter-site/public"
+          }
+        ],
+        "styles": ["apps/starter-site/src/styles.scss"],
+        "server": "apps/starter-site/src/main.server.ts",
+        "ssr": {
+          "entry": "apps/starter-site/src/server.ts"
+        },
+        "outputMode": "server"
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "800kb",
+              "maximumError": "1.5mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kb",
+              "maximumError": "8kb"
+            }
+          ],
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "port": 4300
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "starter-site:build:production"
+        },
+        "development": {
+          "buildTarget": "starter-site:build:development"
+        }
+      }
+    },
+    "test": {
+      "executor": "@angular/build:unit-test",
+      "options": {
+        "watch": false
+      }
+    },
+    "serve-static": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "buildTarget": "starter-site:build",
+        "port": 4300,
+        "staticFilePath": "dist/apps/starter-site/browser",
+        "spa": true
+      }
+    }
+  }
+}
