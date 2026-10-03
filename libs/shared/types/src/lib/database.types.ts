@@ -144,7 +144,18 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "auth_space_ids":
+{ Args: Record<PropertyKey, never>; Returns: (string)[]
+                           },
+"custom_access_token_hook":
+{ Args: { "event": Json }; Returns: Json
+                           },
+"has_space_role":
+{ Args: { "roles": (string)[],"space": string }; Returns: boolean
+                           },
+"is_agency_staff":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           }
           }
           Enums: {
             [_ in never]: never

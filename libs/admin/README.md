@@ -5,9 +5,14 @@ They are generated here by the build package that introduces the feature (see `d
 
 ```bash
 npx nx g @nx/angular:lib libs/admin/<feature> --name=admin-<feature> --importPath=@novan/admin-<feature> \
-  --buildable --prefix=nv --style=scss --changeDetection=OnPush --unitTestRunner=vitest-angular \
+  --prefix=nv --style=scss --changeDetection=OnPush --unitTestRunner=vitest-angular \
   --tags="scope:admin,type:feature"
 ```
+
+Then delete the generated sample component (and its `.scss`: styles come from the design system).
+
+Admin libs are not buildable: only `apps/admin` consumes them, and a buildable lib could not import the
+non-buildable `@novan/shared-schemas` (`enforceBuildableLibDependency`).
 
 Rules (`docs/build/00-conventions.md`):
 

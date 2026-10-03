@@ -19,7 +19,12 @@
       "@novan/shared-schemas": ["./libs/shared/schemas/src/index.ts"],
       "@novan/cms-angular": ["./libs/cms-angular/src/index.ts"],
       "@novan/blocks": ["./libs/blocks/src/index.ts"],
-      "@novan/api-db": ["./libs/api/db/src/index.ts"]
+      "@novan/api-db": ["./libs/api/db/src/index.ts"],
+      "@novan/api-auth": ["./libs/api/auth/src/index.ts"],
+      "@novan/api-spaces": ["./libs/api/spaces/src/index.ts"],
+      "@novan/api-common": ["./libs/api/common/src/index.ts"],
+      "@novan/admin-auth": ["./libs/admin/auth/src/index.ts"],
+      "@novan/admin-spaces": ["./libs/admin/spaces/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

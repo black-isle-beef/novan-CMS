@@ -1,0 +1,22 @@
+<nv-auth-layout heading="Two-step verification">
+  @if (error(); as message) {
+    <ds-alert variant="danger" class="mb-4">{{ message }}</ds-alert>
+  }
+
+  @if (loading()) {
+    <ds-spinner label="Checking your account" />
+  } @else if (factorId(); as id) {
+    <p>Enter the code from your authenticator app to finish signing in.</p>
+    <form [formGroup]="form" (ngSubmit)="verify(id)" novalidate>
+      <nv-totp-code-field [control]="code" fieldId="challenge-code" [showError]="submitted() && code.invalid" />
+      <button type="submit" class="btn btn-primary w-100" [disabled]="busy()" [attr.aria-busy]="busy()">Verify</button>
+    </form>
+  } @else if (!loadFailed()) {
+    <p>Your account needs two-step verification. Add an authenticator app to continue.</p>
+    <nv-totp-enrolment (verified)="continue()" />
+  }
+
+  <p class="mt-3 mb-0">
+    <button type="button" class="btn btn-link px-0" (click)="signOut()">Sign out</button>
+  </p>
+</nv-auth-layout>

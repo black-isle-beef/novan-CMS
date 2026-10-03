@@ -1,0 +1,33 @@
+@if (error(); as message) {
+  <ds-alert variant="danger" class="mb-4">{{ message }}</ds-alert>
+}
+
+@if (enrolment(); as setup) {
+  <ol class="ps-3">
+    <li class="mb-3">
+      Open an authenticator app (such as Google Authenticator, Microsoft Authenticator or 1Password) and scan this QR
+      code.
+      <img
+        [src]="setup.qrCode"
+        alt="QR code for adding Novan CMS to your authenticator app"
+        class="d-block mt-2 img-fluid"
+        width="200"
+        height="200"
+      />
+    </li>
+    <li class="mb-3">
+      If you cannot scan it, enter this key instead:
+      <code class="d-block mt-1 text-break">{{ setup.secret }}</code>
+    </li>
+    <li>Enter the code the app shows.</li>
+  </ol>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <nv-totp-code-field [control]="code" fieldId="enrol-code" [showError]="submitted() && code.invalid" />
+    <button type="submit" class="btn btn-primary w-100" [disabled]="busy()" [attr.aria-busy]="busy()">
+      Turn on two-step verification
+    </button>
+  </form>
+} @else if (!error()) {
+  <ds-spinner label="Setting up two-step verification" />
+}

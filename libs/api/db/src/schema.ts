@@ -3,52 +3,21 @@
 /* eslint-disable */
 import {
   pgTable,
-  index,
-  foreignKey,
+  pgPolicy,
+  check,
   uuid,
   text,
-  jsonb,
   timestamp,
-  check,
+  index,
+  foreignKey,
   unique,
+  jsonb,
   uniqueIndex,
   boolean,
   primaryKey,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { users } from './auth-schema';
-
-export const auditEvents = pgTable(
-  'audit_events',
-  {
-    id: uuid().defaultRandom().primaryKey().notNull(),
-    spaceId: uuid('space_id').notNull(),
-    actorId: uuid('actor_id'),
-    action: text().notNull(),
-    targetType: text('target_type'),
-    targetId: text('target_id'),
-    diff: jsonb(),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-  },
-  (table) => [
-    index('audit_events_actor_id_idx').using('btree', table.actorId.asc().nullsLast().op('uuid_ops')),
-    index('audit_events_space_id_created_at_idx').using(
-      'btree',
-      table.spaceId.asc().nullsLast().op('timestamptz_ops'),
-      table.createdAt.desc().nullsFirst().op('timestamptz_ops'),
-    ),
-    foreignKey({
-      columns: [table.spaceId],
-      foreignColumns: [spaces.id],
-      name: 'audit_events_space_id_fkey',
-    }).onDelete('cascade'),
-    foreignKey({
-      columns: [table.actorId],
-      foreignColumns: [users.id],
-      name: 'audit_events_actor_id_fkey',
-    }).onDelete('set null'),
-  ],
-);
 
 export const organisations = pgTable(
   'organisations',
@@ -58,7 +27,17 @@ export const organisations = pgTable(
     plan: text().default('agency').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
   },
-  (table) => [check('organisations_name_check', sql`length(TRIM(BOTH FROM name)) > 0`)],
+  (table) => [
+    pgPolicy('organisations: agency staff and members read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR (EXISTS ( SELECT 1
+   FROM spaces s
+  WHERE ((s.organisation_id = organisations.id) AND (s.id = ANY (( SELECT auth_space_ids() AS auth_space_ids)::uuid[]))))))`,
+    }),
+    check('organisations_name_check', sql`length(TRIM(BOTH FROM name)) > 0`),
+  ],
 );
 
 export const spaces = pgTable(
@@ -81,6 +60,14 @@ export const spaces = pgTable(
       name: 'spaces_organisation_id_fkey',
     }).onDelete('restrict'),
     unique('spaces_slug_key').on(table.slug),
+    pgPolicy('spaces: members and agency staff read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+      using: sql`((id = ANY (( SELECT auth_space_ids() AS auth_space_ids)::uuid[])) OR ( SELECT is_agency_staff() AS is_agency_staff))`,
+    }),
+    pgPolicy('spaces: agency staff create', { as: 'permissive', for: 'insert', to: ['authenticated'] }),
+    pgPolicy('spaces: admins and agency staff update', { as: 'permissive', for: 'update', to: ['authenticated'] }),
     check('spaces_name_check', sql`length(TRIM(BOTH FROM name)) > 0`),
     check('spaces_slug_check', sql`slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text`),
   ],
@@ -112,6 +99,13 @@ export const environments = pgTable(
     }).onDelete('set null'),
     unique('environments_id_space_id_key').on(table.id, table.spaceId),
     unique('environments_space_id_name_key').on(table.spaceId, table.name),
+    pgPolicy('environments: members and agency staff read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+      using: sql`((space_id = ANY (( SELECT auth_space_ids() AS auth_space_ids)::uuid[])) OR ( SELECT is_agency_staff() AS is_agency_staff))`,
+    }),
+    pgPolicy('environments: admins and agency staff write', { as: 'permissive', for: 'all', to: ['authenticated'] }),
     check('environments_name_check', sql`name ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text`),
   ],
 );
@@ -133,6 +127,14 @@ export const roles = pgTable(
     }).onDelete('cascade'),
     unique('roles_id_space_id_key').on(table.id, table.spaceId),
     unique('roles_space_id_key_key').on(table.spaceId, table.key),
+    pgPolicy('auth hook reads roles', {
+      as: 'permissive',
+      for: 'select',
+      to: ['supabase_auth_admin'],
+      using: sql`true`,
+    }),
+    pgPolicy('roles: members and agency staff read', { as: 'permissive', for: 'select', to: ['authenticated'] }),
+    pgPolicy('roles: admins and agency staff write', { as: 'permissive', for: 'all', to: ['authenticated'] }),
     check('roles_key_check', sql`key ~ '^[a-z][a-z0-9_]*$'::text`),
   ],
 );
@@ -151,6 +153,56 @@ export const profiles = pgTable(
       foreignColumns: [users.id],
       name: 'profiles_user_id_fkey',
     }).onDelete('cascade'),
+    pgPolicy('auth hook reads profiles', {
+      as: 'permissive',
+      for: 'select',
+      to: ['supabase_auth_admin'],
+      using: sql`true`,
+    }),
+    pgPolicy('profiles: self, co-members and agency staff read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+    }),
+    pgPolicy('profiles: self update', { as: 'permissive', for: 'update', to: ['authenticated'] }),
+  ],
+);
+
+export const auditEvents = pgTable(
+  'audit_events',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    spaceId: uuid('space_id').notNull(),
+    actorId: uuid('actor_id'),
+    action: text().notNull(),
+    targetType: text('target_type'),
+    targetId: text('target_id'),
+    diff: jsonb(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('audit_events_actor_id_idx').using('btree', table.actorId.asc().nullsLast().op('uuid_ops')),
+    index('audit_events_space_id_created_at_idx').using(
+      'btree',
+      table.spaceId.asc().nullsLast().op('timestamptz_ops'),
+      table.createdAt.desc().nullsFirst().op('timestamptz_ops'),
+    ),
+    foreignKey({
+      columns: [table.spaceId],
+      foreignColumns: [spaces.id],
+      name: 'audit_events_space_id_fkey',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.actorId],
+      foreignColumns: [users.id],
+      name: 'audit_events_actor_id_fkey',
+    }).onDelete('set null'),
+    pgPolicy('audit events: admins and agency staff read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(audit_events.space_id, '{admin}'::text[]) AS has_space_role))`,
+    }),
   ],
 );
 
@@ -187,5 +239,13 @@ export const members = pgTable(
       name: 'members_role_id_space_id_fkey',
     }).onDelete('restrict'),
     primaryKey({ columns: [table.spaceId, table.userId], name: 'members_pkey' }),
+    pgPolicy('auth hook reads members', {
+      as: 'permissive',
+      for: 'select',
+      to: ['supabase_auth_admin'],
+      using: sql`true`,
+    }),
+    pgPolicy('members: members and agency staff read', { as: 'permissive', for: 'select', to: ['authenticated'] }),
+    pgPolicy('members: admins and agency staff write', { as: 'permissive', for: 'all', to: ['authenticated'] }),
   ],
 );
