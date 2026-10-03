@@ -1,0 +1,14 @@
+// Rich text fields (libs/admin/fields). Tiptap renders the editable element itself, so its rules cannot
+// live in a component. It already looks like a Bootstrap .form-control, focus ring included.
+
+.nv-rich-text {
+  min-height: 8rem;
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}

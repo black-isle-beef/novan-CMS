@@ -1,0 +1,72 @@
+<fieldset class="mb-3" [id]="id()" tabindex="-1" [attr.aria-describedby]="describedBy()">
+  <legend class="form-label fs-6 mb-1">
+    {{ field().label }}
+    @if (field().required) {
+      <span class="text-body-secondary">(required)</span>
+    }
+  </legend>
+  <nv-field-messages [help]="field().help" [helpId]="helpId()" [errors]="errors()" [errorId]="errorId()" />
+
+  @for (item of items(); track $index; let i = $index) {
+    <div class="border rounded p-3 mt-2">
+      @if (field().multiple) {
+        <p class="fw-semibold mb-2">Item {{ i + 1 }}</p>
+      }
+      <div class="mb-2">
+        <label class="form-label" [for]="id() + '-asset-' + i">Asset id</label>
+        <input
+          type="text"
+          class="form-control font-monospace"
+          spellcheck="false"
+          autocomplete="off"
+          [id]="id() + '-asset-' + i"
+          [class.is-invalid]="errorsAt(itemPath(i) + '.assetId').length"
+          [value]="item.assetId"
+          [disabled]="disabled()"
+          [attr.aria-describedby]="id() + '-asset-' + i + '-help'"
+          (input)="setAsset(i, $event)"
+        />
+        <nv-field-messages
+          help="Paste the id of an uploaded file."
+          [helpId]="id() + '-asset-' + i + '-help'"
+          [errors]="errorsAt(itemPath(i) + '.assetId')"
+          [errorId]="id() + '-asset-' + i + '-error'"
+        />
+      </div>
+      <div class="mb-2">
+        <label class="form-label" [for]="id() + '-alt-' + i">
+          Alternative text
+          @if (field().requireAlt) {
+            <span class="text-body-secondary">(required)</span>
+          }
+        </label>
+        <input
+          type="text"
+          class="form-control"
+          [id]="id() + '-alt-' + i"
+          [class.is-invalid]="errorsAt(itemPath(i) + '.alt').length"
+          [value]="item.alt ?? ''"
+          [disabled]="disabled()"
+          [attr.aria-describedby]="id() + '-alt-' + i + '-help'"
+          (input)="setAlt(i, $event)"
+        />
+        <nv-field-messages
+          [help]="altHint()"
+          [helpId]="id() + '-alt-' + i + '-help'"
+          [errors]="errorsAt(itemPath(i) + '.alt')"
+          [errorId]="id() + '-alt-' + i + '-error'"
+        />
+      </div>
+      @if (field().multiple && !disabled()) {
+        <button type="button" class="btn btn-sm btn-outline-danger" (click)="remove(i)">
+          Remove item {{ i + 1 }}<span class="visually-hidden"> from {{ field().label }}</span>
+        </button>
+      }
+    </div>
+  }
+  @if (field().multiple && !disabled()) {
+    <button type="button" class="btn btn-sm btn-outline-primary mt-2" (click)="add()">
+      Add an item<span class="visually-hidden"> to {{ field().label }}</span>
+    </button>
+  }
+</fieldset>

@@ -24,7 +24,10 @@
       "@novan/api-spaces": ["./libs/api/spaces/src/index.ts"],
       "@novan/api-common": ["./libs/api/common/src/index.ts"],
       "@novan/api-content-model": ["./libs/api/content-model/src/index.ts"],
+      "@novan/api-content": ["./libs/api/content/src/index.ts"],
       "@novan/admin-auth": ["./libs/admin/auth/src/index.ts"],
+      "@novan/admin-content": ["./libs/admin/content/src/index.ts"],
+      "@novan/admin-fields": ["./libs/admin/fields/src/index.ts"],
       "@novan/admin-schema": ["./libs/admin/schema/src/index.ts"],
       "@novan/admin-spaces": ["./libs/admin/spaces/src/index.ts"]
     }

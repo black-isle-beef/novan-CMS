@@ -1,0 +1,84 @@
+<ds-offcanvas [(open)]="open" placement="end" heading="Version history" closeButtonLabel="Close version history">
+  @if (loadError(); as message) {
+    <ds-alert variant="danger">{{ message }}</ds-alert>
+  } @else if (versions(); as list) {
+    <p class="text-body-secondary">
+      Every save is kept. Restoring a version makes it the current draft; nothing goes live until it is published.
+    </p>
+
+    @if (comparison(); as c) {
+      <section id="version-comparison" tabindex="-1" class="border rounded p-3 mb-3" aria-labelledby="version-comparison-heading">
+        <h3 id="version-comparison-heading" class="h6">Changes since {{ time(c.version) }}</h3>
+        @if (c.error) {
+          <ds-alert variant="danger">{{ c.error }}</ds-alert>
+        } @else if (c.changes === null) {
+          <ds-spinner label="Comparing versions" />
+        } @else if (c.changes.length) {
+          <ul class="mb-0">
+            @for (change of c.changes; track $index) {
+              <li>{{ change }}</li>
+            }
+          </ul>
+        } @else {
+          <p class="mb-0">No differences from the current version.</p>
+        }
+      </section>
+    }
+
+    @if (confirming(); as version) {
+      <section id="version-restore-confirm" tabindex="-1" class="border border-warning rounded p-3 mb-3" aria-labelledby="version-restore-heading">
+        <h3 id="version-restore-heading" class="h6">Restore the version from {{ time(version) }}?</h3>
+        <p class="mb-2">
+          It becomes the current draft. The current version stays in the history.
+          @if (hasUnsavedChanges()) {
+            <strong>Changes you have not saved will be lost.</strong>
+          }
+        </p>
+        @if (restoreError(); as message) {
+          <ds-alert variant="danger" class="mb-2">{{ message }}</ds-alert>
+        }
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-primary btn-sm" (click)="restore()">Restore this version</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="confirming.set(null)">Cancel</button>
+        </div>
+      </section>
+    }
+
+    <ol class="list-unstyled mb-0">
+      @for (version of list; track version.id) {
+        <li class="border-bottom py-2">
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <time class="fw-semibold" [attr.datetime]="version.createdAt">{{ time(version) }}</time>
+            @if (version.current) {
+              <ds-badge variant="primary">Current</ds-badge>
+            }
+            @if (version.published) {
+              <ds-badge variant="secondary">Published</ds-badge>
+            }
+            @if (version.autosave) {
+              <ds-badge variant="neutral">Saved automatically</ds-badge>
+            }
+          </div>
+          <div class="small text-body-secondary">by {{ version.createdByName ?? 'a team member' }}</div>
+          @if (version.message) {
+            <p class="mb-1">{{ version.message }}</p>
+          }
+          @if (!version.current) {
+            <div class="d-flex flex-wrap gap-2 mt-1">
+              <button type="button" class="btn btn-sm btn-outline-secondary" (click)="compare(version)">
+                Compare with current<span class="visually-hidden"> ({{ time(version) }})</span>
+              </button>
+              @if (canRestore()) {
+                <button type="button" class="btn btn-sm btn-outline-primary" (click)="askRestore(version)">
+                  Restore<span class="visually-hidden"> the version from {{ time(version) }}</span>
+                </button>
+              }
+            </div>
+          }
+        </li>
+      }
+    </ol>
+  } @else {
+    <ds-spinner label="Loading versions" />
+  }
+</ds-offcanvas>

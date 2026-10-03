@@ -1,0 +1,18 @@
+<div class="mb-3">
+  <div class="form-check form-switch">
+    <input
+      type="checkbox"
+      role="switch"
+      class="form-check-input"
+      [id]="id()"
+      [class.is-invalid]="invalid()"
+      [checked]="checked()"
+      [disabled]="disabled()"
+      [attr.aria-describedby]="describedBy()"
+      [attr.aria-invalid]="invalid() || null"
+      (change)="set($event)"
+    />
+    <label class="form-check-label" [for]="id()">{{ field().label }}</label>
+  </div>
+  <nv-field-messages [help]="field().help" [helpId]="helpId()" [errors]="errors()" [errorId]="errorId()" />
+</div>

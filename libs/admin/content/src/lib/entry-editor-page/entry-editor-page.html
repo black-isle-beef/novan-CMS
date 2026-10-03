@@ -1,0 +1,134 @@
+<nav aria-label="Breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'content']">Content</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ loading() ? 'Loading' : title() }}</li>
+  </ol>
+</nav>
+
+@if (loadError(); as message) {
+  <h1>Not found</h1>
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (loading()) {
+  <ds-spinner label="Loading the page" />
+} @else if (entry(); as e) {
+  @if (contentType(); as type) {
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-2">
+      <div>
+        <h1 class="mb-1">{{ title() }}</h1>
+        <p class="text-body-secondary mb-2">
+          {{ type.name }} at <code>{{ e.path }}</code>
+          @if (e.publishedPath && e.publishedPath !== e.path) {
+            (live at <code>{{ e.publishedPath }}</code> until published)
+          }
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+          @for (badge of badges(); track badge.label) {
+            <ds-badge [variant]="badge.variant">{{ badge.label }}</ds-badge>
+          }
+          @if (dirty() && canEdit()) {
+            <ds-badge variant="info">Unsaved changes</ds-badge>
+          }
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        @if (canEdit()) {
+          <button type="button" class="btn btn-outline-primary" [disabled]="busy() !== null" (click)="save()">Save draft</button>
+        }
+        @if (canPublish()) {
+          <button type="button" class="btn btn-primary" [disabled]="busy() !== null" (click)="publish()">
+            {{ published() ? 'Publish changes' : 'Publish' }}
+          </button>
+          @if (published()) {
+            <button type="button" class="btn btn-outline-secondary" [disabled]="busy() !== null" (click)="unpublish()">Unpublish</button>
+          }
+        }
+        <button type="button" class="btn btn-outline-secondary" (click)="historyOpen.set(true)">Version history</button>
+      </div>
+    </div>
+
+    <p class="small text-body-secondary mb-3" role="status">{{ saveState() }}</p>
+
+    @if (!canEdit()) {
+      <ds-alert variant="info" class="mb-3">You can look at this page, but your role cannot change it.</ds-alert>
+    }
+
+    @if (status(); as message) {
+      <div id="entry-status" tabindex="-1" class="mb-3">
+        <ds-alert variant="success">{{ message }}</ds-alert>
+      </div>
+    }
+    @if (problem(); as message) {
+      <div id="entry-problem" tabindex="-1" class="mb-3">
+        <ds-alert variant="danger">{{ message }}</ds-alert>
+      </div>
+    }
+    @if (summary(); as s) {
+      <div id="entry-errors" tabindex="-1" class="mb-3">
+        <ds-alert variant="danger" [title]="s.check === 'publish' ? 'Fix these before publishing' : 'Fix these before saving'">
+          <ul class="mb-0">
+            @for (item of s.items; track $index) {
+              <li><a [href]="item.href">{{ item.text }}</a></li>
+            }
+          </ul>
+        </ds-alert>
+      </div>
+    }
+
+    <form class="col-lg-8 mb-5" novalidate [attr.aria-label]="title()" (submit)="$event.preventDefault(); save()">
+      <nv-field-form [fields]="type.fields" [value]="data()" (valueChange)="setData($event)" />
+    </form>
+
+    <section class="col-lg-8 mb-5" aria-labelledby="entry-settings-heading">
+      <h2 id="entry-settings-heading" class="h4">Settings</h2>
+      <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
+        <div>
+          <label for="entry-folder" class="form-label">Folder</label>
+          <select
+            id="entry-folder"
+            class="form-select"
+            [disabled]="!canMove()"
+            [attr.aria-describedby]="published() ? 'entry-folder-hint' : null"
+            (change)="setMoveTo($event)"
+          >
+            <option value="" [selected]="!moveTo()">Top level</option>
+            @for (folder of folders(); track folder.id) {
+              <option [value]="folder.id" [selected]="moveTo() === folder.id">{{ folder.name }} ({{ folder.path }})</option>
+            }
+          </select>
+        </div>
+        @if (canMove()) {
+          <button type="button" class="btn btn-outline-primary" [disabled]="moveTo() === e.folderId || busy() !== null" (click)="move()">
+            Move
+          </button>
+        }
+      </div>
+      @if (published()) {
+        <p id="entry-folder-hint" class="form-text mt-0">Moving a published page changes its address on the site straight away.</p>
+      }
+      @if (canPublish()) {
+        <button type="button" class="btn btn-outline-danger" (click)="confirmingDelete.set(true)">Delete</button>
+      }
+    </section>
+
+    <nv-version-history
+      [(open)]="historyOpen"
+      [spaceId]="spaceId()"
+      [entry]="e"
+      [contentType]="type"
+      [blockTypes]="blockTypes()"
+      [canRestore]="canEdit()"
+      [hasUnsavedChanges]="dirty()"
+      (restored)="restored($event)"
+    />
+  }
+}
+
+<ds-modal [open]="confirmingDelete()" (openChange)="!$event && confirmingDelete.set(false)" [heading]="'Delete ' + title() + '?'" size="sm">
+  <p class="mb-0">
+    It goes to the bin{{ published() ? ' and comes off the site' : '' }}. You can restore it from the bin for 30 days.
+  </p>
+  <div dsModalFooter class="d-flex justify-content-end gap-2">
+    <ds-button variant="secondary" (pressed)="confirmingDelete.set(false)">Cancel</ds-button>
+    <ds-button variant="danger" (pressed)="remove()">Delete</ds-button>
+  </div>
+</ds-modal>

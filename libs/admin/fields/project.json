@@ -1,0 +1,21 @@
+{
+  "name": "admin-fields",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/admin/fields/src",
+  "prefix": "nv",
+  "projectType": "library",
+  "tags": ["scope:admin", "type:ui"],
+  "targets": {
+    "test": {
+      "executor": "@nx/angular:unit-test",
+      "options": {
+        "watch": false,
+        "buildTarget": "admin:build:development",
+        "tsConfig": "libs/admin/fields/tsconfig.spec.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

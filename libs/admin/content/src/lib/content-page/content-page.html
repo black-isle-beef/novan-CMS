@@ -1,0 +1,238 @@
+<h1 class="mb-1">Content</h1>
+<p class="lead text-muted mb-4">Pages and other content of {{ context.currentSpace()?.name ?? 'this space' }}.</p>
+
+@if (status(); as message) {
+  <div id="content-status" tabindex="-1" class="mb-3">
+    <ds-alert variant="success">{{ message }}</ds-alert>
+  </div>
+}
+@if (actionError(); as message) {
+  <div id="content-error" tabindex="-1" class="mb-3">
+    <ds-alert variant="danger">{{ message }}</ds-alert>
+  </div>
+}
+
+@if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (loading()) {
+  <ds-spinner label="Loading content" />
+} @else {
+  <div class="d-flex flex-wrap align-items-end gap-3 mb-4">
+    <div class="flex-grow-1">
+      <label for="content-search" class="form-label">Search</label>
+      <input
+        id="content-search"
+        type="search"
+        class="form-control"
+        aria-describedby="content-search-hint"
+        [value]="search()"
+        (input)="setSearch($event)"
+      />
+      <div id="content-search-hint" class="form-text">Find a page by its title or address.</div>
+    </div>
+    @if (canEdit()) {
+      <div class="d-flex gap-2 mb-4">
+        <button type="button" class="btn btn-primary" [disabled]="!contentTypes().length" (click)="openNew()">New page</button>
+        <button type="button" class="btn btn-outline-primary" (click)="openNewFolder()">New folder</button>
+      </div>
+    }
+  </div>
+
+  @if (results(); as found) {
+    <section aria-labelledby="results-heading">
+      <h2 id="results-heading" class="h5" aria-live="polite">
+        {{ found.length === 1 ? '1 result' : found.length + ' results' }}
+      </h2>
+      <ul class="list-unstyled">
+        @for (entry of found; track entry.id) {
+          <li class="d-flex flex-wrap align-items-center gap-2 py-1">
+            <a [routerLink]="['/spaces', spaceId(), 'content', entry.id]">{{ entry.title }}</a>
+            <span class="text-body-secondary small">{{ entry.path }}</span>
+            @for (badge of statusBadges(entry); track badge.label) {
+              <ds-badge [variant]="badge.variant">{{ badge.label }}</ds-badge>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+  } @else {
+    <section aria-labelledby="tree-heading" class="mb-5">
+      <h2 id="tree-heading" class="visually-hidden">All pages</h2>
+      @if (tree().folders.length || tree().entries.length) {
+        <nv-page-tree
+          [spaceId]="spaceId()"
+          [folders]="tree().folders"
+          [entries]="tree().entries"
+          [canManageFolders]="canPublish()"
+          (renameFolder)="openRename($event)"
+          (deleteFolder)="deletingFolder.set($event)"
+        />
+      } @else {
+        <p>Nothing here yet.{{ canEdit() ? ' Create the first page.' : '' }}</p>
+      }
+    </section>
+  }
+
+  @if (bin().length) {
+    <details class="mt-4">
+      <summary class="mb-2">Bin ({{ bin().length }})</summary>
+      <p class="text-body-secondary">Deleted pages stay here for 30 days.</p>
+      <ul class="list-unstyled">
+        @for (entry of bin(); track entry.id) {
+          <li class="d-flex flex-wrap align-items-center gap-2 py-1">
+            <span>{{ entry.title }}</span>
+            <span class="text-body-secondary small">{{ entry.path }}</span>
+            @if (canPublish()) {
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="restore(entry)">
+                Restore<span class="visually-hidden"> {{ entry.title }}</span>
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    </details>
+  }
+}
+
+<ds-modal [open]="creating()" (openChange)="!$event && creating.set(false)" heading="New page" size="md">
+  <form novalidate (submit)="$event.preventDefault(); create()">
+    <div class="mb-3">
+      <label for="new-entry-type" class="form-label">Type</label>
+      <select id="new-entry-type" class="form-select" (change)="setNewType($event)">
+        @for (type of contentTypes(); track type.apiId) {
+          <option [value]="type.apiId" [selected]="newType() === type.apiId">{{ type.name }}</option>
+        }
+      </select>
+    </div>
+    <div class="mb-3">
+      <label for="new-entry-title" class="form-label">Title</label>
+      <input
+        id="new-entry-title"
+        type="text"
+        class="form-control"
+        required
+        [class.is-invalid]="newSubmitted() && newIssues()['title']"
+        [value]="newTitle()"
+        [attr.aria-invalid]="(newSubmitted() && !!newIssues()['title']) || null"
+        [attr.aria-describedby]="newSubmitted() && newIssues()['title'] ? 'new-entry-title-error' : null"
+        (input)="setNewTitle($event)"
+      />
+      @if (newSubmitted() && newIssues()['title']; as messages) {
+        <div id="new-entry-title-error" class="invalid-feedback d-block">{{ messages.join(' ') }}</div>
+      }
+    </div>
+    <div class="mb-3">
+      <label for="new-entry-slug" class="form-label">Slug</label>
+      <input
+        id="new-entry-slug"
+        type="text"
+        class="form-control font-monospace"
+        spellcheck="false"
+        autocomplete="off"
+        required
+        [class.is-invalid]="newSubmitted() && newIssues()['slug']"
+        [value]="newSlug()"
+        [attr.aria-invalid]="(newSubmitted() && !!newIssues()['slug']) || null"
+        [attr.aria-describedby]="'new-entry-slug-hint' + (newSubmitted() && newIssues()['slug'] ? ' new-entry-slug-error' : '')"
+        (input)="setNewSlug($event)"
+      />
+      <div id="new-entry-slug-hint" class="form-text">The last part of the page address, like about-us.</div>
+      @if (newSubmitted() && newIssues()['slug']; as messages) {
+        <div id="new-entry-slug-error" class="invalid-feedback d-block">{{ messages.join(' ') }}</div>
+      }
+    </div>
+    <div class="mb-3">
+      <label for="new-entry-folder" class="form-label">Folder</label>
+      <select id="new-entry-folder" class="form-select" (change)="setNewFolder($event)">
+        <option value="" [selected]="!newFolderId()">Top level</option>
+        @for (folder of folders(); track folder.id) {
+          <option [value]="folder.id" [selected]="newFolderId() === folder.id">{{ folder.name }} ({{ folder.path }})</option>
+        }
+      </select>
+    </div>
+    <div class="d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-outline-secondary" (click)="creating.set(false)">Cancel</button>
+      <button type="submit" class="btn btn-primary">Create page</button>
+    </div>
+  </form>
+</ds-modal>
+
+<ds-modal
+  [open]="folderDialog() !== null"
+  (openChange)="!$event && folderDialog.set(null)"
+  [heading]="folderDialog()?.folder ? 'Rename folder' : 'New folder'"
+  size="md"
+>
+  @if (folderDialog(); as dialog) {
+    <form novalidate (submit)="$event.preventDefault(); saveFolder()">
+      @if (dialog.folder) {
+        <ds-alert variant="info" class="mb-3">
+          Changing the slug or parent changes the address of every page inside, including published ones.
+        </ds-alert>
+      }
+      <div class="mb-3">
+        <label for="folder-name" class="form-label">Name</label>
+        <input
+          id="folder-name"
+          type="text"
+          class="form-control"
+          required
+          [class.is-invalid]="folderSubmitted() && folderIssues()['name']"
+          [value]="dialog.name"
+          [attr.aria-invalid]="(folderSubmitted() && !!folderIssues()['name']) || null"
+          [attr.aria-describedby]="folderSubmitted() && folderIssues()['name'] ? 'folder-name-error' : null"
+          (input)="setFolderName($event)"
+        />
+        @if (folderSubmitted() && folderIssues()['name']; as messages) {
+          <div id="folder-name-error" class="invalid-feedback d-block">{{ messages.join(' ') }}</div>
+        }
+      </div>
+      <div class="mb-3">
+        <label for="folder-slug" class="form-label">Slug</label>
+        <input
+          id="folder-slug"
+          type="text"
+          class="form-control font-monospace"
+          spellcheck="false"
+          autocomplete="off"
+          required
+          [class.is-invalid]="folderSubmitted() && folderIssues()['slug']"
+          [value]="dialog.slug"
+          [attr.aria-invalid]="(folderSubmitted() && !!folderIssues()['slug']) || null"
+          [attr.aria-describedby]="'folder-slug-hint' + (folderSubmitted() && folderIssues()['slug'] ? ' folder-slug-error' : '')"
+          (input)="setFolderSlug($event)"
+        />
+        <div id="folder-slug-hint" class="form-text">Part of the address of every page inside, like blog.</div>
+        @if (folderSubmitted() && folderIssues()['slug']; as messages) {
+          <div id="folder-slug-error" class="invalid-feedback d-block">{{ messages.join(' ') }}</div>
+        }
+      </div>
+      <div class="mb-3">
+        <label for="folder-parent" class="form-label">Inside</label>
+        <select id="folder-parent" class="form-select" (change)="setFolderParent($event)">
+          <option value="" [selected]="!dialog.parentId">Top level</option>
+          @for (folder of parentChoices(dialog); track folder.id) {
+            <option [value]="folder.id" [selected]="dialog.parentId === folder.id">{{ folder.name }} ({{ folder.path }})</option>
+          }
+        </select>
+      </div>
+      <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-outline-secondary" (click)="folderDialog.set(null)">Cancel</button>
+        <button type="submit" class="btn btn-primary">{{ dialog.folder ? 'Save folder' : 'Add folder' }}</button>
+      </div>
+    </form>
+  }
+</ds-modal>
+
+<ds-modal
+  [open]="deletingFolder() !== null"
+  (openChange)="!$event && deletingFolder.set(null)"
+  [heading]="'Delete the ' + (deletingFolder()?.name ?? '') + ' folder?'"
+  size="sm"
+>
+  <p class="mb-0">Only empty folders can be deleted. Pages from it that are in the bin move to the top level.</p>
+  <div dsModalFooter class="d-flex justify-content-end gap-2">
+    <ds-button variant="secondary" (pressed)="deletingFolder.set(null)">Cancel</ds-button>
+    <ds-button variant="danger" (pressed)="deleteFolder()">Delete</ds-button>
+  </div>
+</ds-modal>

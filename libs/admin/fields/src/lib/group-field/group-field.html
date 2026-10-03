@@ -1,0 +1,49 @@
+<fieldset class="mb-3" [id]="id()" tabindex="-1" [attr.aria-describedby]="describedBy()">
+  <legend class="form-label fs-6 fw-semibold mb-1">
+    {{ field().label }}
+    @if (field().required) {
+      <span class="text-body-secondary fw-normal">(required)</span>
+    }
+  </legend>
+  <nv-field-messages [help]="field().help" [hint]="hint()" [helpId]="helpId()" [errors]="errors()" [errorId]="errorId()" />
+
+  @if (field().multiple) {
+    @if (items().length) {
+      <ol class="list-unstyled mb-2">
+        @for (item of items(); track $index; let i = $index, first = $first, last = $last) {
+          <li class="border rounded p-3 mb-2">
+            <fieldset [id]="id() + '-item-' + i" tabindex="-1">
+              <legend class="fs-6 fw-semibold">Item {{ i + 1 }}</legend>
+              <nv-field-form [fields]="field().fields" [path]="itemPath(i)" [value]="item" (valueChange)="setItem(i, $event)" />
+            </fieldset>
+            @if (!disabled()) {
+              <div class="d-flex flex-wrap gap-1">
+                <button type="button" class="btn btn-sm btn-outline-secondary" [id]="id() + '-up-' + i" [disabled]="first" (click)="move(i, -1)">
+                  <i class="bi bi-arrow-up" aria-hidden="true"></i>
+                  <span class="visually-hidden">Move item {{ i + 1 }} up</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" [id]="id() + '-down-' + i" [disabled]="last" (click)="move(i, 1)">
+                  <i class="bi bi-arrow-down" aria-hidden="true"></i>
+                  <span class="visually-hidden">Move item {{ i + 1 }} down</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" (click)="remove(i)">
+                  Remove item {{ i + 1 }}<span class="visually-hidden"> from {{ field().label }}</span>
+                </button>
+              </div>
+            }
+          </li>
+        }
+      </ol>
+    } @else {
+      <p class="text-body-secondary">None yet.</p>
+    }
+    <div class="visually-hidden" role="status">{{ announcement() }}</div>
+    @if (!disabled()) {
+      <button type="button" class="btn btn-sm btn-outline-primary" [id]="id() + '-add'" (click)="add()">
+        Add an item<span class="visually-hidden"> to {{ field().label }}</span>
+      </button>
+    }
+  } @else {
+    <nv-field-form [fields]="field().fields" [path]="path()" [value]="object()" (valueChange)="value.set($event)" />
+  }
+</fieldset>

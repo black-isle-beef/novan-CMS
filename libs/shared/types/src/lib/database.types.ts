@@ -74,6 +74,80 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"entries": {
+                  Row: {
+                    "content_type_id": string,"created_at": string,"created_by": string | null,"current_version_id": string | null,"deleted_at": string | null,"environment_id": string,"folder_id": string | null,"id": string,"locale": string,"published_at": string | null,"published_version_id": string | null,"slug": string,"space_id": string,"status": string,"updated_at": string
+                  }
+                  Insert: {
+                    "content_type_id": string,"created_at"?: string,"created_by"?: string | null,"current_version_id"?: string | null,"deleted_at"?: string | null,"environment_id": string,"folder_id"?: string | null,"id"?: string,"locale": string,"published_at"?: string | null,"published_version_id"?: string | null,"slug": string,"space_id": string,"status"?: string,"updated_at"?: string
+                  }
+                  Update: {
+                    "content_type_id"?: string,"created_at"?: string,"created_by"?: string | null,"current_version_id"?: string | null,"deleted_at"?: string | null,"environment_id"?: string,"folder_id"?: string | null,"id"?: string,"locale"?: string,"published_at"?: string | null,"published_version_id"?: string | null,"slug"?: string,"space_id"?: string,"status"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "entries_content_type_id_environment_id_fkey"
+      columns: ["content_type_id","environment_id"]
+isOneToOne: false
+      referencedRelation: "content_types"
+      referencedColumns: ["id","environment_id"]
+    },{
+      foreignKeyName: "entries_current_version_id_id_fkey"
+      columns: ["current_version_id","id"]
+isOneToOne: false
+      referencedRelation: "entry_versions"
+      referencedColumns: ["id","entry_id"]
+    },{
+      foreignKeyName: "entries_environment_id_space_id_fkey"
+      columns: ["environment_id","space_id"]
+isOneToOne: false
+      referencedRelation: "environments"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "entries_folder_id_environment_id_fkey"
+      columns: ["folder_id","environment_id"]
+isOneToOne: false
+      referencedRelation: "folders"
+      referencedColumns: ["id","environment_id"]
+    },{
+      foreignKeyName: "entries_published_version_id_id_fkey"
+      columns: ["published_version_id","id"]
+isOneToOne: false
+      referencedRelation: "entry_versions"
+      referencedColumns: ["id","entry_id"]
+    },{
+      foreignKeyName: "entries_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"entry_versions": {
+                  Row: {
+                    "autosave": boolean,"created_at": string,"created_by": string | null,"data": NonNullable<Json>,"entry_id": string,"id": string,"message": string | null,"space_id": string
+                  }
+                  Insert: {
+                    "autosave"?: boolean,"created_at"?: string,"created_by"?: string | null,"data": NonNullable<Json>,"entry_id": string,"id"?: string,"message"?: string | null,"space_id": string
+                  }
+                  Update: {
+                    "autosave"?: boolean,"created_at"?: string,"created_by"?: string | null,"data"?: NonNullable<Json>,"entry_id"?: string,"id"?: string,"message"?: string | null,"space_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "entry_versions_entry_id_space_id_fkey"
+      columns: ["entry_id","space_id"]
+isOneToOne: false
+      referencedRelation: "entries"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "entry_versions_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"environments": {
                   Row: {
                     "cloned_from_id": string | null,"created_at": string,"id": string,"is_main": boolean,"name": string,"space_id": string
@@ -93,6 +167,37 @@ isOneToOne: false
       referencedColumns: ["id","space_id"]
     },{
       foreignKeyName: "environments_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"folders": {
+                  Row: {
+                    "created_at": string,"environment_id": string,"id": string,"name": string,"parent_id": string | null,"path": string,"slug": string,"space_id": string,"updated_at": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"environment_id": string,"id"?: string,"name": string,"parent_id"?: string | null,"path"?: string,"slug": string,"space_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"environment_id"?: string,"id"?: string,"name"?: string,"parent_id"?: string | null,"path"?: string,"slug"?: string,"space_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "folders_environment_id_space_id_fkey"
+      columns: ["environment_id","space_id"]
+isOneToOne: false
+      referencedRelation: "environments"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "folders_parent_id_environment_id_fkey"
+      columns: ["parent_id","environment_id"]
+isOneToOne: false
+      referencedRelation: "folders"
+      referencedColumns: ["id","environment_id"]
+    },{
+      foreignKeyName: "folders_space_id_fkey"
       columns: ["space_id"]
 isOneToOne: false
       referencedRelation: "spaces"
@@ -149,6 +254,43 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"published_content": {
+                  Row: {
+                    "cache_tags": (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"locale": string,"published_at": string,"space_id": string
+                  }
+                  Insert: {
+                    "cache_tags"?: (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"locale": string,"published_at": string,"space_id": string
+                  }
+                  Update: {
+                    "cache_tags"?: (string)[],"content_type_api_id"?: string,"data"?: NonNullable<Json>,"entry_id"?: string,"environment_id"?: string,"full_path"?: string,"locale"?: string,"published_at"?: string,"space_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "published_content_entry_id_environment_id_fkey"
+      columns: ["entry_id","environment_id"]
+isOneToOne: false
+      referencedRelation: "entries"
+      referencedColumns: ["id","environment_id"]
+    },{
+      foreignKeyName: "published_content_entry_id_space_id_fkey"
+      columns: ["entry_id","space_id"]
+isOneToOne: false
+      referencedRelation: "entries"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "published_content_environment_id_space_id_fkey"
+      columns: ["environment_id","space_id"]
+isOneToOne: false
+      referencedRelation: "environments"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "published_content_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"roles": {
                   Row: {

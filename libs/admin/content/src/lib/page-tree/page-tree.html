@@ -1,0 +1,59 @@
+<ul class="list-unstyled mb-0">
+  @for (node of folders(); track node.folder.id) {
+    <li class="mb-1">
+      <div class="d-flex flex-wrap align-items-center gap-2 py-1">
+        <button
+          type="button"
+          class="btn btn-link text-body text-decoration-none p-0 d-inline-flex align-items-center gap-2"
+          [attr.aria-expanded]="isOpen(node.folder)"
+          [attr.aria-controls]="'folder-' + node.folder.id"
+          (click)="toggle(node.folder)"
+        >
+          <i [class]="isOpen(node.folder) ? 'bi bi-folder2-open' : 'bi bi-folder'" aria-hidden="true"></i>
+          <span class="fw-semibold">{{ node.folder.name }}</span>
+          <span class="visually-hidden"> folder</span>
+        </button>
+        <span class="text-body-secondary small">{{ node.folder.path }}</span>
+        @if (canManageFolders()) {
+          <span class="d-inline-flex gap-1 ms-auto">
+            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="renameFolder.emit(node.folder)">
+              Rename<span class="visually-hidden"> {{ node.folder.name }} folder</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger" (click)="deleteFolder.emit(node.folder)">
+              Delete<span class="visually-hidden"> {{ node.folder.name }} folder</span>
+            </button>
+          </span>
+        }
+      </div>
+      @if (isOpen(node.folder)) {
+        <div class="ps-4 border-start ms-2" [id]="'folder-' + node.folder.id">
+          @if (node.folders.length || node.entries.length) {
+            <nv-page-tree
+              [spaceId]="spaceId()"
+              [folders]="node.folders"
+              [entries]="node.entries"
+              [canManageFolders]="canManageFolders()"
+              (renameFolder)="renameFolder.emit($event)"
+              (deleteFolder)="deleteFolder.emit($event)"
+            />
+          } @else {
+            <p class="text-body-secondary small py-1 mb-0">Empty folder.</p>
+          }
+        </div>
+      }
+    </li>
+  }
+  @for (entry of entries(); track entry.id) {
+    <li class="d-flex flex-wrap align-items-center gap-2 py-1">
+      <i class="bi bi-file-earmark-text text-body-secondary" aria-hidden="true"></i>
+      <a [routerLink]="['/spaces', spaceId(), 'content', entry.id]">{{ entry.title }}</a>
+      <span class="text-body-secondary small">{{ entry.path }}</span>
+      @if (entry.kind !== 'page') {
+        <ds-badge variant="info">{{ entry.contentTypeName }}</ds-badge>
+      }
+      @for (badge of statusBadges(entry); track badge.label) {
+        <ds-badge [variant]="badge.variant">{{ badge.label }}</ds-badge>
+      }
+    </li>
+  }
+</ul>

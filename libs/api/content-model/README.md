@@ -11,7 +11,8 @@ Content types and block types (package 05), under
   deleted (409 `content_type_in_use` / `block_type_in_use`).
 - A change that would make existing entries invalid answers 409 `entries_invalidated` with
   `affectedEntries`, unless sent with `?force=true`. Entries are read through the `ENTRY_SOURCE`
-  provider, which is empty until package 06 adds the entries table.
+  provider (`DbEntrySource`: each live entry's current version, under the caller's RLS). Forcing the
+  deletion of a content type deletes its entries (package 06).
 - Every write records an audit event in the same transaction.
 
 Run `nx test api-content-model` (pure model checks) and `nx test api` (HTTP and database).

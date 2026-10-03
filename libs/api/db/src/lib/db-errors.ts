@@ -16,5 +16,8 @@ export const isUniqueViolation = (error: unknown, constraint?: string): boolean 
 
 export const isForeignKeyViolation = (error: unknown): boolean => pgError(error).code === '23503';
 
+/** A `check` constraint, or a trigger raising `check_violation`. */
+export const isCheckViolation = (error: unknown): boolean => pgError(error).code === '23514';
+
 /** RLS `with check` failure or a missing privilege. */
 export const isInsufficientPrivilege = (error: unknown): boolean => pgError(error).code === '42501';
