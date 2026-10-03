@@ -33,7 +33,7 @@ export class AuthService {
   readonly passwordRecovery = signal(false);
 
   constructor() {
-    // getSession() waits for the client to read any tokens from the URL fragment first.
+    // getSession() waits for the client to read tokens from the URL fragment first.
     this.ready = this.auth.getSession().then(({ data }) => this.sessionState.set(data.session));
     this.auth.onAuthStateChange((event, session) => {
       this.sessionState.set(session);

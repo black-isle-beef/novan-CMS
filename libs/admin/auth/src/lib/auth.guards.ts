@@ -13,7 +13,7 @@ export const requireSignedIn: CanActivateFn = async (_, state) => {
   return true;
 };
 
-/** Signed in at any assurance level (the two-step page itself). */
+/** Signed in at either assurance level (the two-step page itself). */
 export const requireSession: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
