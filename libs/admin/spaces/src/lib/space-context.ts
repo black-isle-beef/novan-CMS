@@ -4,6 +4,7 @@ import type { SpaceSummary } from '@novan/shared-schemas';
 import { firstValueFrom } from 'rxjs';
 import { ManagementApi } from './management-api';
 import { problemMessage } from './problem';
+import { canModel } from './can-model';
 
 /** The spaces the signed-in user can open, and the one they are working in. */
 @Injectable({ providedIn: 'root' })
@@ -18,6 +19,11 @@ export class SpaceContext {
 
   /** Whether the user can manage people in the current space (space admin, or agency staff). */
   readonly canManageCurrent = computed(() => this.auth.agencyStaff() || this.currentSpace()?.role === 'admin');
+
+  /** Whether the user can see and change the current space's content model (admin, developer, agency staff). */
+  readonly canModelCurrent = computed(
+    () => this.currentSpace() !== null && canModel(this.currentSpace()?.role, this.auth.agencyStaff()),
+  );
 
   async load(): Promise<void> {
     try {

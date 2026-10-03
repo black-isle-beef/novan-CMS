@@ -9,6 +9,8 @@ export interface ProblemDetails {
   detail?: string;
   /** Field-level validation errors, keyed by dotted path. */
   errors?: Record<string, string[]>;
+  /** Extension members specific to `code`, e.g. `affectedEntries` (RFC 9457 section 3.2). */
+  [extension: string]: unknown;
 }
 
 /** Throw from services and guards; {@link ProblemDetailsFilter} renders it as `application/problem+json`. */
@@ -19,6 +21,7 @@ export class ProblemException extends HttpException {
     title: string,
     detail?: string,
     readonly errors?: Record<string, string[]>,
+    readonly extensions?: Record<string, unknown>,
   ) {
     super({ title, detail }, status);
   }
@@ -26,6 +29,7 @@ export class ProblemException extends HttpException {
   toProblem(): ProblemDetails {
     const { title, detail } = this.getResponse() as { title: string; detail?: string };
     return {
+      ...this.extensions,
       type: 'about:blank',
       title,
       status: this.getStatus(),

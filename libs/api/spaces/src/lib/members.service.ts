@@ -1,10 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { conflict, notFound } from '@novan/api-common';
 import { type AuthUser, SupabaseAdmin } from '@novan/api-auth';
-import { DbService, type DbTransaction, members, profiles, recordAudit, roles, users } from '@novan/api-db';
+import {
+  DbService,
+  type DbTransaction,
+  isForeignKeyViolation,
+  isUniqueViolation,
+  members,
+  profiles,
+  recordAudit,
+  roles,
+  users,
+} from '@novan/api-db';
 import type { InviteRequest, Member, SpaceRole } from '@novan/shared-schemas';
 import { and, asc, count, eq, sql } from 'drizzle-orm';
-import { isForeignKeyViolation, isUniqueViolation } from './db-errors';
 
 @Injectable()
 export class MembersService {

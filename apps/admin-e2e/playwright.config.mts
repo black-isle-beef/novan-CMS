@@ -45,8 +45,9 @@ export default defineConfig({
       timeout: 180_000,
     },
   ],
-  // Browsers run one after another: each signs the seeded agency user in with MFA, and Supabase Auth
-  // ends that user's other password-only sessions when a second factor is verified.
+  // Browsers run one after another, and tests one at a time: several sign the seeded agency user in with
+  // MFA, and Supabase Auth ends that user's other password-only sessions when a second factor is verified.
+  workers: 1,
   projects: [
     {
       name: 'chromium',

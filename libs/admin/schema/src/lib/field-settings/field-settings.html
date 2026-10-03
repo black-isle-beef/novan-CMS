@@ -1,0 +1,316 @@
+@let f = field();
+
+<div class="d-flex flex-wrap align-items-baseline gap-2 mb-3">
+  @switch (level()) {
+    @case (2) {
+      <h2 class="h5 mb-0" tabindex="-1" [id]="headingId">{{ f.label || 'Untitled field' }}</h2>
+    }
+    @case (4) {
+      <h4 class="h6 mb-0" tabindex="-1" [id]="headingId">{{ f.label || 'Untitled field' }}</h4>
+    }
+    @case (5) {
+      <h5 class="h6 mb-0" tabindex="-1" [id]="headingId">{{ f.label || 'Untitled field' }}</h5>
+    }
+    @default {
+      <h3 class="h5 mb-0" tabindex="-1" [id]="headingId">{{ f.label || 'Untitled field' }}</h3>
+    }
+  }
+  <ds-badge variant="neutral">{{ typeLabel() }}</ds-badge>
+</div>
+
+<div class="mb-3">
+  <label class="form-label" [for]="id('label')">Label</label>
+  <input class="form-control" type="text" [id]="id('label')" [value]="f.label" (input)="setLabel($event)" />
+</div>
+
+<div class="mb-3">
+  <label class="form-label" [for]="id('api-id')">API id</label>
+  <input
+    class="form-control font-monospace"
+    type="text"
+    spellcheck="false"
+    autocomplete="off"
+    [id]="id('api-id')"
+    [value]="f.apiId"
+    [attr.aria-describedby]="id('api-id-hint')"
+    (input)="setText('apiId', $event)"
+  />
+  <div class="form-text" [id]="id('api-id-hint')">
+    camelCase key used by the API and in stored content. Renaming it on a type that already has content loses that
+    field's values.
+  </div>
+</div>
+
+<div class="mb-3">
+  <label class="form-label" [for]="id('help')">Help text <span class="text-body-secondary">(optional)</span></label>
+  <textarea class="form-control" rows="2" [id]="id('help')" [value]="f.help ?? ''" (input)="setOptionalText('help', $event)"></textarea>
+</div>
+
+<fieldset class="mb-3">
+  <legend class="form-label fs-6 mb-1">Editing</legend>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" [id]="id('required')" [checked]="f.required" (change)="setFlag('required', $event)" />
+    <label class="form-check-label" [for]="id('required')">Required</label>
+  </div>
+  <div class="form-check">
+    <input
+      class="form-check-input"
+      type="checkbox"
+      [id]="id('localised')"
+      [checked]="f.localised"
+      [attr.aria-describedby]="id('localised-hint')"
+      (change)="setFlag('localised', $event)"
+    />
+    <label class="form-check-label" [for]="id('localised')">Translated</label>
+    <div class="form-text mt-0" [id]="id('localised-hint')">Each language gets its own value.</div>
+  </div>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" [id]="id('hidden')" [checked]="f.hidden ?? false" (change)="setFlag('hidden', $event)" />
+    <label class="form-check-label" [for]="id('hidden')">Hidden from editors</label>
+  </div>
+</fieldset>
+
+@if (text(); as t) {
+  <fieldset class="mb-3">
+    <legend class="form-label fs-6 mb-1">Text</legend>
+    <div class="form-check mb-2">
+      <input class="form-check-input" type="checkbox" [id]="id('multiline')" [checked]="t.multiline" (change)="setFlag('multiline', $event)" />
+      <label class="form-check-label" [for]="id('multiline')">Several lines</label>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-sm-6">
+        <label class="form-label" [for]="id('min')">Minimum length</label>
+        <input class="form-control" type="number" min="0" step="1" [id]="id('min')" [value]="t.min ?? ''" (change)="setNumber('min', $event)" />
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label" [for]="id('max')">Maximum length</label>
+        <input class="form-control" type="number" min="1" step="1" [id]="id('max')" [value]="t.max ?? ''" (change)="setNumber('max', $event)" />
+      </div>
+    </div>
+    <label class="form-label" [for]="id('pattern')">Pattern <span class="text-body-secondary">(optional)</span></label>
+    <input
+      class="form-control font-monospace"
+      type="text"
+      spellcheck="false"
+      [id]="id('pattern')"
+      [value]="t.pattern ?? ''"
+      [attr.aria-describedby]="id('pattern-hint')"
+      (change)="setOptionalText('pattern', $event)"
+    />
+    <div class="form-text" [id]="id('pattern-hint')">A regular expression the whole value must match.</div>
+  </fieldset>
+}
+
+@if (richText()) {
+  <fieldset class="mb-3">
+    <legend class="form-label fs-6 mb-1">Formatting editors can use</legend>
+    @for (choice of markChoices; track choice.value) {
+      <div class="form-check form-check-inline">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          [id]="id('mark-' + choice.value)"
+          [checked]="isChecked('marks', choice.value)"
+          (change)="toggle('marks', choice.value, markChoices, $event)"
+        />
+        <label class="form-check-label" [for]="id('mark-' + choice.value)">{{ choice.label }}</label>
+      </div>
+    }
+  </fieldset>
+  <fieldset class="mb-3">
+    <legend class="form-label fs-6 mb-1">Elements editors can add</legend>
+    @for (choice of nodeChoices; track choice.value) {
+      <div class="form-check form-check-inline">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          [id]="id('node-' + choice.value)"
+          [checked]="isChecked('nodes', choice.value)"
+          (change)="toggle('nodes', choice.value, nodeChoices, $event)"
+        />
+        <label class="form-check-label" [for]="id('node-' + choice.value)">{{ choice.label }}</label>
+      </div>
+    }
+  </fieldset>
+}
+
+@if (number(); as n) {
+  <fieldset class="mb-3">
+    <legend class="form-label fs-6 mb-1">Number</legend>
+    <div class="row g-2 mb-2">
+      <div class="col-sm-6">
+        <label class="form-label" [for]="id('min')">Minimum</label>
+        <input class="form-control" type="number" [id]="id('min')" [value]="n.min ?? ''" (change)="setNumber('min', $event)" />
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label" [for]="id('max')">Maximum</label>
+        <input class="form-control" type="number" [id]="id('max')" [value]="n.max ?? ''" (change)="setNumber('max', $event)" />
+      </div>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" [id]="id('integer')" [checked]="n.integer" (change)="setFlag('integer', $event)" />
+      <label class="form-check-label" [for]="id('integer')">Whole numbers only</label>
+    </div>
+  </fieldset>
+}
+
+@if (boolean(); as b) {
+  <div class="mb-3">
+    <label class="form-label" [for]="id('default')">Starts as</label>
+    <select class="form-select" [id]="id('default')" (change)="setBooleanDefault($event)">
+      <option value="" [selected]="b.default === undefined">Not set</option>
+      <option value="true" [selected]="b.default === true">Yes</option>
+      <option value="false" [selected]="b.default === false">No</option>
+    </select>
+  </div>
+}
+
+@if (date(); as d) {
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" [id]="id('with-time')" [checked]="d.withTime" (change)="setFlag('withTime', $event)" />
+    <label class="form-check-label" [for]="id('with-time')">Include a time (stored in UTC)</label>
+  </div>
+}
+
+@if (select(); as s) {
+  <div class="mb-3">
+    <label class="form-label" [for]="id('options')">Options</label>
+    <textarea
+      class="form-control font-monospace"
+      rows="4"
+      spellcheck="false"
+      [id]="id('options')"
+      [value]="optionsText()"
+      [attr.aria-describedby]="id('options-hint')"
+      (change)="setOptions($event)"
+    ></textarea>
+    <div class="form-text" [id]="id('options-hint')">One option per line, as value | Label, for example red | Red.</div>
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" [id]="id('multiple')" [checked]="s.multiple" (change)="setFlag('multiple', $event)" />
+    <label class="form-check-label" [for]="id('multiple')">Editors can choose several</label>
+  </div>
+}
+
+@if (media(); as m) {
+  <fieldset class="mb-3">
+    <legend class="form-label fs-6 mb-1">Accepts</legend>
+    @for (choice of mediaChoices; track choice.value) {
+      <div class="form-check form-check-inline">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          [id]="id('accept-' + choice.value)"
+          [checked]="isChecked('accept', choice.value)"
+          (change)="toggle('accept', choice.value, mediaChoices, $event)"
+        />
+        <label class="form-check-label" [for]="id('accept-' + choice.value)">{{ choice.label }}</label>
+      </div>
+    }
+  </fieldset>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" [id]="id('multiple')" [checked]="m.multiple" (change)="setFlag('multiple', $event)" />
+    <label class="form-check-label" [for]="id('multiple')">Editors can add several</label>
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" [id]="id('require-alt')" [checked]="m.requireAlt" (change)="setFlag('requireAlt', $event)" />
+    <label class="form-check-label" [for]="id('require-alt')">Require alternative text</label>
+  </div>
+}
+
+@if (link(); as l) {
+  <fieldset class="mb-3">
+    <legend class="form-label fs-6 mb-1">Editors can link to</legend>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" [id]="id('internal')" checked disabled />
+      <label class="form-check-label" [for]="id('internal')">Pages on this site</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" [id]="id('external')" [checked]="l.allowExternal" (change)="setFlag('allowExternal', $event)" />
+      <label class="form-check-label" [for]="id('external')">Other websites</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" [id]="id('email')" [checked]="l.allowEmail" (change)="setFlag('allowEmail', $event)" />
+      <label class="form-check-label" [for]="id('email')">Email addresses</label>
+    </div>
+  </fieldset>
+}
+
+@if (reference(); as r) {
+  <fieldset class="mb-3" [attr.aria-describedby]="id('content-types-hint')">
+    <legend class="form-label fs-6 mb-1">Content types it can point at</legend>
+    @for (choice of contentTypeChoices(); track choice.value) {
+      <div class="form-check">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          [id]="id('ct-' + choice.value)"
+          [checked]="isChecked('contentTypes', choice.value)"
+          (change)="toggle('contentTypes', choice.value, contentTypeChoices(), $event)"
+        />
+        <label class="form-check-label" [for]="id('ct-' + choice.value)">{{ choice.label }}</label>
+      </div>
+    }
+    <div class="form-text" [id]="id('content-types-hint')">Leave all unticked to allow every content type.</div>
+  </fieldset>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" [id]="id('multiple')" [checked]="r.multiple" (change)="setFlag('multiple', $event)" />
+    <label class="form-check-label" [for]="id('multiple')">Editors can choose several</label>
+  </div>
+}
+
+@if (blocks(); as bl) {
+  <fieldset class="mb-3" [attr.aria-describedby]="id('blocks-hint')">
+    <legend class="form-label fs-6 mb-1">Blocks editors can add</legend>
+    @for (choice of blockChoices(); track choice.value) {
+      <div class="form-check">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          [id]="id('block-' + choice.value)"
+          [checked]="isChecked('allowedBlocks', choice.value)"
+          (change)="toggle('allowedBlocks', choice.value, blockChoices(), $event)"
+        />
+        <label class="form-check-label" [for]="id('block-' + choice.value)">{{ choice.label }}</label>
+      </div>
+    }
+    <div class="form-text" [id]="id('blocks-hint')">Leave all unticked to allow every block.</div>
+  </fieldset>
+  <div class="row g-2 mb-3">
+    <div class="col-sm-6">
+      <label class="form-label" [for]="id('min')">Fewest blocks</label>
+      <input class="form-control" type="number" min="0" step="1" [id]="id('min')" [value]="bl.min ?? ''" (change)="setNumber('min', $event)" />
+    </div>
+    <div class="col-sm-6">
+      <label class="form-label" [for]="id('max')">Most blocks</label>
+      <input class="form-control" type="number" min="1" step="1" [id]="id('max')" [value]="bl.max ?? ''" (change)="setNumber('max', $event)" />
+    </div>
+  </div>
+}
+
+@if (group(); as g) {
+  <div class="form-check mb-2">
+    <input class="form-check-input" type="checkbox" [id]="id('repeatable')" [checked]="g.multiple" (change)="setFlag('multiple', $event)" />
+    <label class="form-check-label" [for]="id('repeatable')">Repeatable (editors add as many as they need)</label>
+  </div>
+  @if (g.multiple) {
+    <div class="row g-2 mb-3">
+      <div class="col-sm-6">
+        <label class="form-label" [for]="id('min')">Fewest items</label>
+        <input class="form-control" type="number" min="0" step="1" [id]="id('min')" [value]="g.min ?? ''" (change)="setNumber('min', $event)" />
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label" [for]="id('max')">Most items</label>
+        <input class="form-control" type="number" min="1" step="1" [id]="id('max')" [value]="g.max ?? ''" (change)="setNumber('max', $event)" />
+      </div>
+    </div>
+  }
+  <nv-field-list
+    layout="stacked"
+    heading="Fields in this group"
+    [fields]="g.fields"
+    (fieldsChange)="setGroupFields($event)"
+    [options]="options()"
+    [level]="level() + 1"
+  />
+}

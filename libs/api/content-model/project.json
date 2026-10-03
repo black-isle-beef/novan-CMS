@@ -1,0 +1,9 @@
+{
+  "name": "api-content-model",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/api/content-model/src",
+  "projectType": "library",
+  "tags": ["scope:api", "type:feature"],
+  "// targets": "to see all targets run: nx show project api-content-model --web",
+  "targets": {}
+}

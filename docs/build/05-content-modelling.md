@@ -14,7 +14,7 @@ Migration `0005_content_model.sql`:
 - `block_types (id, space_id, environment_id, api_id, name, icon, preview_image_path, fields jsonb, allowed_children text[], style_options jsonb, schema_version int, unique (environment_id, api_id))`
 - RLS: read for members; write for `admin`/`developer` roles. pgTAP cross-tenant tests.
 
-## Field definition format (`libs/shared/schemas/src/fields.ts`)
+## Field definition format (`libs/shared/schemas/src/lib/fields.ts`)
 
 A Zod discriminated union, `FieldDef`, with common props `{ id, apiId, label, help?, required, localised, hidden? }` and one variant per type:
 
@@ -31,6 +31,11 @@ A Zod discriminated union, `FieldDef`, with common props `{ id, apiId, label, he
 | `reference` | `contentTypes[]`, `multiple` |
 | `blocks` | `allowedBlocks[]`, `min`, `max` |
 | `json` | — |
+| `group` | `fields[]` (nested field definitions), `multiple`, `min`, `max` (`min`/`max` only when `multiple`) |
+
+`group` was added during this package: the seeded `page` type needs an `seo` group, and the `featureGrid` block needs a repeatable list of features. A single group stores an object; a `multiple` group stores an array of objects.
+
+Link values are `{ type: 'internal', entryId, anchor? } | { type: 'external', url } | { type: 'email', email }`, each with an optional `text` (the visible link or button text, up to 200 characters). `external` and `email` are accepted only when the field allows them; external URLs must be `http(s)`.
 
 Also export `buildEntrySchema(fields: FieldDef[]): ZodType` that turns a field list into a validator for entry data. This one function is used by the API on save and by the admin forms.
 
@@ -60,6 +65,6 @@ npx nx e2e admin-e2e --grep @schema   # create type, add 3 fields, reorder, save
 
 ## Definition of done
 
-- [ ] `buildEntrySchema` is the single validation path for entry data
-- [ ] Developer role can model; editor role cannot see schema screens
-- [ ] Seeded page + 5 block types exist after `db:reset`
+- [x] `buildEntrySchema` is the single validation path for entry data
+- [x] Developer role can model; editor role cannot see schema screens
+- [x] Seeded page + 5 block types exist after `db:reset`

@@ -3,7 +3,8 @@
 // drizzle-kit pull (0.31) has two defects this script corrects:
 // - tables referenced in `auth` are used but never declared, so `users` is imported from ./auth-schema;
 // - composite foreign keys get their column lists paired in the wrong order, so they are rebuilt
-//   from pg_constraint, which keeps the declared pairing.
+//   from pg_constraint, which keeps the declared pairing;
+// - an empty array default (`'{}'`) is read as `[""]`, so those columns get `.default([])`.
 // Its relations.ts inherits the composite-key bug, so it is not kept.
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -31,6 +32,10 @@ const compositeKeys = await sql`
           join pg_attribute a on a.attrelid = c.confrelid and a.attnum = k.attnum order by k.i) as foreign_columns
   from pg_constraint c
   where c.contype = 'f' and c.connamespace = 'public'::regnamespace and cardinality(c.conkey) > 1`;
+const emptyArrayDefaults = await sql`
+  select column_name as name
+  from information_schema.columns
+  where table_schema = 'public' and data_type = 'ARRAY' and column_default ~ '^''\\{\\}''::'`;
 await sql.end();
 
 let source = readFileSync(pulled, 'utf8');
@@ -48,6 +53,12 @@ for (const fk of compositeKeys) {
       `foreignColumns: [${fk.foreign_columns.map((c) => `${foreignTable}.${camel(c)}`).join(', ')}],${gap2}` +
       `name: "${fk.name}"`,
   );
+}
+
+for (const column of emptyArrayDefaults) {
+  const wrong = `("${column.name}").array().default([""])`;
+  if (!source.includes(wrong)) throw new Error(`Array default of ${column.name} not found in ${pulled}`);
+  source = source.replaceAll(wrong, `("${column.name}").array().default([])`);
 }
 
 if (/\busers\.id\b/.test(source)) {

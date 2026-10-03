@@ -14,6 +14,7 @@ import {
   jsonb,
   uniqueIndex,
   boolean,
+  integer,
   primaryKey,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
@@ -88,15 +89,15 @@ export const environments = pgTable(
       .using('btree', table.spaceId.asc().nullsLast().op('uuid_ops'))
       .where(sql`is_main`),
     foreignKey({
-      columns: [table.spaceId],
-      foreignColumns: [spaces.id],
-      name: 'environments_space_id_fkey',
-    }).onDelete('cascade'),
-    foreignKey({
       columns: [table.clonedFromId, table.spaceId],
       foreignColumns: [table.id, table.spaceId],
       name: 'environments_cloned_from_id_space_id_fkey',
     }).onDelete('set null'),
+    foreignKey({
+      columns: [table.spaceId],
+      foreignColumns: [spaces.id],
+      name: 'environments_space_id_fkey',
+    }).onDelete('cascade'),
     unique('environments_id_space_id_key').on(table.id, table.spaceId),
     unique('environments_space_id_name_key').on(table.spaceId, table.name),
     pgPolicy('environments: members and agency staff read', {
@@ -188,21 +189,118 @@ export const auditEvents = pgTable(
       table.createdAt.desc().nullsFirst().op('timestamptz_ops'),
     ),
     foreignKey({
-      columns: [table.spaceId],
-      foreignColumns: [spaces.id],
-      name: 'audit_events_space_id_fkey',
-    }).onDelete('cascade'),
-    foreignKey({
       columns: [table.actorId],
       foreignColumns: [users.id],
       name: 'audit_events_actor_id_fkey',
     }).onDelete('set null'),
+    foreignKey({
+      columns: [table.spaceId],
+      foreignColumns: [spaces.id],
+      name: 'audit_events_space_id_fkey',
+    }).onDelete('cascade'),
     pgPolicy('audit events: admins and agency staff read', {
       as: 'permissive',
       for: 'select',
       to: ['authenticated'],
       using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(audit_events.space_id, '{admin}'::text[]) AS has_space_role))`,
     }),
+  ],
+);
+
+export const contentTypes = pgTable(
+  'content_types',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    spaceId: uuid('space_id').notNull(),
+    environmentId: uuid('environment_id').notNull(),
+    apiId: text('api_id').notNull(),
+    name: text().notNull(),
+    kind: text().notNull(),
+    description: text(),
+    fields: jsonb().default([]).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('content_types_space_id_idx').using('btree', table.spaceId.asc().nullsLast().op('uuid_ops')),
+    foreignKey({
+      columns: [table.environmentId, table.spaceId],
+      foreignColumns: [environments.id, environments.spaceId],
+      name: 'content_types_environment_id_space_id_fkey',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.spaceId],
+      foreignColumns: [spaces.id],
+      name: 'content_types_space_id_fkey',
+    }).onDelete('cascade'),
+    unique('content_types_id_space_id_key').on(table.id, table.spaceId),
+    unique('content_types_environment_id_api_id_key').on(table.environmentId, table.apiId),
+    pgPolicy('content types: members and agency staff read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+      using: sql`((space_id = ANY (( SELECT auth_space_ids() AS auth_space_ids)::uuid[])) OR ( SELECT is_agency_staff() AS is_agency_staff))`,
+    }),
+    pgPolicy('content types: admins, developers and agency staff write', {
+      as: 'permissive',
+      for: 'all',
+      to: ['authenticated'],
+    }),
+    check('content_types_api_id_check', sql`(api_id ~ '^[a-z][a-zA-Z0-9]*$'::text) AND (length(api_id) <= 64)`),
+    check('content_types_fields_check', sql`jsonb_typeof(fields) = 'array'::text`),
+    check('content_types_kind_check', sql`kind = ANY (ARRAY['page'::text, 'entry'::text, 'singleton'::text])`),
+    check('content_types_name_check', sql`length(TRIM(BOTH FROM name)) > 0`),
+  ],
+);
+
+export const blockTypes = pgTable(
+  'block_types',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    spaceId: uuid('space_id').notNull(),
+    environmentId: uuid('environment_id').notNull(),
+    apiId: text('api_id').notNull(),
+    name: text().notNull(),
+    icon: text(),
+    previewImagePath: text('preview_image_path'),
+    fields: jsonb().default([]).notNull(),
+    allowedChildren: text('allowed_children').array().default([]).notNull(),
+    styleOptions: jsonb('style_options').default({}).notNull(),
+    schemaVersion: integer('schema_version').default(1).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('block_types_space_id_idx').using('btree', table.spaceId.asc().nullsLast().op('uuid_ops')),
+    foreignKey({
+      columns: [table.environmentId, table.spaceId],
+      foreignColumns: [environments.id, environments.spaceId],
+      name: 'block_types_environment_id_space_id_fkey',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.spaceId],
+      foreignColumns: [spaces.id],
+      name: 'block_types_space_id_fkey',
+    }).onDelete('cascade'),
+    unique('block_types_id_space_id_key').on(table.id, table.spaceId),
+    unique('block_types_environment_id_api_id_key').on(table.environmentId, table.apiId),
+    pgPolicy('block types: members and agency staff read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+      using: sql`((space_id = ANY (( SELECT auth_space_ids() AS auth_space_ids)::uuid[])) OR ( SELECT is_agency_staff() AS is_agency_staff))`,
+    }),
+    pgPolicy('block types: admins, developers and agency staff write', {
+      as: 'permissive',
+      for: 'all',
+      to: ['authenticated'],
+    }),
+    check('block_types_api_id_check', sql`(api_id ~ '^[a-z][a-zA-Z0-9]*$'::text) AND (length(api_id) <= 64)`),
+    check('block_types_fields_check', sql`jsonb_typeof(fields) = 'array'::text`),
+    check('block_types_icon_check', sql`icon ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text`),
+    check('block_types_name_check', sql`length(TRIM(BOTH FROM name)) > 0`),
+    check('block_types_schema_version_check', sql`schema_version > 0`),
+    check('block_types_style_options_check', sql`jsonb_typeof(style_options) = 'object'::text`),
   ],
 );
 
@@ -219,16 +317,6 @@ export const members = pgTable(
     index('members_role_id_idx').using('btree', table.roleId.asc().nullsLast().op('uuid_ops')),
     index('members_user_id_idx').using('btree', table.userId.asc().nullsLast().op('uuid_ops')),
     foreignKey({
-      columns: [table.spaceId],
-      foreignColumns: [spaces.id],
-      name: 'members_space_id_fkey',
-    }).onDelete('cascade'),
-    foreignKey({
-      columns: [table.userId],
-      foreignColumns: [users.id],
-      name: 'members_user_id_fkey',
-    }).onDelete('cascade'),
-    foreignKey({
       columns: [table.invitedBy],
       foreignColumns: [users.id],
       name: 'members_invited_by_fkey',
@@ -238,6 +326,16 @@ export const members = pgTable(
       foreignColumns: [roles.id, roles.spaceId],
       name: 'members_role_id_space_id_fkey',
     }).onDelete('restrict'),
+    foreignKey({
+      columns: [table.spaceId],
+      foreignColumns: [spaces.id],
+      name: 'members_space_id_fkey',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [users.id],
+      name: 'members_user_id_fkey',
+    }).onDelete('cascade'),
     primaryKey({ columns: [table.spaceId, table.userId], name: 'members_pkey' }),
     pgPolicy('auth hook reads members', {
       as: 'permissive',

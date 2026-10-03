@@ -20,3 +20,5 @@ export function roleLabel(role: string | null | undefined): string {
 }
 
 export const isSpaceRole = (value: string): value is SpaceRole => (spaceRoles as readonly string[]).includes(value);
+
+export { canModel } from './can-model';

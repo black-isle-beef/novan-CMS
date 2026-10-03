@@ -1,10 +1,19 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { conflict, forbidden, ProblemException } from '@novan/api-common';
 import type { AuthUser } from '@novan/api-auth';
-import { DbService, type DbTransaction, members, organisations, recordAudit, roles, spaces } from '@novan/api-db';
+import {
+  DbService,
+  type DbTransaction,
+  isInsufficientPrivilege,
+  isUniqueViolation,
+  members,
+  organisations,
+  recordAudit,
+  roles,
+  spaces,
+} from '@novan/api-db';
 import { type CreateSpaceRequest, type SpaceRole, spaceRoleSchema, type SpaceSummary } from '@novan/shared-schemas';
 import { and, asc, eq } from 'drizzle-orm';
-import { isInsufficientPrivilege, isUniqueViolation } from './db-errors';
 
 @Injectable()
 export class SpacesService {

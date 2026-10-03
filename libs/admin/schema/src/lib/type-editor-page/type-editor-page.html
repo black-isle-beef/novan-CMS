@@ -1,0 +1,218 @@
+<nav aria-label="Breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'schema']">Schema</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ title() }}</li>
+  </ol>
+</nav>
+
+<h1 class="mb-1">{{ title() }}</h1>
+@if (!isNew()) {
+  <p class="lead text-muted mb-4">
+    {{ isBlock() ? 'Block type' : 'Content type' }} <code>{{ apiId() }}</code>
+  </p>
+} @else {
+  <p class="lead text-muted mb-4">
+    {{ isBlock() ? 'A block editors can add to pages.' : 'A kind of page or reusable content.' }}
+  </p>
+}
+
+@if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (loading()) {
+  <ds-spinner [label]="'Loading ' + noun()" />
+} @else {
+  @if (status(); as message) {
+    <div id="type-editor-status" tabindex="-1" class="mb-3">
+      <ds-alert variant="success">{{ message }}</ds-alert>
+    </div>
+  }
+
+  @if (submitted() && issues().length) {
+    <div id="type-editor-errors" tabindex="-1" class="mb-3">
+      <ds-alert variant="danger" title="Fix these before saving">
+        <ul class="mb-0">
+          @for (issue of issues(); track $index) {
+            <li>{{ issue }}</li>
+          }
+        </ul>
+      </ds-alert>
+    </div>
+  }
+
+  @if (blocked(); as problem) {
+    <div id="type-editor-blocked" tabindex="-1" class="mb-3">
+      <ds-alert [variant]="problem.affectedEntries ? 'warning' : 'danger'">
+        <p class="mb-2">{{ problem.message }}</p>
+        @if (serverIssues().length) {
+          <ul class="mb-2">
+            @for (issue of serverIssues(); track $index) {
+              <li>{{ issue }}</li>
+            }
+          </ul>
+        }
+        @if (problem.affectedEntries) {
+          <button type="button" class="btn btn-warning btn-sm" (click)="retry(problem)">
+            {{ problem.action === 'save' ? 'Save anyway' : 'Delete anyway' }}
+          </button>
+        }
+      </ds-alert>
+    </div>
+  }
+
+  <form novalidate (submit)="$event.preventDefault(); save()">
+    <section class="col-lg-7 mb-5" aria-labelledby="type-details-heading">
+      <h2 id="type-details-heading" class="h4">Details</h2>
+
+      <div class="mb-3">
+        <label for="type-name" class="form-label">Name</label>
+        <input id="type-name" type="text" class="form-control" required [value]="name()" (input)="setName($event)" />
+      </div>
+
+      @if (isNew()) {
+        <div class="mb-3">
+          <label for="type-api-id" class="form-label">API id</label>
+          <input
+            id="type-api-id"
+            type="text"
+            class="form-control font-monospace"
+            spellcheck="false"
+            autocomplete="off"
+            required
+            aria-describedby="type-api-id-hint"
+            [value]="newApiId()"
+            (input)="setApiId($event)"
+          />
+          <div id="type-api-id-hint" class="form-text">
+            camelCase name used by the API and the site's code. It cannot be changed later.
+          </div>
+        </div>
+      }
+
+      @if (isBlock()) {
+        <div class="mb-3">
+          <label for="type-icon" class="form-label">Icon <span class="text-body-secondary">(optional)</span></label>
+          <input
+            id="type-icon"
+            type="text"
+            class="form-control font-monospace"
+            spellcheck="false"
+            aria-describedby="type-icon-hint"
+            [value]="icon()"
+            (input)="setText(icon, $event)"
+          />
+          <div id="type-icon-hint" class="form-text">A Bootstrap Icons name shown in the block picker, like image.</div>
+        </div>
+
+        <fieldset class="mb-3" aria-describedby="type-children-hint">
+          <legend class="form-label fs-6 mb-1">Blocks it can contain</legend>
+          @for (choice of blockChoices(); track choice.apiId) {
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                [id]="'type-child-' + choice.apiId"
+                [checked]="allowedChildren().includes(choice.apiId)"
+                (change)="toggleChild(choice.apiId, $event)"
+              />
+              <label class="form-check-label" [for]="'type-child-' + choice.apiId">{{ choice.name }}</label>
+            </div>
+          } @empty {
+            <p class="text-body-secondary mb-0">There are no other block types yet.</p>
+          }
+          <div id="type-children-hint" class="form-text">Leave all unticked for a block without nested blocks.</div>
+        </fieldset>
+      } @else {
+        @if (isNew()) {
+          <fieldset class="mb-3">
+            <legend class="form-label fs-6 mb-1">Kind</legend>
+            @for (option of kindOptions; track option.value) {
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  name="type-kind"
+                  [id]="'type-kind-' + option.value"
+                  [checked]="contentKind() === option.value"
+                  [attr.aria-describedby]="'type-kind-' + option.value + '-hint'"
+                  (change)="setKind(option.value)"
+                />
+                <label class="form-check-label" [for]="'type-kind-' + option.value">{{ option.label }}</label>
+                <div class="form-text mt-0" [id]="'type-kind-' + option.value + '-hint'">{{ option.description }}</div>
+              </div>
+            }
+          </fieldset>
+        } @else {
+          <p class="mb-3">Kind: {{ contentKind() }}</p>
+        }
+
+        <div class="mb-3">
+          <label for="type-description" class="form-label">
+            Description <span class="text-body-secondary">(optional)</span>
+          </label>
+          <textarea
+            id="type-description"
+            class="form-control"
+            rows="2"
+            [value]="description()"
+            (input)="setText(description, $event)"
+          ></textarea>
+        </div>
+      }
+    </section>
+
+    <div class="mb-5">
+      <nv-field-list [(fields)]="fields" [options]="options()" heading="Fields" [level]="2" />
+    </div>
+
+    @if (isBlock()) {
+      <section class="col-lg-7 mb-5" aria-labelledby="type-style-heading">
+        <h2 id="type-style-heading" class="h4">Style options</h2>
+        <label for="type-style-options" class="form-label">Style options (JSON)</label>
+        <textarea
+          id="type-style-options"
+          class="form-control font-monospace"
+          rows="10"
+          spellcheck="false"
+          aria-describedby="type-style-options-hint"
+          [value]="styleOptionsText()"
+          (change)="setText(styleOptionsText, $event)"
+        ></textarea>
+        <div id="type-style-options-hint" class="form-text">
+          The block component's styling schema: named presets only (select, radio or toggle), never raw colours or sizes.
+        </div>
+      </section>
+    }
+
+    <details class="mb-5">
+      <summary class="mb-2">JSON preview</summary>
+      <pre class="bg-body-tertiary border rounded p-3 small mb-0"><code>{{ json() }}</code></pre>
+    </details>
+
+    <div class="d-flex flex-wrap gap-2">
+      <button type="submit" class="btn btn-primary" [disabled]="saving()" [attr.aria-busy]="saving()">
+        {{ isNew() ? 'Create ' + noun() : 'Save changes' }}
+      </button>
+      <a class="btn btn-outline-secondary" [routerLink]="['/spaces', spaceId(), 'schema']">Back to schema</a>
+      @if (!isNew()) {
+        <button type="button" class="btn btn-outline-danger ms-auto" (click)="confirmingDelete.set(true)">
+          Delete {{ noun() }}
+        </button>
+      }
+    </div>
+  </form>
+}
+
+<ds-modal
+  [open]="confirmingDelete()"
+  (openChange)="!$event && confirmingDelete.set(false)"
+  [heading]="'Delete ' + title() + '?'"
+  size="sm"
+>
+  <p class="mb-0">
+    Its fields are removed from the API. This cannot be undone, and it is refused while other types still use it.
+  </p>
+  <div dsModalFooter class="d-flex justify-content-end gap-2">
+    <ds-button variant="secondary" (pressed)="confirmingDelete.set(false)">Cancel</ds-button>
+    <ds-button variant="danger" (pressed)="remove()">Delete</ds-button>
+  </div>
+</ds-modal>

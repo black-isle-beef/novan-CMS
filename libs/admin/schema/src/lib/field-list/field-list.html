@@ -1,0 +1,142 @@
+<div class="row g-4">
+  <section [class]="layout() === 'side' ? 'col-lg-7' : 'col-12'" [attr.aria-labelledby]="id('heading')">
+    @switch (level()) {
+      @case (3) {
+        <h3 class="h5" [id]="id('heading')">{{ heading() }}</h3>
+      }
+      @case (4) {
+        <h4 class="h6" [id]="id('heading')">{{ heading() }}</h4>
+      }
+      @case (5) {
+        <h5 class="h6" [id]="id('heading')">{{ heading() }}</h5>
+      }
+      @default {
+        <h2 class="h4" [id]="id('heading')">{{ heading() }}</h2>
+      }
+    }
+
+    @if (fields().length) {
+      <p class="form-text mt-0" [id]="id('reorder-hint')">
+        Drag a field by its handle, or use the arrow buttons, to change the order editors see.
+      </p>
+      <ol
+        class="list-group mb-3"
+        cdkDropList
+        cdkDropListLockAxis="y"
+        [cdkDropListData]="fields()"
+        [attr.aria-describedby]="id('reorder-hint')"
+        (cdkDropListDropped)="drop($event)"
+      >
+        @for (field of fields(); track field.id; let i = $index, first = $first, last = $last) {
+          <li
+            class="list-group-item d-flex flex-wrap align-items-center gap-2"
+            cdkDrag
+            [class.border-primary]="selectedId() === field.id"
+            [attr.aria-current]="selectedId() === field.id ? 'true' : null"
+          >
+            <span class="nv-drag-handle text-body-secondary" cdkDragHandle aria-hidden="true">
+              <i class="bi bi-grip-vertical"></i>
+            </span>
+            <div class="flex-grow-1">
+              <span class="fw-semibold">{{ field.label || 'Untitled field' }}</span>
+              <code class="ms-2 small">{{ field.apiId }}</code>
+              <ds-badge variant="neutral" class="ms-2">{{ typeLabel(field.type) }}</ds-badge>
+              @if (field.required) {
+                <ds-badge variant="info" class="ms-1">Required</ds-badge>
+              }
+            </div>
+            <div class="d-flex gap-1">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                [id]="id('up', field)"
+                [disabled]="first"
+                (click)="move(i, -1)"
+              >
+                <i class="bi bi-arrow-up" aria-hidden="true"></i>
+                <span class="visually-hidden">Move {{ field.label || 'field' }} up</span>
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                [id]="id('down', field)"
+                [disabled]="last"
+                (click)="move(i, 1)"
+              >
+                <i class="bi bi-arrow-down" aria-hidden="true"></i>
+                <span class="visually-hidden">Move {{ field.label || 'field' }} down</span>
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-primary"
+                [id]="id('edit', field)"
+                [attr.aria-expanded]="selectedId() === field.id"
+                [attr.aria-controls]="panelId"
+                (click)="toggle(field)"
+              >
+                Edit<span class="visually-hidden"> {{ field.label || 'field' }}</span>
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger" (click)="remove(i)">
+                Remove<span class="visually-hidden"> {{ field.label || 'field' }}</span>
+              </button>
+            </div>
+          </li>
+        }
+      </ol>
+    } @else {
+      <p class="text-body-secondary">No fields yet. Add one below.</p>
+    }
+
+    <div class="visually-hidden" role="status">{{ announcement() }}</div>
+
+    <section class="mt-4" [attr.aria-labelledby]="id('add-heading')">
+      @switch (level()) {
+        @case (3) {
+          <h4 class="h6" tabindex="-1" [id]="id('add-heading')">Add a field</h4>
+        }
+        @case (4) {
+          <h5 class="h6" tabindex="-1" [id]="id('add-heading')">Add a field</h5>
+        }
+        @case (5) {
+          <h6 class="h6" tabindex="-1" [id]="id('add-heading')">Add a field</h6>
+        }
+        @default {
+          <h3 class="h5" tabindex="-1" [id]="id('add-heading')">Add a field</h3>
+        }
+      }
+      <ul class="list-unstyled row row-cols-1 row-cols-sm-2 g-2 mb-0">
+        @for (option of fieldTypeOptions; track option.type) {
+          <li class="col">
+            <button type="button" class="btn btn-outline-secondary w-100 h-100 text-start" (click)="add(option.type)">
+              <i [class]="'bi bi-' + option.icon + ' me-2'" aria-hidden="true"></i>
+              <span class="fw-semibold">{{ option.label }}</span>{{ ' ' }}<span class="d-block small">{{
+                option.description
+              }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  </section>
+
+  <div [class]="layout() === 'side' ? 'col-lg-5' : 'col-12'" [id]="panelId">
+    @if (selected(); as field) {
+      <section class="card sticky-lg-top" [attr.aria-label]="'Settings for ' + (field.label || 'field')">
+        <div class="card-body">
+          <nv-field-settings
+            [field]="field"
+            [autoApiId]="isNew(field)"
+            [options]="options()"
+            [level]="level() + 1"
+            (fieldChange)="update($event)"
+          />
+          <button type="button" class="btn btn-primary" (click)="close()">
+            Done<span class="visually-hidden"> with {{ field.label || 'field' }}</span>
+          </button>
+        </div>
+      </section>
+    } @else if (layout() === 'side' && fields().length) {
+      <p class="text-body-secondary">Choose Edit on a field to change its settings.</p>
+    }
+  </div>
+</div>
