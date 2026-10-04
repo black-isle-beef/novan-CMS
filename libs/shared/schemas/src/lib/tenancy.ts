@@ -43,6 +43,8 @@ export const spaceSummarySchema = z.object({
   name: z.string(),
   slug: z.string(),
   organisationId: z.uuid(),
+  /** Origin of the space's site, e.g. `https://www.example.com`, used to open pages from the admin. */
+  previewUrl: z.string().nullable(),
   /** The caller's role, or null when they see the space as agency staff without being a member. */
   role: spaceRoleSchema.nullable(),
   createdAt: z.string(),

@@ -43,10 +43,22 @@
           }
         }
         <button type="button" class="btn btn-outline-secondary" (click)="historyOpen.set(true)">Version history</button>
+        @if (liveUrl(); as url) {
+          @if (liveIsCurrent()) {
+            <a class="btn btn-outline-secondary" [href]="url" target="_blank" rel="noopener">
+              View live page<span class="visually-hidden"> (opens in a new tab)</span>
+            </a>
+          } @else {
+            <button type="button" class="btn btn-outline-secondary" disabled aria-describedby="entry-live-hint">View live page</button>
+          }
+        }
       </div>
     </div>
 
     <p class="small text-body-secondary mb-3" role="status">{{ saveState() }}</p>
+    @if (liveUrl() && !liveIsCurrent()) {
+      <p id="entry-live-hint" class="small text-body-secondary mb-3">Save and publish your changes to see them on the live page.</p>
+    }
 
     @if (!canEdit()) {
       <ds-alert variant="info" class="mb-3">You can look at this page, but your role cannot change it.</ds-alert>

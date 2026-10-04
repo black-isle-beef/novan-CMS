@@ -27,7 +27,7 @@ describe('MembersPage', () => {
 
   async function render(role: SpaceSummary['role']) {
     const spaces = signal<SpaceSummary[] | null>([
-      { id: spaceId, name: 'Demo site', slug: 'demo-site', organisationId: spaceId, role, createdAt: '' },
+      { id: spaceId, name: 'Demo site', slug: 'demo-site', organisationId: spaceId, previewUrl: null, role, createdAt: '' },
     ]);
     const currentSpaceId = signal<string | null>(null);
     const currentSpace = computed(() => spaces()?.find((s) => s.id === currentSpaceId()) ?? null);

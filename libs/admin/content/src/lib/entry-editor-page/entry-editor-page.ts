@@ -116,6 +116,15 @@ export class EntryEditorPage {
   protected readonly canEdit = computed(() => this.context.canEditCurrent());
   protected readonly canPublish = computed(() => this.context.canPublishCurrent());
   protected readonly published = computed(() => this.entry()?.status === 'published');
+  /** The published page on the space's site, or null when it is not published or the site is unknown. */
+  protected readonly liveUrl = computed(() => {
+    const origin = this.context.currentSpace()?.previewUrl;
+    const path = this.entry()?.publishedPath;
+    if (!this.published() || !path || !origin || !/^https?:\/\//i.test(origin)) return null;
+    return `${origin.replace(/\/+$/, '')}${path}`;
+  });
+  /** The live page only matches the form once every change is saved and published. */
+  protected readonly liveIsCurrent = computed(() => !this.dirty() && !this.entry()?.hasUnpublishedChanges);
   /** Moving a published page changes its address straight away, so it needs an editor. */
   protected readonly canMove = computed(() => (this.published() ? this.canPublish() : this.canEdit()));
 

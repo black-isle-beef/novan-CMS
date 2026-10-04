@@ -111,6 +111,7 @@ async function render(role: 'editor' | 'author' | 'viewer', api = fakeApi()) {
         provide: SpaceContext,
         useValue: {
           currentSpaceId: signal(null),
+          currentSpace: signal({ previewUrl: 'https://www.example.com/' }),
           canEditCurrent: signal(role !== 'viewer'),
           canPublishCurrent: signal(role === 'editor'),
         },
@@ -205,6 +206,36 @@ describe('EntryEditorPage', () => {
     expect(el.textContent).toContain('Unpublish');
   });
 
+  it('links to the live page once published, disabled until changes are saved and published', async () => {
+    const draft = await render('editor');
+    expect(draft.el.textContent).not.toContain('View live page');
+    TestBed.resetTestingModule();
+
+    const published = entry({ status: 'published', publishedPath: '/home', publishedVersionId: 'v' });
+    const api = fakeApi(published);
+    api.saveEntry.mockImplementation((_s, _id, data) => of({ ...published, data, hasUnpublishedChanges: true }));
+    const { click, type, el } = await render('editor', api);
+    const live = () => [...el.querySelectorAll('a, button')].find((c) => c.textContent?.includes('View live page')) as HTMLElement;
+
+    expect(live().tagName).toBe('A');
+    expect(live().getAttribute('href')).toBe('https://www.example.com/home');
+    expect(live().getAttribute('target')).toBe('_blank');
+    expect(live().textContent).toContain('opens in a new tab');
+
+    await type('Title', 'Changed');
+    expect(live().tagName).toBe('BUTTON');
+    expect((live() as HTMLButtonElement).disabled).toBe(true);
+    expect(el.querySelector(`#${live().getAttribute('aria-describedby')}`)?.textContent).toContain('Save and publish');
+
+    await click('Save draft');
+    expect((live() as HTMLButtonElement).disabled).toBe(true);
+
+    await type('Summary', 'Hello');
+    await click('Publish changes');
+    expect(live().getAttribute('href')).toBe('https://www.example.com/home');
+    expect(el.querySelector('#entry-live-hint')).toBeNull();
+  });
+
   it('shows the API\'s field errors on the fields', async () => {
     const api = fakeApi();
     api.saveEntry.mockReturnValue(
@@ -232,7 +263,7 @@ describe('EntryEditorPage', () => {
           provideRouter([]),
           { provide: ContentApi, useValue: api },
           ...mediaStubs,
-          { provide: SpaceContext, useValue: { currentSpaceId: signal(null), canEditCurrent: signal(true), canPublishCurrent: signal(false) } },
+          { provide: SpaceContext, useValue: { currentSpaceId: signal(null), currentSpace: signal(null), canEditCurrent: signal(true), canPublishCurrent: signal(false) } },
         ],
       });
       const fixture = TestBed.createComponent(EntryEditorPage);
