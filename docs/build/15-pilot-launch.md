@@ -9,7 +9,7 @@ One real client site runs on Novan CMS in production, and the client publishes a
 ## Tasks
 
 1. Choose the pilot client and agree scope: pages, blocks needed beyond the five, launch date, who edits.
-2. Create the client site from `apps/starter-site` (copy into `apps/<client>-site` or a separate repo using `@novan/cms-angular`). Apply the client's brand through Novan Design System tokens. Build any extra blocks with the `create-angular-cms-component` skill.
+2. Create the client site from `apps/starter-site` (copy into `apps/<client>-site` or a separate repo using `@black-isle-beef/cms-angular`). Apply the client's brand through Novan Design System tokens. Build any extra blocks with the `create-angular-cms-component` skill.
 3. Production space: create the space, set `preview_url`, domains, roles; create delivery and preview tokens; configure Cloudflare DNS and cache rules for the client domain.
 4. Content migration: script in `tools/migrate/<client>.ts` that creates pages and uploads media through the Management API (never direct SQL). Re-runnable and idempotent.
 5. Client onboarding: invite the client as `editor`, run a 30-minute walkthrough, give a one-page "How to edit your site" guide (keep it in `docs/clients/editing-guide.md`, reusable for every client).

@@ -1,5 +1,22 @@
 {
-  "name": "@novan/cms-angular",
-  "version": "0.0.1",
+  "name": "@black-isle-beef/cms-angular",
+  "version": "0.1.0",
+  "description": "Angular SDK for Novan CMS: content fetching with SSR transfer state, block and rich text rendering, preview mode.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/black-isle-beef/novan-CMS.git",
+    "directory": "libs/cms-angular"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "peerDependencies": {
+    "@angular/common": "^22.2.0",
+    "@angular/core": "^22.2.0",
+    "@angular/platform-browser": "^22.2.0",
+    "@angular/router": "^22.2.0",
+    "rxjs": "^7.8.0"
+  },
   "sideEffects": false
 }

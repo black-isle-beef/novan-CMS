@@ -13,8 +13,18 @@
   },
   "tags": ["scope:site", "type:data", "publishable"],
   "targets": {
+    "check-readme": {
+      "executor": "nx:run-commands",
+      "inputs": ["default", "^default"],
+      "outputs": [],
+      "options": {
+        "commands": ["node libs/cms-angular/tools/check-readme.mjs", "ngc -p libs/cms-angular/tsconfig.examples.json"],
+        "parallel": false
+      }
+    },
     "build": {
       "executor": "@nx/angular:package",
+      "dependsOn": ["^build", "check-readme"],
       "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
       "defaultConfiguration": "production",
       "options": {

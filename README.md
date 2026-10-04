@@ -56,12 +56,12 @@ libs/
   shared/schemas/ @novan/shared-schemas Zod schemas used by API and admin
   api/            NestJS feature libs (one per feature)
   admin/          Angular feature libs for the admin
-  cms-angular/    @novan/cms-angular    publishable Angular SDK
+  cms-angular/    @black-isle-beef/cms-angular    publishable Angular SDK
   blocks/         @novan/blocks         Novan CMS blocks
 docs/build/       build instructions
 ```
 
-Every project is tagged `scope:*` and `type:*`. Lint enforces that `admin` and site projects never import `scope:api` code, and that `@novan/cms-angular` only imports `scope:shared` libs. See `eslint.config.mjs`.
+Every project is tagged `scope:*` and `type:*`. Lint enforces that `admin` and site projects never import `scope:api` code, and that `@black-isle-beef/cms-angular` only imports `scope:shared` libs. See `eslint.config.mjs`.
 
 ## Troubleshooting
 

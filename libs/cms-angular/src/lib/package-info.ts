@@ -1,2 +1,2 @@
-/** npm name of the SDK. The SDK itself (client, renderer, preview bridge) is built in package 09. */
-export const CMS_ANGULAR_PACKAGE_NAME = '@novan/cms-angular';
+/** npm name of the SDK. */
+export const CMS_ANGULAR_PACKAGE_NAME = '@black-isle-beef/cms-angular';

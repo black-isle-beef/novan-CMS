@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/out-tsc/cms-angular-examples",
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "files": [],
+  "include": ["examples/**/*.ts"]
+}

@@ -35,7 +35,7 @@ libs/
   shared/schemas/ Zod schemas (fields, blocks, API payloads)
   api/*           NestJS feature libs (auth, spaces, content, media, delivery, ...)
   admin/*         Angular feature libs (schema, editor, media, users, settings)
-  cms-angular/    @novan/cms-angular SDK (publishable)
+  cms-angular/    @black-isle-beef/cms-angular SDK (publishable)
   blocks/         Novan CMS blocks (one folder per block)
 supabase/
   config.toml, migrations/, tests/ (pgTAP), seed.sql
