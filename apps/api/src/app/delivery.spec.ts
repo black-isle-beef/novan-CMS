@@ -76,11 +76,11 @@ describe('delivery and preview APIs', () => {
 
   const server = () => app.getHttpServer();
 
+  // These are refused before the database is asked, so they run without one (CI's unit test job).
   describe('without a usable token', () => {
     it.each([
       ['no token', 401, 'missing_token', undefined],
       ['a Supabase session', 401, 'invalid_token', 'eyJhbGciOiJIUzI1NiJ9.e30.sig'],
-      ['an unknown token', 401, 'invalid_token', `nv_del_${'a'.repeat(43)}`],
       ['a preview token', 403, 'wrong_token_scope', `nv_pre_${'a'.repeat(43)}`],
     ])('answers %s with %i, and nothing is cached', async (_, status, code, token) => {
       const req = request(server()).get('/v1/delivery/pages?path=/');
@@ -277,6 +277,13 @@ describe('delivery and preview APIs', () => {
     });
 
     describe('API tokens', () => {
+      it('answers a well-formed but unknown token with 401, and nothing is cached', async () => {
+        const res = await request(server()).get('/v1/delivery/pages?path=/').auth(`nv_del_${'a'.repeat(43)}`, { type: 'bearer' });
+        expect(res.status).toBe(401);
+        expect(res.body.code).toBe('invalid_token');
+        expect(res.headers['cache-control']).toBe('no-store');
+      });
+
       it('a developer creates tokens; the secret is shown once and only its hash is kept', async () => {
         expect(deliveryA).toMatchObject({ name: 'Website', scope: 'delivery', environment: 'main', revokedAt: null, lastUsedAt: null });
         expect(deliveryA.token).toMatch(/^nv_del_[A-Za-z0-9_-]{43}$/);
