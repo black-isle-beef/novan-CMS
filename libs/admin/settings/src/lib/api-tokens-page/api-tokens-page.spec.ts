@@ -52,7 +52,7 @@ describe('ApiTokensPage', () => {
 
   async function render() {
     const spaces = signal<SpaceSummary[] | null>([
-      { id: spaceId, name: 'Demo site', slug: 'demo-site', organisationId: spaceId, role: 'developer', createdAt: '' },
+      { id: spaceId, name: 'Demo site', slug: 'demo-site', organisationId: spaceId, previewUrl: null, role: 'developer', createdAt: '' },
     ]);
     const currentSpaceId = signal<string | null>(null);
     TestBed.configureTestingModule({

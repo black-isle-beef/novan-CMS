@@ -28,6 +28,7 @@ export class SpacesService {
           name: spaces.name,
           slug: spaces.slug,
           organisationId: spaces.organisationId,
+          previewUrl: spaces.previewUrl,
           createdAt: spaces.createdAt,
         })
         .from(spaces)
@@ -50,6 +51,7 @@ export class SpacesService {
           name: spaces.name,
           slug: spaces.slug,
           organisationId: spaces.organisationId,
+          previewUrl: spaces.previewUrl,
           createdAt: spaces.createdAt,
         });
 
