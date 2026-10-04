@@ -12,7 +12,7 @@ them to an entry's data.
 | `boolean` | `nv-boolean-field` | Switch |
 | `date` | `nv-date-field` | Date, or local date and time stored in UTC |
 | `select` | `nv-select-field` | Select, or checkboxes when multiple |
-| `media` | `nv-media-field` | Asset id and alternative text until the media library (package 07) |
+| `media` | `nv-media-field` | Files chosen in the media library picker, with optional alt text for the page (the library's is used when empty) |
 | `link` | `nv-link-field` | Page on the site, web address or email, with link text |
 | `reference` | `nv-reference-field` | Select, or checkboxes when multiple |
 | `blocks` | `nv-blocks-field` | Add, reorder (drag and drop or buttons), remove and open nested blocks |
@@ -20,7 +20,7 @@ them to an entry's data.
 | `group` | `nv-group-field` | Nested fields, or a repeatable list of them |
 
 Provide a `FieldFormContext` on the page that hosts the form: it carries the block types, the entries
-reference and link fields can choose from, the validation errors (dotted path to messages, exactly as the
+reference and link fields can choose from, the media library (media, a MediaSource from @novan/admin-media, and the\nssets previews it loads), the validation errors (dotted path to messages, exactly as the
 API and `buildEntrySchema` report them) and a read-only switch for roles that cannot edit.
 
 Every control has a visible label, its help and errors linked with `aria-describedby`, and an id from

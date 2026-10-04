@@ -1,0 +1,64 @@
+<fieldset [attr.aria-describedby]="id + '-now'">
+  <legend class="form-label fs-6 mb-1">Focal point</legend>
+  <p class="form-text mt-0">The part of the image to keep in view when it is cropped to fit a space.</p>
+
+  <!-- Click the image to set the point, or focus it and use the arrow keys (as the sliders below). -->
+  <button
+    type="button"
+    class="nv-focal-frame btn p-0 border-0 position-relative d-inline-block mw-100"
+    [disabled]="disabled()"
+    [attr.aria-describedby]="id + '-keys ' + id + '-now'"
+    (click)="pick($event)"
+    (keydown)="nudge($event)"
+  >
+    <img class="d-block mw-100 h-auto rounded" [src]="src()" alt="Set the focal point" />
+    <svg
+      class="nv-focal-marker position-absolute top-0 start-0 w-100 h-100"
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <line [attr.x1]="x()" [attr.x2]="x()" y1="0" y2="100" vector-effect="non-scaling-stroke" />
+      <line x1="0" x2="100" [attr.y1]="y()" [attr.y2]="y()" vector-effect="non-scaling-stroke" />
+    </svg>
+  </button>
+  <p [id]="id + '-keys'" class="visually-hidden">Arrow keys move the point by 5%.</p>
+  <p [id]="id + '-now'" class="small text-body-secondary mt-1 mb-2" aria-live="polite">{{ description() }}</p>
+
+  <div class="row g-2">
+    <div class="col-sm-6">
+      <label class="form-label" [for]="id + '-x'">From the left</label>
+      <input
+        type="range"
+        class="form-range"
+        min="0"
+        max="100"
+        step="1"
+        [id]="id + '-x'"
+        [value]="x()"
+        [disabled]="disabled()"
+        [attr.aria-valuetext]="x() + '%'"
+        (change)="setX($event)"
+      />
+    </div>
+    <div class="col-sm-6">
+      <label class="form-label" [for]="id + '-y'">From the top</label>
+      <input
+        type="range"
+        class="form-range"
+        min="0"
+        max="100"
+        step="1"
+        [id]="id + '-y'"
+        [value]="y()"
+        [disabled]="disabled()"
+        [attr.aria-valuetext]="y() + '%'"
+        (change)="setY($event)"
+      />
+    </div>
+  </div>
+  @if (value() && !disabled()) {
+    <button type="button" class="btn btn-sm btn-link px-0" (click)="clear()">Back to the centre</button>
+  }
+</fieldset>

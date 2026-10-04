@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { type FieldDef, type FieldDefInput, fieldListSchema } from '@novan/shared-schemas';
-import { FieldFormContext } from '../field-form-context';
+import { FieldFormContext, type MediaPreview, type MediaSource } from '../field-form-context';
 import { FieldForm } from './field-form';
 
 const defs = (...fields: FieldDefInput[]): FieldDef[] => fieldListSchema.parse(fields);
@@ -179,13 +179,94 @@ describe('FieldForm', () => {
     expect(value()).toEqual({ extra: { a: 2 } });
   });
 
-  it('stores a media item with its alternative text, and nothing when emptied', async () => {
+  it('without a media library, stores a typed asset id with its alternative text, and nothing when emptied', async () => {
     const { type, value } = await render(defs({ id: 'i', apiId: 'image', label: 'Image', type: 'media', requireAlt: true }));
     await type('Asset id', '00000000-0000-4000-8000-000000000009');
     await type('Alternative text', 'A cat');
     expect(value()).toEqual({ image: { assetId: '00000000-0000-4000-8000-000000000009', alt: 'A cat' } });
-    await type('Asset id', '');
     await type('Alternative text', '');
+    expect(value()).toEqual({ image: { assetId: '00000000-0000-4000-8000-000000000009' } });
+    await type('Asset id', '');
     expect(value()).toEqual({ image: null });
+  });
+
+  describe('with a media library', () => {
+    const door: MediaPreview = {
+      id: '00000000-0000-4000-8000-000000000001',
+      filename: 'red-door.jpg',
+      title: 'Red door',
+      kind: 'image',
+      alt: 'A red front door',
+      thumbnailUrl: 'https://storage.example/red-door.jpg?token=x',
+    };
+    const plain: MediaPreview = { ...door, id: '00000000-0000-4000-8000-000000000002', title: 'Plain', alt: null };
+
+    function library(context: FieldFormContext, choice: MediaPreview[] | null) {
+      const source: MediaSource = {
+        choose: vi.fn().mockResolvedValue(choice),
+        load: vi.fn((ids: readonly string[]) => {
+          const known = new Map([door, plain].map((asset) => [asset.id, asset]));
+          context.assets.update((assets) => new Map([...assets, ...ids.map((id) => [id, known.get(id) ?? null] as const)]));
+        }),
+      };
+      context.media.set(source);
+      return source;
+    }
+
+    const click = async (el: HTMLElement, fixture: { whenStable(): Promise<unknown> }, name: RegExp) => {
+      const button = [...el.querySelectorAll('button')].find((b) => name.test(b.textContent?.replace(/\s+/g, ' ').trim() ?? ''));
+      if (!button) throw new Error(`no button ${name}`);
+      button.click();
+      await fixture.whenStable();
+      await fixture.whenStable();
+    };
+
+    it('chooses a file in the picker and uses the library\'s alt text unless the page gives its own', async () => {
+      const fields = defs({ id: 'i', apiId: 'image', label: 'Image', type: 'media', requireAlt: true });
+      const { fixture, el, context, input, type, value } = await render(fields);
+      const source = library(context, [door]);
+      await fixture.whenStable();
+
+      await click(el, fixture, /^Choose an image for Image$/);
+      expect(source.choose).toHaveBeenCalledWith({ accept: ['image'], multiple: false, label: 'Image' });
+      expect(value()).toEqual({ image: { assetId: door.id } });
+      expect(el.textContent).toContain('Red door');
+      // The button that opened the picker is gone; focus moves to its replacement, not the page.
+      await vi.waitFor(() => expect(document.activeElement?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Change Red door in Image'));
+      expect(el.querySelector('img')?.getAttribute('alt')).toBe('');
+      // The library has alt text, so the page's own is optional.
+      expect(el.querySelector(`label[for="${input('Alternative text').id}"]`)?.textContent).not.toContain('(required)');
+      expect(el.textContent).toContain('Leave empty to use the library\'s: "A red front door".');
+      await type('Alternative text', 'Our front door');
+      expect(value()).toEqual({ image: { assetId: door.id, alt: 'Our front door' } });
+
+      await click(el, fixture, /^Remove Red door from Image$/);
+      expect(value()).toEqual({ image: null });
+      await vi.waitFor(() => expect(document.activeElement?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Choose an image for Image'));
+    });
+
+    it('asks for alt text when the library has none, and says when a file has gone', async () => {
+      const fields = defs({ id: 'i', apiId: 'image', label: 'Image', type: 'media', requireAlt: true });
+      const { fixture, el, context } = await render(fields, { image: { assetId: plain.id } });
+      library(context, null);
+      await fixture.whenStable();
+      expect(el.textContent).toContain('Alternative text (required)');
+      expect(context.assetInfo(plain.id)).toEqual({ kind: 'image', alt: null });
+
+      context.assets.set(new Map([[plain.id, null]]));
+      await fixture.whenStable();
+      expect(el.textContent).toContain('This file is no longer in the media library.');
+      expect(context.assetInfo(plain.id)).toBeNull();
+      expect(context.assetInfo('unknown')).toBeUndefined();
+    });
+
+    it('adds several files to a list field, once each', async () => {
+      const fields = defs({ id: 'g', apiId: 'gallery', label: 'Gallery', type: 'media', multiple: true });
+      const { fixture, el, context, value } = await render(fields, { gallery: [{ assetId: door.id }] });
+      library(context, [door, plain]);
+      await fixture.whenStable();
+      await click(el, fixture, /^Add from the media library to Gallery$/);
+      expect(value()).toEqual({ gallery: [{ assetId: door.id }, { assetId: plain.id }] });
+    });
   });
 });

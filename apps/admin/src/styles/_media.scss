@@ -1,0 +1,53 @@
+// The media library (libs/admin/media) and media fields (libs/admin/fields).
+
+// Upload drop zone: a dashed outline that turns solid while files are dragged over it.
+.nv-dropzone {
+  border: 0.125rem dashed var(--bs-border-color);
+  background-color: var(--ds-color-surface-muted);
+}
+
+.nv-dropzone-active {
+  border-style: solid;
+  border-color: var(--ds-color-brand-primary);
+}
+
+.nv-dropzone-input {
+  max-width: 28rem;
+}
+
+// A chosen file's preview in a media field.
+.nv-media-field-thumb {
+  width: 6rem;
+  height: 4.5rem;
+}
+
+// Previews in the library's list view and the details drawer.
+.nv-media-list-thumb {
+  width: 4.5rem;
+}
+
+.nv-asset-preview {
+  max-width: 12rem;
+}
+
+// Focal point: crosshairs drawn over the image, visible on light and dark pictures.
+.nv-focal-frame {
+  cursor: crosshair;
+}
+
+.nv-focal-marker line {
+  stroke: var(--ds-color-text-inverse);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 0.125rem var(--ds-color-text-body));
+}
+
+@media (forced-colors: active) {
+  .nv-focal-marker line {
+    stroke: Highlight;
+    filter: none;
+  }
+
+  .nv-dropzone-active {
+    border-color: Highlight;
+  }
+}

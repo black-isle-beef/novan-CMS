@@ -1,0 +1,231 @@
+<ds-offcanvas
+  [open]="open()"
+  (openChange)="!$event && assetId.set(null)"
+  placement="end"
+  [heading]="asset() ? asset()?.title || asset()?.filename || 'File' : 'File details'"
+  closeButtonLabel="Close file details"
+>
+  @if (loadError(); as message) {
+    <ds-alert variant="danger">{{ message }}</ds-alert>
+  } @else if (asset(); as file) {
+    @if (status(); as message) {
+      <div id="asset-status" tabindex="-1" class="mb-3">
+        <ds-alert variant="success">{{ message }}</ds-alert>
+      </div>
+    }
+    @if (problem(); as message) {
+      <div id="asset-problem" tabindex="-1" class="mb-3">
+        <ds-alert variant="danger">{{ message }}</ds-alert>
+      </div>
+    }
+    @if (file.deletedAt) {
+      <ds-alert variant="warning" class="d-block mb-3"
+        >This file is in the bin. Pages that used it no longer show it.</ds-alert
+      >
+    }
+
+    @let src = url();
+    @let current = draft();
+    @if (file.kind === 'image' && src && current) {
+      <nv-focal-point-picker
+        class="d-block mb-3"
+        [src]="src"
+        [value]="current.focal"
+        [disabled]="!canDescribe()"
+        (changed)="setFocal($event)"
+      />
+    } @else {
+      <div class="nv-asset-preview mb-3">
+        <nv-asset-thumb [asset]="file" [url]="url()" />
+      </div>
+    }
+
+    <dl class="row small mb-3">
+      <dt class="col-5">File</dt>
+      <dd class="col-7 text-break">{{ file.filename }}</dd>
+      <dt class="col-5">Size</dt>
+      <dd class="col-7">
+        {{ formatBytes(file.sizeBytes) }}{{ file.width ? ', ' + file.width + ' × ' + file.height + ' pixels' : '' }}
+      </dd>
+      <dt class="col-5">Added</dt>
+      <dd class="col-7">{{ time(file.createdAt) }}{{ file.uploadedByName ? ' by ' + file.uploadedByName : '' }}</dd>
+    </dl>
+
+    @if (draft(); as d) {
+      <form novalidate (submit)="$event.preventDefault(); save()">
+        @if (file.kind === 'image') {
+          <div class="mb-3">
+            <label for="asset-alt" class="form-label">Alternative text</label>
+            <textarea
+              id="asset-alt"
+              class="form-control"
+              rows="2"
+              [class.is-invalid]="errors('alt').length"
+              [attr.aria-describedby]="describedBy('alt', true)"
+              [attr.aria-invalid]="errors('alt').length > 0 || null"
+              [value]="d.alt"
+              [disabled]="!canDescribe()"
+              (input)="set('alt', $event)"
+            ></textarea>
+            <div id="asset-alt-hint" class="form-text">
+              Describe the image for people who cannot see it. Pages use this unless they give their own.
+            </div>
+            @if (errors('alt').length) {
+              <div id="asset-alt-error" class="invalid-feedback d-block">{{ errors('alt').join(' ') }}</div>
+            }
+            @if (!d.alt.trim()) {
+              <ds-badge variant="danger" class="mt-1">No alt text yet</ds-badge>
+            }
+          </div>
+        }
+        <div class="mb-3">
+          <label for="asset-title" class="form-label">Title</label>
+          <input
+            id="asset-title"
+            type="text"
+            class="form-control"
+            [class.is-invalid]="errors('title').length"
+            [attr.aria-describedby]="describedBy('title', false)"
+            [attr.aria-invalid]="errors('title').length > 0 || null"
+            [value]="d.title"
+            [disabled]="!canDescribe()"
+            (input)="set('title', $event)"
+          />
+          @if (errors('title').length) {
+            <div id="asset-title-error" class="invalid-feedback d-block">{{ errors('title').join(' ') }}</div>
+          }
+        </div>
+        <div class="mb-3">
+          <label for="asset-tags" class="form-label">Tags</label>
+          <input
+            id="asset-tags"
+            type="text"
+            class="form-control"
+            [class.is-invalid]="errors('tags').length"
+            [attr.aria-describedby]="describedBy('tags', true)"
+            [attr.aria-invalid]="errors('tags').length > 0 || null"
+            [value]="d.tags"
+            [disabled]="!canDescribe()"
+            (input)="set('tags', $event)"
+          />
+          <div id="asset-tags-hint" class="form-text">Separate tags with commas, like team, events.</div>
+          @if (errors('tags').length) {
+            <div id="asset-tags-error" class="invalid-feedback d-block">{{ errors('tags').join(' ') }}</div>
+          }
+        </div>
+        <div class="mb-3">
+          <label for="asset-folder" class="form-label">Folder</label>
+          <input
+            id="asset-folder"
+            type="text"
+            class="form-control"
+            list="asset-folder-choices"
+            [class.is-invalid]="errors('folder').length"
+            [attr.aria-describedby]="describedBy('folder', true)"
+            [attr.aria-invalid]="errors('folder').length > 0 || null"
+            [value]="d.folder"
+            [disabled]="!canDescribe()"
+            (input)="set('folder', $event)"
+          />
+          <datalist id="asset-folder-choices">
+            @for (folder of folders(); track folder) {
+              <option [value]="folder"></option>
+            }
+          </datalist>
+          <div id="asset-folder-hint" class="form-text">
+            Leave empty for no folder. Use / for a folder inside another, like Brand/Logos.
+          </div>
+          @if (errors('folder').length) {
+            <div id="asset-folder-error" class="invalid-feedback d-block">{{ errors('folder').join(' ') }}</div>
+          }
+        </div>
+        @if (canDescribe()) {
+          <button type="submit" class="btn btn-primary mb-4" [disabled]="saving() || !dirty()">Save details</button>
+        } @else if (!file.deletedAt) {
+          <p class="small text-body-secondary">You can describe only the files you uploaded.</p>
+        }
+      </form>
+    }
+
+    <section class="mb-4" aria-labelledby="asset-usage-heading">
+      <h3 id="asset-usage-heading" class="h6">
+        {{
+          file.usageCount === 0
+            ? 'Not used on any published page'
+            : file.usageCount === 1
+              ? 'Used on 1 published page'
+              : 'Used on ' + file.usageCount + ' published pages'
+        }}
+      </h3>
+      @if (file.usages.length) {
+        <ul class="list-unstyled mb-0">
+          @for (usage of file.usages; track usage.entryId + usage.fieldPath) {
+            <li>
+              <a [routerLink]="['/spaces', spaceId(), 'content', usage.entryId]">{{ usage.title }}</a>
+              <span class="small text-body-secondary"> {{ usage.path }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    @if (canEditAny()) {
+      <section aria-labelledby="asset-manage-heading">
+        <h3 id="asset-manage-heading" class="h6">Manage the file</h3>
+        @if (file.deletedAt) {
+          <button type="button" class="btn btn-outline-primary" [disabled]="saving()" (click)="restore()">
+            Restore from the bin
+          </button>
+        } @else {
+          <div class="mb-3">
+            <label for="asset-replace" class="form-label">Replace the file</label>
+            <input
+              id="asset-replace"
+              type="file"
+              class="form-control"
+              aria-describedby="asset-replace-hint"
+              [disabled]="saving()"
+              (change)="replace($event)"
+            />
+            <div id="asset-replace-hint" class="form-text">
+              Choose a new {{ file.kind === 'file' ? 'file' : file.kind }}. Every page using this one shows the new
+              file; its alt text stays.
+            </div>
+            @if (replacing() !== null) {
+              <p class="small mb-0 mt-1" aria-live="polite">Uploading the new file: {{ replacing() }}%</p>
+            }
+          </div>
+          <button
+            type="button"
+            class="btn btn-outline-danger"
+            [disabled]="saving()"
+            (click)="confirmingDelete.set(true)"
+          >
+            Delete
+          </button>
+        }
+      </section>
+    }
+
+    <ds-modal
+      [open]="confirmingDelete()"
+      (openChange)="!$event && confirmingDelete.set(false)"
+      [heading]="'Delete ' + (file.title || file.filename) + '?'"
+      size="sm"
+    >
+      @if (file.usageCount) {
+        <ds-alert variant="warning" class="d-block mb-2">
+          It is in use on {{ file.usageCount === 1 ? '1 published page' : file.usageCount + ' published pages' }}. Those
+          pages will stop showing it.
+        </ds-alert>
+      }
+      <p class="mb-0">It moves to the bin for 30 days, and you can restore it until then.</p>
+      <div dsModalFooter class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-outline-secondary" (click)="confirmingDelete.set(false)">Cancel</button>
+        <button type="button" class="btn btn-danger" (click)="remove()">Delete</button>
+      </div>
+    </ds-modal>
+  } @else {
+    <ds-spinner label="Loading the file" />
+  }
+</ds-offcanvas>

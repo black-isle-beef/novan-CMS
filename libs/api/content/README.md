@@ -21,6 +21,9 @@ Entries, folders and versions (package 06), under `/v1/management/spaces/:spaceI
   the same roles.
 - Entry data is validated with `buildEntrySchema` from `@novan/shared-schemas`: drafts may be incomplete
   but never malformed; publishing needs every required field (400 `entry_invalid` with field `errors`).
+- Media items are checked against the space's library (`loadAssets`): the file must be a kind the field
+  accepts, still be in the library to publish, and have alt text (on the page or in the library) where the
+  field has `requireAlt`. Publishing records the files used in `asset_usages`; unpublishing clears them.
 - Versions are immutable. Publishing and restoring only move `current_version_id` / `published_version_id`
   and copy data into `published_content`.
 - The slug lives on the entry. When the content type has a top-level `slug` text field, the entry's slug

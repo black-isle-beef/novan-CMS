@@ -1,0 +1,53 @@
+<div
+  class="nv-dropzone rounded p-4 text-center"
+  [class.nv-dropzone-active]="dragging()"
+  (dragover)="dragOver($event)"
+  (dragleave)="dragging.set(false)"
+  (drop)="dropped($event)"
+>
+  <i class="bi bi-cloud-arrow-up fs-2 d-block mb-2" aria-hidden="true"></i>
+  <label class="form-label fw-semibold" [for]="inputId">Upload files</label>
+  <input
+    type="file"
+    class="form-control mx-auto nv-dropzone-input"
+    multiple
+    [id]="inputId"
+    [accept]="acceptAttr()"
+    [attr.aria-describedby]="inputId + '-hint'"
+    (change)="chosen($event)"
+  />
+  <p [id]="inputId + '-hint'" class="form-text mb-0">
+    Drag files here, or choose them. Images up to {{ limits.image }}; videos and documents up to {{ limits.other }}.
+  </p>
+</div>
+
+<div class="mt-2" aria-live="polite">
+  @if (summary(); as text) {
+    <p class="mb-2">{{ text }}</p>
+  }
+</div>
+@if (uploads().length) {
+  <ul class="list-unstyled mb-0">
+    @for (upload of uploads(); track upload.key) {
+      <li class="border rounded p-2 mb-2">
+        <div class="d-flex flex-wrap justify-content-between gap-2">
+          <span class="text-break">{{ upload.name }}</span>
+          <span
+            class="small"
+            [class.text-danger-emphasis]="upload.state === 'failed'"
+            [class.text-success-emphasis]="upload.state === 'done'"
+            [class.text-body-secondary]="upload.state === 'uploading' || upload.state === 'checking'"
+          >
+            {{ stateText(upload) }}
+          </span>
+        </div>
+        @if (upload.state === 'uploading' || upload.state === 'checking') {
+          <ds-progress class="d-block mt-1" [value]="upload.progress" [label]="'Uploading ' + upload.name" />
+        }
+      </li>
+    }
+  </ul>
+  @if (!summary().startsWith('Uploading')) {
+    <button type="button" class="btn btn-sm btn-link px-0" (click)="clearFinished()">Clear this list</button>
+  }
+}

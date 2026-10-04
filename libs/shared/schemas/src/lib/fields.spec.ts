@@ -6,6 +6,8 @@ import {
   type FieldDefInput,
   fieldDefSchema,
   fieldListSchema,
+  type MediaAssetInfo,
+  mediaRefs,
   REQUIRED_MESSAGE,
 } from './fields';
 
@@ -312,26 +314,98 @@ describe('buildEntrySchema', () => {
   });
 
   describe('media', () => {
-    const schema = buildEntrySchema(
-      defs(
-        { id: 'a', apiId: 'image', label: 'Image', type: 'media', requireAlt: true, required: true },
-        { id: 'b', apiId: 'gallery', label: 'Gallery', type: 'media', multiple: true },
-      ),
+    const mediaFields = defs(
+      { id: 'a', apiId: 'image', label: 'Image', type: 'media', requireAlt: true, required: true },
+      { id: 'b', apiId: 'gallery', label: 'Gallery', type: 'media', multiple: true },
     );
+    const schema = buildEntrySchema(mediaFields);
 
-    it('takes an asset id, and alt text when required', () => {
+    it('takes an asset id with optional alt text', () => {
       expect(schema.parse({ image: { assetId: uid(1), alt: 'A red door' } })).toEqual({
         image: { assetId: uid(1), alt: 'A red door' },
       });
-      expect(issues(schema, { image: { assetId: uid(1) } })).toEqual([
-        'image.alt: Describe the image for people who cannot see it.',
-      ]);
+      // Without the library, alt text may come from the asset, so it is not asked for.
+      expect(schema.parse({ image: { assetId: uid(1) } })).toEqual({ image: { assetId: uid(1) } });
       expect(issues(schema, { image: { assetId: 'nope', alt: 'x' } })).toEqual(['image.assetId: Expected an id (UUID).']);
     });
 
     it('takes a list when multiple', () => {
       const gallery = [{ assetId: uid(1) }, { assetId: uid(2), alt: '' }];
       expect(schema.parse({ image: { assetId: uid(3), alt: 'x' }, gallery })).toMatchObject({ gallery });
+    });
+
+    describe('with the media library', () => {
+      const library = new Map<string, MediaAssetInfo>([
+        [uid(1), { kind: 'image', alt: 'A red door' }],
+        [uid(2), { kind: 'image', alt: null }],
+        [uid(3), { kind: 'file', alt: null }],
+      ]);
+      const lookup = (id: string) => library.get(id) ?? (id === uid(9) ? undefined : null);
+      const publish = buildEntrySchema(mediaFields, { assets: lookup });
+      const draft = buildEntrySchema(mediaFields, { assets: lookup, draft: true });
+
+      it('publishing needs alt text on the item or the asset when the field requires it', () => {
+        expect(issues(publish, { image: { assetId: uid(1) } })).toEqual([]);
+        expect(issues(publish, { image: { assetId: uid(2), alt: 'A blue door' } })).toEqual([]);
+        expect(issues(publish, { image: { assetId: uid(2), alt: '  ' } })).toEqual([
+          'image.alt: Describe the image for people who cannot see it.',
+        ]);
+        // A draft may still be missing it.
+        expect(issues(draft, { image: { assetId: uid(2) } })).toEqual([]);
+      });
+
+      it('refuses a kind of file the field does not accept, even in a draft', () => {
+        expect(issues(draft, { image: { assetId: uid(3), alt: 'x' } })).toEqual(['image.assetId: Choose an image.']);
+      });
+
+      it('publishing needs every file to still be in the library; unknown ones are left to the API', () => {
+        expect(issues(publish, { image: { assetId: uid(1) }, gallery: [{ assetId: uid(4) }] })).toEqual([
+          'gallery.0.assetId: This file is no longer in the media library. Choose another.',
+        ]);
+        expect(issues(draft, { image: { assetId: uid(4) } })).toEqual([]);
+        expect(issues(publish, { image: { assetId: uid(9) } })).toEqual([]);
+      });
+    });
+  });
+
+  describe('mediaRefs', () => {
+    const blocks = [
+      { apiId: 'hero', fields: defs({ id: 'i', apiId: 'image', label: 'Image', type: 'media' }), allowedChildren: ['hero'] },
+    ];
+    const fields = defs(
+      { id: 'a', apiId: 'image', label: 'Image', type: 'media' },
+      { id: 'b', apiId: 'gallery', label: 'Gallery', type: 'media', multiple: true },
+      {
+        id: 'c',
+        apiId: 'seo',
+        label: 'SEO',
+        type: 'group',
+        fields: [{ id: 'o', apiId: 'ogImage', label: 'Image', type: 'media' }],
+      },
+      { id: 'd', apiId: 'body', label: 'Body', type: 'blocks' },
+      { id: 'e', apiId: 'extra', label: 'Extra', type: 'json' },
+    );
+
+    it('finds media items in fields, lists, groups, blocks and their children, by block _uid', () => {
+      const data = {
+        image: { assetId: uid(1) },
+        gallery: [{ assetId: uid(2) }, { assetId: uid(3) }],
+        seo: { ogImage: { assetId: uid(4) } },
+        body: [{ _uid: uid(10), _block: 'hero', image: { assetId: uid(5) }, children: [{ _uid: uid(11), _block: 'hero', image: { assetId: uid(6) } }] }],
+        extra: { assetId: uid(7) },
+      };
+      expect(mediaRefs(fields, data, blocks)).toEqual([
+        { assetId: uid(1), path: 'image' },
+        { assetId: uid(2), path: 'gallery.0' },
+        { assetId: uid(3), path: 'gallery.1' },
+        { assetId: uid(4), path: 'seo.ogImage' },
+        { assetId: uid(5), path: `body.${uid(10)}.image` },
+        { assetId: uid(6), path: `body.${uid(10)}.children.${uid(11)}.image` },
+      ]);
+    });
+
+    it('skips values of the wrong shape', () => {
+      expect(mediaRefs(fields, { image: 'x', gallery: { assetId: uid(1) }, seo: [], body: [null, { _block: 'hero' }] }, blocks)).toEqual([]);
     });
   });
 

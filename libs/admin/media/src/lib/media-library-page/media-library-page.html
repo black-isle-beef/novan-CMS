@@ -1,0 +1,222 @@
+<h1 class="mb-1">Media</h1>
+<p class="lead text-muted mb-4">Images, videos and documents of {{ context.currentSpace()?.name ?? 'this space' }}.</p>
+
+@if (canUpload()) {
+  <section class="mb-4" aria-labelledby="media-upload-heading">
+    <h2 id="media-upload-heading" class="visually-hidden">Upload</h2>
+    <nv-media-uploader [spaceId]="spaceId()" [folder]="uploadFolder()" (uploaded)="reload()" />
+    @if (uploadFolder(); as folder) {
+      <p class="form-text">New files go in the {{ folder }} folder.</p>
+    }
+  </section>
+}
+
+@if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (loading()) {
+  <ds-spinner label="Loading the media library" />
+} @else {
+  <div class="row g-4">
+    <nav class="col-md-3" aria-label="Folders">
+      <h2 class="h6">Folders</h2>
+      <ul class="list-unstyled mb-0">
+        <li>
+          <button
+            type="button"
+            class="btn btn-sm w-100 text-start"
+            [class.btn-primary]="folder() === 'all'"
+            [attr.aria-current]="folder() === 'all' ? 'true' : null"
+            (click)="folder.set('all')"
+          >
+            All files
+          </button>
+        </li>
+        <li>
+          <button
+            type="button"
+            class="btn btn-sm w-100 text-start"
+            [class.btn-primary]="folder() === 'root'"
+            [attr.aria-current]="folder() === 'root' ? 'true' : null"
+            (click)="folder.set('root')"
+          >
+            Not in a folder
+          </button>
+        </li>
+        @for (option of folders(); track option.path) {
+          <li>
+            <button
+              type="button"
+              class="btn btn-sm w-100 text-start text-break"
+              [class]="depthClass(option.depth)"
+              [class.btn-primary]="folder() === option.path"
+              [attr.aria-current]="folder() === option.path ? 'true' : null"
+              [attr.aria-label]="option.path.split('/').join(' / ')"
+              (click)="folder.set(option.path)"
+            >
+              <i class="bi bi-folder me-1" aria-hidden="true"></i>{{ option.name }}
+            </button>
+          </li>
+        }
+      </ul>
+      @if (!folders().length) {
+        <p class="small text-body-secondary mt-2">Put a file in a folder from its details.</p>
+      }
+    </nav>
+
+    <section class="col-md-9" aria-labelledby="media-files-heading">
+      <h2 id="media-files-heading" class="h5">{{ folderName() }}</h2>
+      <div class="d-flex flex-wrap align-items-end gap-3 mb-3">
+        <div class="flex-grow-1">
+          <label for="media-search" class="form-label">Search</label>
+          <input
+            id="media-search"
+            type="search"
+            class="form-control"
+            aria-describedby="media-search-hint"
+            [value]="search()"
+            (input)="setSearch($event)"
+          />
+          <div id="media-search-hint" class="form-text">By name, title, alt text or tag.</div>
+        </div>
+        <div class="mb-4">
+          <label for="media-kind" class="form-label">Type</label>
+          <select id="media-kind" class="form-select" (change)="setKind($event)">
+            <option value="" [selected]="!kind()">All types</option>
+            <option value="image" [selected]="kind() === 'image'">Images</option>
+            <option value="video" [selected]="kind() === 'video'">Videos</option>
+            <option value="file" [selected]="kind() === 'file'">Documents</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label for="media-tag" class="form-label">Tag</label>
+          <select id="media-tag" class="form-select" (change)="setTag($event)">
+            <option value="" [selected]="!tag()">All tags</option>
+            @for (name of tags(); track name) {
+              <option [value]="name" [selected]="tag() === name">{{ name }}</option>
+            }
+          </select>
+        </div>
+        <div class="mb-4 btn-group" role="group" aria-label="Show as">
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            [class.active]="view() === 'grid'"
+            [attr.aria-pressed]="view() === 'grid'"
+            (click)="view.set('grid')"
+          >
+            <i class="bi bi-grid-3x3-gap me-1" aria-hidden="true"></i>Grid
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            [class.active]="view() === 'list'"
+            [attr.aria-pressed]="view() === 'list'"
+            (click)="view.set('list')"
+          >
+            <i class="bi bi-list-ul me-1" aria-hidden="true"></i>List
+          </button>
+        </div>
+      </div>
+
+      <p class="small text-body-secondary" aria-live="polite">
+        {{ shown().length === 1 ? '1 file' : shown().length + ' files' }}
+      </p>
+
+      @if (!shown().length) {
+        <p>
+          {{
+            assets().length ? 'No files match.' : 'No files yet.' + (canUpload() ? ' Upload the first ones above.' : '')
+          }}
+        </p>
+      } @else if (view() === 'grid') {
+        <ul class="row row-cols-2 row-cols-sm-3 row-cols-xl-4 g-3 list-unstyled mb-0">
+          @for (asset of shown(); track asset.id) {
+            <li class="col">
+              <div class="border rounded h-100 p-2">
+                <button type="button" class="btn w-100 p-0 text-start border-0" (click)="openId.set(asset.id)">
+                  <nv-asset-thumb [asset]="asset" [url]="urls().get(asset.id)" />
+                  <span class="d-block small fw-semibold text-break mt-2">{{ asset.title || asset.filename }}</span>
+                  <span class="visually-hidden">, open details</span>
+                </button>
+                <div class="d-flex flex-wrap gap-1 mt-1">
+                  @if (asset.kind === 'image' && !asset.alt) {
+                    <ds-badge variant="danger">No alt text</ds-badge>
+                  }
+                  @if (asset.usageCount) {
+                    <ds-badge variant="neutral">In use</ds-badge>
+                  }
+                </div>
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <caption class="visually-hidden">
+              Files in
+              {{
+                folderName()
+              }}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col"><span class="visually-hidden">Preview</span></th>
+                <th scope="col">Name</th>
+                <th scope="col">Type</th>
+                <th scope="col">Size</th>
+                <th scope="col">Alt text</th>
+                <th scope="col">Used on</th>
+                <th scope="col">Added</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (asset of shown(); track asset.id) {
+                <tr>
+                  <td class="nv-media-list-thumb"><nv-asset-thumb [asset]="asset" [url]="urls().get(asset.id)" /></td>
+                  <th scope="row" class="fw-normal">
+                    <button type="button" class="btn btn-link p-0 text-start text-break" (click)="openId.set(asset.id)">
+                      {{ asset.title || asset.filename }}
+                    </button>
+                    <span class="d-block small text-body-secondary text-break">{{ asset.filename }}</span>
+                  </th>
+                  <td>{{ kindLabels[asset.kind] }}</td>
+                  <td>{{ formatBytes(asset.sizeBytes) }}</td>
+                  <td>
+                    @if (asset.kind !== 'image') {
+                      <span class="text-body-secondary">Not needed</span>
+                    } @else if (asset.alt) {
+                      <span><i class="bi bi-check-circle text-success me-1" aria-hidden="true"></i>Added</span>
+                    } @else {
+                      <ds-badge variant="danger">Missing</ds-badge>
+                    }
+                  </td>
+                  <td>{{ asset.usageCount === 1 ? '1 page' : asset.usageCount + ' pages' }}</td>
+                  <td>{{ date(asset.createdAt) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (bin().length) {
+        <details class="mt-4">
+          <summary class="mb-2">Bin ({{ bin().length }})</summary>
+          <p class="text-body-secondary">Deleted files stay here for 30 days.</p>
+          <ul class="list-unstyled">
+            @for (asset of bin(); track asset.id) {
+              <li class="py-1">
+                <button type="button" class="btn btn-link p-0 text-break" (click)="openId.set(asset.id)">
+                  {{ asset.title || asset.filename }}<span class="visually-hidden"> (in the bin), open details</span>
+                </button>
+              </li>
+            }
+          </ul>
+        </details>
+      }
+    </section>
+  </div>
+}
+
+<nv-asset-details [spaceId]="spaceId()" [(assetId)]="openId" [folders]="folderPaths()" (changed)="reload()" />

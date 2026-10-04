@@ -28,13 +28,14 @@ export class Shell implements OnInit {
 
   protected readonly navItems = computed<NavItem[]>(() => {
     const spaceId = this.spaces.currentSpaceId();
-    const section = /^\/spaces\/[^/]+\/(content|members|schema)(\/|$)/.exec(this.url())?.[1] ?? null;
+    const section = /^\/spaces\/[^/]+\/(content|media|members|schema)(\/|$)/.exec(this.url())?.[1] ?? null;
     const inSchema = section === 'schema';
     return [
       { label: 'Spaces', href: '/spaces', active: this.url().startsWith('/spaces') && section === null },
       ...(spaceId && this.spaces.currentSpace()
         ? [
             { label: 'Content', href: `/spaces/${spaceId}/content`, active: section === 'content' },
+            { label: 'Media', href: `/spaces/${spaceId}/media`, active: section === 'media' },
             { label: 'People', href: `/spaces/${spaceId}/members`, active: section === 'members' },
           ]
         : []),

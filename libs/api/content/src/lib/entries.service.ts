@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { badRequest, conflict, forbidden, notFound } from '@novan/api-common';
 import type { AuthUser, SpaceAccess } from '@novan/api-auth';
 import {
+  assetUsages,
   contentTypes,
   DbService,
   type DbTransaction,
@@ -26,6 +27,8 @@ import {
   type EntryVersion,
   entryTitle,
   type listEntriesQuerySchema,
+  type MediaRef,
+  mediaRefs,
   type moveEntryRequestSchema,
   slugify,
   type updateEntryRequestSchema,
@@ -41,6 +44,7 @@ import {
   type EntryModel,
   environmentId,
   hasSlugField,
+  loadAssets,
   loadModel,
   slugInData,
   validateData,
@@ -128,7 +132,8 @@ export class EntriesService {
         // The slug comes from the data's slug field, else the request, else the title.
         const slug = slugInData(type, body.data) ?? body.slug ?? (slugify(entryTitle(body.data, '')) || null);
         if (!slug) throw badRequest('slug_required', 'Give it a title or a slug, so it has an address.');
-        const data = validateData(model, type, hasSlugField(type) ? { ...body.data, slug } : body.data, 'draft');
+        const input = hasSlugField(type) ? { ...body.data, slug } : body.data;
+        const data = validateData(model, type, input, 'draft', await loadAssets(tx, spaceId, model, type, input));
 
         const [{ locale }] = await tx.select({ locale: spaces.defaultLocale }).from(spaces).where(eq(spaces.id, spaceId));
         const [entry] = await tx
@@ -166,7 +171,7 @@ export class EntriesService {
         const model = await loadModel(tx, spaceId, env);
         const entry = await liveEntry(tx, model.environmentId, id);
         const type = contentTypeById(model, entry.contentTypeId);
-        const data = validateData(model, type, body.data, 'draft');
+        const data = validateData(model, type, body.data, 'draft', await loadAssets(tx, spaceId, model, type, body.data));
         await saveVersion(tx, entry, user, data, {
           message: body.message ?? null,
           autosave: false,
@@ -190,7 +195,7 @@ export class EntriesService {
         const model = await loadModel(tx, spaceId, env);
         const entry = await liveEntry(tx, model.environmentId, id);
         const type = contentTypeById(model, entry.contentTypeId);
-        const data = validateData(model, type, body.data, 'draft');
+        const data = validateData(model, type, body.data, 'draft', await loadAssets(tx, spaceId, model, type, body.data));
         const slug = slugInData(type, data) ?? entry.slug;
 
         const [current] = await tx.select().from(entryVersions).where(eq(entryVersions.id, entry.currentVersionId as string));
@@ -231,7 +236,7 @@ export class EntriesService {
         const type = contentTypeById(model, entry.contentTypeId);
         const versionId = entry.currentVersionId as string;
         const [version] = await tx.select({ data: entryVersions.data }).from(entryVersions).where(eq(entryVersions.id, versionId));
-        const data = validateData(model, type, version.data, 'publish');
+        const data = validateData(model, type, version.data, 'publish', await loadAssets(tx, spaceId, model, type, version.data));
 
         const path = entryPath(entry.folderId ? await folderPath(tx, model.environmentId, entry.folderId) : null, entry.slug);
         const tags = cacheTags({ id: entry.id, contentType: type.apiId, path });
@@ -254,6 +259,7 @@ export class EntriesService {
           .update(entries)
           .set({ status: 'published', publishedVersionId: versionId, publishedAt: sql`now()` })
           .where(eq(entries.id, entry.id));
+        await recordUsages(tx, entry, mediaRefs(type.fields, data, model.blockTypes));
         await recordAudit(tx, {
           spaceId,
           actorId: user.id,
@@ -326,7 +332,7 @@ export class EntriesService {
         if (version.id === entry.currentVersionId) return readEntry(tx, model.environmentId, id);
 
         const type = contentTypeById(model, entry.contentTypeId);
-        const data = validateData(model, type, version.data, 'draft');
+        const data = validateData(model, type, version.data, 'draft', await loadAssets(tx, spaceId, model, type, version.data));
         await tx
           .update(entries)
           .set({ currentVersionId: version.id, slug: slugInData(type, data) ?? entry.slug })
@@ -496,12 +502,26 @@ async function saveVersion(
   await tx.update(entries).set({ currentVersionId: version.id, slug: options.slug }).where(eq(entries.id, entry.id));
 }
 
-/** Removes the published copy and marks the entry as a draft; returns the event to announce after commit. */
+/** Records which files the published version uses (the library's "in use" warning and the image route read it). */
+async function recordUsages(tx: DbTransaction, entry: EntryRow, refs: readonly MediaRef[]): Promise<void> {
+  await tx.delete(assetUsages).where(eq(assetUsages.entryId, entry.id));
+  if (!refs.length) return;
+  await tx
+    .insert(assetUsages)
+    .values(refs.map((ref) => ({ assetId: ref.assetId, entryId: entry.id, spaceId: entry.spaceId, fieldPath: ref.path })))
+    .onConflictDoNothing();
+}
+
+/**
+ * Removes the published copy and its record of files used, and marks the entry as a draft; returns the
+ * event to announce after commit.
+ */
 async function takeOffline(tx: DbTransaction, model: EntryModel, entry: EntryRow, user: AuthUser): Promise<ContentEvent> {
   const [removed] = await tx
     .delete(publishedContent)
     .where(eq(publishedContent.entryId, entry.id))
     .returning({ fullPath: publishedContent.fullPath, cacheTags: publishedContent.cacheTags });
+  await tx.delete(assetUsages).where(eq(assetUsages.entryId, entry.id));
   await tx
     .update(entries)
     .set({ status: 'draft', publishedVersionId: null, publishedAt: null })

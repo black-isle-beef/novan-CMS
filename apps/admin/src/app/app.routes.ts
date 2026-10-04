@@ -16,6 +16,8 @@ export const appRoutes: Route[] = [
       ...contentRoutes,
       ...schemaRoutes,
       accountRoute,
+      // Last, and lazy: the library is only loaded for its own URLs.
+      { path: '', loadChildren: () => import('@novan/admin-media').then((m) => m.mediaRoutes) },
     ],
   },
   { path: '**', redirectTo: '' },

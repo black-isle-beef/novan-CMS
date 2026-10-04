@@ -8,65 +8,123 @@
   <nv-field-messages [help]="field().help" [helpId]="helpId()" [errors]="errors()" [errorId]="errorId()" />
 
   @for (item of items(); track $index; let i = $index) {
+    @let info = preview(item);
     <div class="border rounded p-3 mt-2">
-      @if (field().multiple) {
-        <p class="fw-semibold mb-2">Item {{ i + 1 }}</p>
+      @if (library()) {
+        @if (item.assetId) {
+          <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+            @if (info?.thumbnailUrl) {
+              <img class="nv-media-field-thumb rounded border object-fit-cover" [src]="info?.thumbnailUrl" alt="" />
+            }
+            <div class="flex-grow-1">
+              @if (info === null) {
+                <p class="text-danger mb-0">This file is no longer in the media library. Choose another.</p>
+              } @else if (info) {
+                <p class="fw-semibold mb-0 text-break">{{ info.title || info.filename }}</p>
+                <p class="small text-body-secondary mb-0 text-break">{{ info.filename }}</p>
+              } @else {
+                <p class="text-body-secondary mb-0">Loading the file's details…</p>
+              }
+            </div>
+            @if (!disabled()) {
+              <div class="d-flex gap-2">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary"
+                  [id]="id() + '-change-' + i"
+                  [attr.aria-describedby]="errorsAt(itemPath(i) + '.assetId').length ? id() + '-asset-' + i + '-error' : null"
+                  (click)="choose(i)"
+                >
+                  Change<span class="visually-hidden"> {{ itemName(item, i) }} in {{ field().label }}</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" (click)="remove(i)">
+                  Remove<span class="visually-hidden"> {{ itemName(item, i) }} from {{ field().label }}</span>
+                </button>
+              </div>
+            }
+          </div>
+          <nv-field-messages
+            [helpId]="id() + '-asset-' + i + '-help'"
+            [errors]="errorsAt(itemPath(i) + '.assetId')"
+            [errorId]="id() + '-asset-' + i + '-error'"
+          />
+        } @else if (!disabled()) {
+          <button type="button" class="btn btn-outline-primary" [id]="id() + '-choose-' + i" (click)="choose(i)">
+            Choose {{ what() }}<span class="visually-hidden"> for {{ field().label }}</span>
+          </button>
+        } @else {
+          <p class="text-body-secondary mb-0">No file chosen.</p>
+        }
+      } @else {
+        @if (field().multiple) {
+          <p class="fw-semibold mb-2">Item {{ i + 1 }}</p>
+        }
+        <div class="mb-2">
+          <label class="form-label" [for]="id() + '-asset-' + i">Asset id</label>
+          <input
+            type="text"
+            class="form-control font-monospace"
+            spellcheck="false"
+            autocomplete="off"
+            [id]="id() + '-asset-' + i"
+            [class.is-invalid]="errorsAt(itemPath(i) + '.assetId').length"
+            [value]="item.assetId"
+            [disabled]="disabled()"
+            [attr.aria-describedby]="id() + '-asset-' + i + '-help'"
+            (input)="setAsset(i, $event)"
+          />
+          <nv-field-messages
+            help="Paste the id of an uploaded file."
+            [helpId]="id() + '-asset-' + i + '-help'"
+            [errors]="errorsAt(itemPath(i) + '.assetId')"
+            [errorId]="id() + '-asset-' + i + '-error'"
+          />
+        </div>
       }
-      <div class="mb-2">
-        <label class="form-label" [for]="id() + '-asset-' + i">Asset id</label>
-        <input
-          type="text"
-          class="form-control font-monospace"
-          spellcheck="false"
-          autocomplete="off"
-          [id]="id() + '-asset-' + i"
-          [class.is-invalid]="errorsAt(itemPath(i) + '.assetId').length"
-          [value]="item.assetId"
-          [disabled]="disabled()"
-          [attr.aria-describedby]="id() + '-asset-' + i + '-help'"
-          (input)="setAsset(i, $event)"
-        />
-        <nv-field-messages
-          help="Paste the id of an uploaded file."
-          [helpId]="id() + '-asset-' + i + '-help'"
-          [errors]="errorsAt(itemPath(i) + '.assetId')"
-          [errorId]="id() + '-asset-' + i + '-error'"
-        />
-      </div>
-      <div class="mb-2">
-        <label class="form-label" [for]="id() + '-alt-' + i">
-          Alternative text
-          @if (field().requireAlt) {
-            <span class="text-body-secondary">(required)</span>
-          }
-        </label>
-        <input
-          type="text"
-          class="form-control"
-          [id]="id() + '-alt-' + i"
-          [class.is-invalid]="errorsAt(itemPath(i) + '.alt').length"
-          [value]="item.alt ?? ''"
-          [disabled]="disabled()"
-          [attr.aria-describedby]="id() + '-alt-' + i + '-help'"
-          (input)="setAlt(i, $event)"
-        />
-        <nv-field-messages
-          [help]="altHint()"
-          [helpId]="id() + '-alt-' + i + '-help'"
-          [errors]="errorsAt(itemPath(i) + '.alt')"
-          [errorId]="id() + '-alt-' + i + '-error'"
-        />
-      </div>
-      @if (field().multiple && !disabled()) {
-        <button type="button" class="btn btn-sm btn-outline-danger" (click)="remove(i)">
+
+      @if (item.assetId && (info?.kind ?? 'image') === 'image') {
+        <div class="mt-2">
+          <label class="form-label" [for]="id() + '-alt-' + i">
+            Alternative text
+            @if (altRequired(item)) {
+              <span class="text-body-secondary">(required)</span>
+            }
+          </label>
+          <input
+            type="text"
+            class="form-control"
+            [id]="id() + '-alt-' + i"
+            [class.is-invalid]="errorsAt(itemPath(i) + '.alt').length"
+            [value]="item.alt ?? ''"
+            [disabled]="disabled()"
+            [attr.aria-invalid]="errorsAt(itemPath(i) + '.alt').length > 0 || null"
+            [attr.aria-describedby]="id() + '-alt-' + i + '-help' + (errorsAt(itemPath(i) + '.alt').length ? ' ' + id() + '-alt-' + i + '-error' : '')"
+            (input)="setAlt(i, $event)"
+          />
+          <nv-field-messages
+            [help]="altHint(item)"
+            [helpId]="id() + '-alt-' + i + '-help'"
+            [errors]="errorsAt(itemPath(i) + '.alt')"
+            [errorId]="id() + '-alt-' + i + '-error'"
+          />
+        </div>
+      }
+      @if (!library() && field().multiple && !disabled()) {
+        <button type="button" class="btn btn-sm btn-outline-danger mt-2" (click)="remove(i)">
           Remove item {{ i + 1 }}<span class="visually-hidden"> from {{ field().label }}</span>
         </button>
       }
     </div>
   }
   @if (field().multiple && !disabled()) {
-    <button type="button" class="btn btn-sm btn-outline-primary mt-2" (click)="add()">
-      Add an item<span class="visually-hidden"> to {{ field().label }}</span>
-    </button>
+    @if (library()) {
+      <button type="button" class="btn btn-sm btn-outline-primary mt-2" [id]="id() + '-add'" (click)="choose(null)">
+        Add from the media library<span class="visually-hidden"> to {{ field().label }}</span>
+      </button>
+    } @else {
+      <button type="button" class="btn btn-sm btn-outline-primary mt-2" [id]="id() + '-add'" (click)="add()">
+        Add an item<span class="visually-hidden"> to {{ field().label }}</span>
+      </button>
+    }
   }
 </fieldset>
