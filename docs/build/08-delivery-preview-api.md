@@ -27,7 +27,7 @@ All require `Authorization: Bearer <token>`; the space and environment come from
 
 1. Token management endpoints and an admin Settings → API tokens screen (developer/admin only).
 2. Delivery reads use `serviceDb` against `published_content` only, always filtered by the token's space and environment. Write a test that a token for space A can never return space B content, even with crafted filters.
-3. Reference resolution with depth limit and cycle protection; asset objects expanded inline.
+3. Reference resolution with depth limit and cycle protection; asset objects expanded inline as `DeliveryAsset` with `assetUrl()` from `@novan/shared-schemas` (the API image route, see 07's decisions); purge `asset:<id>` tags on `MediaEvents`.
 4. Caching headers on delivery responses: `Cache-Control: public, max-age=0, s-maxage=31536000, stale-while-revalidate=60` plus `Cache-Tag: space:<id>,entry:<id>,type:<apiId>` and an `ETag`. Preview responses: `Cache-Control: private, no-store`.
 5. Cache purge service: on `entry.published`/`unpublished`, compute tags and call the Cloudflare purge API (by tag; fall back to purge by URL using the space's configured domains). No-op when `CLOUDFLARE_ZONE_ID` is unset (local).
 6. Rate limiting per token (`@nestjs/throttler` backed by Postgres or memory for now): delivery 50 req/s, preview 10 req/s.
