@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { type NovanAsset, type NovanBlock, novanImage, type NovanLinkValue, novanLinkHref } from '@novan/cms-angular';
+import { type NovanAsset, type NovanBlock, novanImage, type NovanLinkValue, novanLinkHref } from '@black-isle-beef/cms-angular';
 
 interface HeroFields {
   heading: string;

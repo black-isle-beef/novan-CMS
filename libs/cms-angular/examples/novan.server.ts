@@ -1,4 +1,4 @@
-import type { NovanServerOptions } from '@novan/cms-angular';
+import type { NovanServerOptions } from '@black-isle-beef/cms-angular';
 
 // Server only: imported by server.ts and app.config.server.ts, never by browser code.
 export const novanServerOptions: NovanServerOptions = {

@@ -1,4 +1,4 @@
-import type { NovanServerOptions } from '@novan/cms-angular';
+import type { NovanServerOptions } from '@black-isle-beef/cms-angular';
 
 /**
  * How the site's server reaches the Novan API, read from the server environment when it starts. Imported

@@ -11,7 +11,7 @@ Editors edit pages on the real site: click a block to edit it in a side panel, a
 ```
 Admin (apps/admin, libs/admin/editor)          Client site in iframe (preview mode)
 ┌───────────────────────────────┐   postMessage   ┌─────────────────────────────┐
-│ Editor store (signals)        │ <────────────── │ Bridge (in @novan/cms-angular│
+│ Editor store (signals)        │ <────────────── │ Bridge (in cms-angular SDK,  │
 │  - draft data, selection,     │  ready, select, │  lazy-loaded in preview)     │
 │    undo/redo stack            │  hover, rects   │  - outlines blocks by _uid   │
 │ Side panel (field forms)      │ ──────────────> │  - re-renders with new data  │
@@ -38,7 +38,7 @@ All messages are `{ source: 'novan', v: 1, type, payload }`. The bridge only acc
 
 ### 12a — Bridge and preview (3 days)
 
-1. In `@novan/cms-angular`: bridge module loaded only in preview mode. `<novan-blocks>` wraps each block in an element with `data-novan-uid`. Bridge draws hover/selection outlines with a label (block name) in an overlay layer, posts `select`/`hover`/`rects`, and applies `update` by replacing the page data signal (no page reload).
+1. In `@black-isle-beef/cms-angular`: bridge module loaded only in preview mode. `<novan-blocks>` wraps each block in an element with `data-novan-uid`. Bridge draws hover/selection outlines with a label (block name) in an overlay layer, posts `select`/`hover`/`rects`, and applies `update` by replacing the page data signal (no page reload).
 2. Signed preview tokens: admin asks the API for a short-lived (15 min) signed token for `{ spaceId, entryId }`; the site exchanges it via the Preview API. Tokens are refreshed by the admin.
 3. Admin editor route `/spaces/:spaceId/pages/:entryId/edit` with the iframe, device toggles (375 / 768 / 1280 px) and draft/live switch.
 

@@ -1,4 +1,4 @@
-# @novan/cms-angular
+# @black-isle-beef/cms-angular
 
 The Angular SDK for Novan CMS. Client sites (Angular SSR) use it to fetch content, render pages built from
 blocks and rich text, and support preview mode for the visual editor.
@@ -16,13 +16,13 @@ for previews, a preview token.
 ## Install
 
 ```bash
-npm install @novan/cms-angular
+npm install @black-isle-beef/cms-angular
 ```
 
 The package is published to GitHub Packages, so point the scope at that registry in the site's `.npmrc`:
 
 ```ini
-@novan:registry=https://npm.pkg.github.com
+@black-isle-beef:registry=https://npm.pkg.github.com
 ```
 
 ## Set up
@@ -36,7 +36,7 @@ package's checks (`examples/`).
 
 ```ts
 // examples/novan.server.ts
-import type { NovanServerOptions } from '@novan/cms-angular';
+import type { NovanServerOptions } from '@black-isle-beef/cms-angular';
 
 // Server only: imported by server.ts and app.config.server.ts, never by browser code.
 export const novanServerOptions: NovanServerOptions = {
@@ -52,7 +52,7 @@ export const novanServerOptions: NovanServerOptions = {
 // examples/app.config.server.ts
 import { type ApplicationConfig, mergeApplicationConfig } from '@angular/core';
 import { provideServerRendering, RenderMode, withRoutes } from '@angular/ssr';
-import { provideNovanCmsServer } from '@novan/cms-angular';
+import { provideNovanCmsServer } from '@black-isle-beef/cms-angular';
 import { appConfig } from './app.config';
 import { novanServerOptions } from './novan.server';
 
@@ -70,7 +70,7 @@ the read routes of the Delivery and Preview APIs:
 ```ts
 // examples/server.ts
 import { AngularNodeAppEngine, createNodeRequestHandler, writeResponseToNodeResponse } from '@angular/ssr/node';
-import { createNovanProxy } from '@novan/cms-angular/server';
+import { createNovanProxy } from '@black-isle-beef/cms-angular/server';
 import express from 'express';
 import { novanServerOptions } from './novan.server';
 
@@ -98,7 +98,7 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import type { ApplicationConfig } from '@angular/core';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
-import { defineBlocks, provideNovanCms } from '@novan/cms-angular';
+import { defineBlocks, provideNovanCms } from '@black-isle-beef/cms-angular';
 import { routes } from './app.routes';
 import { HeroBlock } from './hero.block';
 
@@ -134,7 +134,7 @@ server answers 404:
 ```ts
 // examples/app.routes.ts
 import type { Routes } from '@angular/router';
-import { novanPageResolver } from '@novan/cms-angular';
+import { novanPageResolver } from '@black-isle-beef/cms-angular';
 import { CmsPage } from './cms-page';
 
 export const routes: Routes = [
@@ -150,7 +150,7 @@ description, canonical link, robots `noindex` and Open Graph tags from the page'
 ```ts
 // examples/cms-page.ts
 import { ChangeDetectionStrategy, Component, effect, inject, Injector, input } from '@angular/core';
-import { applyNovanSeo, NovanBlocks, type Page } from '@novan/cms-angular';
+import { applyNovanSeo, NovanBlocks, type Page } from '@black-isle-beef/cms-angular';
 
 @Component({
   selector: 'site-cms-page',
@@ -188,7 +188,7 @@ fields:
 ```ts
 // examples/hero.block.ts
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { type NovanAsset, type NovanBlock, novanImage, type NovanLinkValue, novanLinkHref } from '@novan/cms-angular';
+import { type NovanAsset, type NovanBlock, novanImage, type NovanLinkValue, novanLinkHref } from '@black-isle-beef/cms-angular';
 
 interface HeroFields {
   heading: string;
@@ -285,7 +285,7 @@ In preview mode:
 - content comes from the Preview API (drafts) with the preview token;
 - the page is served with `Cache-Control: private, no-store`, and content requests use `cache: 'no-store'`;
 - unknown blocks show a warning box;
-- the visual editor bridge (`@novan/cms-angular/bridge`) is loaded. Other visitors never download it.
+- the visual editor bridge (`@black-isle-beef/cms-angular/bridge`) is loaded. Other visitors never download it.
 
 `inject(NovanPreview).active()` tells components whether preview is on.
 

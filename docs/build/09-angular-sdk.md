@@ -1,4 +1,4 @@
-# 09 — Angular SDK (`@novan/cms-angular`)
+# 09 — Angular SDK (`@black-isle-beef/cms-angular`)
 
 **Phase:** 1 Headless core · **Estimate:** 4 days · **Prerequisites:** 08
 
@@ -47,7 +47,7 @@ novanPageResolver                              // route resolver: path -> page, 
   `provideNovanCmsServer` in `app.config.server.ts`, read from `NOVAN_API_URL`, `NOVAN_DELIVERY_TOKEN` and
   `NOVAN_PREVIEW_TOKEN` in a server-only module (`apps/starter-site/src/novan.server.ts`).
 - **By default the browser reads content through the site's server.** `createNovanProxy` (secondary entry
-  `@novan/cms-angular/server`, mounted at `/_novan`) adds the token and passes only GET/HEAD of the read routes:
+  `@black-isle-beef/cms-angular/server`, mounted at `/_novan`) adds the token and passes only GET/HEAD of the read routes:
   `/_novan/{delivery|preview}/{pages|entries|entries/:id|singletons/:apiId|sitemap}`. Delivery answers keep
   their `Cache-Control`, `ETag` and `Cache-Tag`. The opt-in `publicDeliveryToken` lets the browser call the
   Delivery API directly. That needs the API's CORS to allow the site's origin, which it does not yet (admin
@@ -61,7 +61,7 @@ novanPageResolver                              // route resolver: path -> page, 
   drafts. The verdict travels to the browser in transfer state (`novan:preview`). The signed token goes to the
   proxy and the Preview API as `X-Novan-Preview`, and the proxy checks it again on every request. Preview
   pages are served with `Cache-Control: private, no-store` (through `RESPONSE_INIT`).
-- **The bridge is the secondary entry `@novan/cms-angular/bridge`**, imported dynamically in preview only
+- **The bridge is the secondary entry `@black-isle-beef/cms-angular/bridge`**, imported dynamically in preview only
   (its own lazy chunk in the site). It is a stub until package 12.
 - **Blocks:** a block's fields are set on the inputs with the same name (other fields are ignored). A
   component with a `children` input gets the child blocks to place itself; otherwise they render after it.
@@ -87,10 +87,10 @@ novanPageResolver                              // route resolver: path -> page, 
   site and fails if `browser/` contains a token variable, a token from the environment, or anything shaped like
   a token.
 - **The starter site now provides the SDK and the proxy.** Pages, blocks and cache headers are package 10.
-- **Publishing** targets GitHub Packages through `publishConfig`. Open question: GitHub Packages requires the
-  npm scope to match the repository owner, so `@novan/cms-angular` cannot be published from the
-  `black-isle-beef` account as named. Either create a `novan` organisation or rename the package
-  (`@black-isle-beef/cms-angular`) before the first publish.
+- **The package is `@black-isle-beef/cms-angular`**, not `@novan/cms-angular` as package 01 scaffolded it.
+  It is published to GitHub Packages (`publishConfig`), which requires the npm scope to match the repository
+  owner. That is the same scope as `@black-isle-beef/novan-design-system`, so a site's one `.npmrc` line
+  covers both. The workspace's other libraries keep their `@novan/*` import paths, as they are not published.
 
 ## Out of scope
 

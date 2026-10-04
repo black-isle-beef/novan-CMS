@@ -1,6 +1,6 @@
 import { mergeApplicationConfig, ApplicationConfig } from '@angular/core';
 import { provideServerRendering, withRoutes } from '@angular/ssr';
-import { provideNovanCmsServer } from '@novan/cms-angular';
+import { provideNovanCmsServer } from '@black-isle-beef/cms-angular';
 import { novanServerOptions } from '../novan.server';
 import { appConfig } from './app.config';
 import { serverRoutes } from './app.routes.server';

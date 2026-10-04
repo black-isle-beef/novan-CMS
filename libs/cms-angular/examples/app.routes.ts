@@ -1,5 +1,5 @@
 import type { Routes } from '@angular/router';
-import { novanPageResolver } from '@novan/cms-angular';
+import { novanPageResolver } from '@black-isle-beef/cms-angular';
 import { CmsPage } from './cms-page';
 
 export const routes: Routes = [

@@ -1,5 +1,5 @@
 import { AngularNodeAppEngine, createNodeRequestHandler, writeResponseToNodeResponse } from '@angular/ssr/node';
-import { createNovanProxy } from '@novan/cms-angular/server';
+import { createNovanProxy } from '@black-isle-beef/cms-angular/server';
 import express from 'express';
 import { novanServerOptions } from './novan.server';
 

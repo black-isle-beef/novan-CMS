@@ -1,5 +1,5 @@
-// Tests the @novan/cms-angular/server entry point; the unit-test runner only looks under src/.
-import { createNovanProxy, type NovanProxyOptions, type NovanProxyResponse } from '@novan/cms-angular/server';
+// Tests the @black-isle-beef/cms-angular/server entry point; the unit-test runner only looks under src/.
+import { createNovanProxy, type NovanProxyOptions, type NovanProxyResponse } from '@black-isle-beef/cms-angular/server';
 
 const API = 'http://api.internal:3000';
 

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to `@novan/cms-angular`. The package follows [semantic versioning](https://semver.org).
+All notable changes to `@black-isle-beef/cms-angular`. The package follows [semantic versioning](https://semver.org).
 
 ## 0.1.0
 
@@ -10,11 +10,11 @@ First release (docs/build/09-angular-sdk.md).
   the server only.
 - `NovanContentService`: `page`, `entries`, `entry`, `singleton` and `sitemap` from the Delivery API (Preview API
   in preview mode), with server answers passed to the browser in transfer state.
-- `createNovanProxy` (`@novan/cms-angular/server`): lets the browser read content through the site's server,
+- `createNovanProxy` (`@black-isle-beef/cms-angular/server`): lets the browser read content through the site's server,
   which adds the token.
 - `<novan-blocks>`, `defineBlocks` and the `NovanBlock<TFields>` contract for block components.
 - `<novan-rich-text>`: rich text rendered without `innerHTML`, with unsafe links, images, elements and
   attributes dropped.
 - `novanImage`, `novanLinkHref`, `novanPageResolver` and `applyNovanSeo`.
 - Preview mode from `?novan_preview=<signed token>`, checked on the server by `verifyPreview`: drafts, no caching,
-  and the lazy-loaded editor bridge (`@novan/cms-angular/bridge`, filled in by package 12).
+  and the lazy-loaded editor bridge (`@black-isle-beef/cms-angular/bridge`, filled in by package 12).

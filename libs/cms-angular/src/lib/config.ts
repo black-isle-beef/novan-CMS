@@ -13,7 +13,7 @@ export interface NovanCmsConfig {
   /** Block components by block type, from `defineBlocks(...)`. */
   blocks: NovanBlockRegistry;
   /**
-   * Where the site's server mounts `createNovanProxy` (from `@novan/cms-angular/server`), which the browser
+   * Where the site's server mounts `createNovanProxy` (from `@black-isle-beef/cms-angular/server`), which the browser
    * fetches content through after the first page. Default `/_novan`.
    */
   proxyPath?: string;
@@ -50,7 +50,7 @@ export const NOVAN_CMS_SERVER = new InjectionToken<NovanServerOptions>('NOVAN_CM
 /** Loads the visual editor bridge (package 12); replaced in tests. */
 export const NOVAN_BRIDGE_LOADER = new InjectionToken<() => Promise<NovanBridgeModule>>('NOVAN_BRIDGE_LOADER', {
   providedIn: 'root',
-  factory: () => () => import('@novan/cms-angular/bridge'),
+  factory: () => () => import('@black-isle-beef/cms-angular/bridge'),
 });
 
 /** What the bridge entry point exports. */

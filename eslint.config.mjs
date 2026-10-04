@@ -23,7 +23,7 @@ export default [
             { sourceTag: 'scope:admin', onlyDependOnLibsWithTags: ['scope:admin', 'scope:shared'] },
             { sourceTag: 'scope:site', onlyDependOnLibsWithTags: ['scope:site', 'scope:shared'] },
             { sourceTag: 'scope:shared', onlyDependOnLibsWithTags: ['scope:shared'] },
-            // Published packages (@novan/cms-angular) may only pull in shared code.
+            // Published packages (@black-isle-beef/cms-angular) may only pull in shared code.
             { sourceTag: 'publishable', onlyDependOnLibsWithTags: ['scope:shared'] },
             // Layers: apps > feature > ui > data > util.
             { sourceTag: 'type:app', onlyDependOnLibsWithTags: ['type:feature', 'type:ui', 'type:data', 'type:util'] },

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, inject, Injector, input } from '@angular/core';
-import { applyNovanSeo, NovanBlocks, type Page } from '@novan/cms-angular';
+import { applyNovanSeo, NovanBlocks, type Page } from '@black-isle-beef/cms-angular';
 
 @Component({
   selector: 'site-cms-page',

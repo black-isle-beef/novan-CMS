@@ -1,5 +1,5 @@
-// `@novan/cms-angular/server`: runs in the site's Node server (`server.ts`), never in the browser.
-import type { NovanServerOptions } from '@novan/cms-angular';
+// `@black-isle-beef/cms-angular/server`: runs in the site's Node server (`server.ts`), never in the browser.
+import type { NovanServerOptions } from '@black-isle-beef/cms-angular';
 
 /** The parts of a Node `IncomingMessage` (or Express request) the proxy reads. */
 export interface NovanProxyRequest {

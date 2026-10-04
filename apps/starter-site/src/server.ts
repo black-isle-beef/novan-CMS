@@ -4,7 +4,7 @@ import {
   isMainModule,
   writeResponseToNodeResponse,
 } from '@angular/ssr/node';
-import { createNovanProxy } from '@novan/cms-angular/server';
+import { createNovanProxy } from '@black-isle-beef/cms-angular/server';
 import express from 'express';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
