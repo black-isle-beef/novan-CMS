@@ -31,7 +31,9 @@
       "@novan/admin-fields": ["./libs/admin/fields/src/index.ts"],
       "@novan/admin-media": ["./libs/admin/media/src/index.ts"],
       "@novan/admin-schema": ["./libs/admin/schema/src/index.ts"],
-      "@novan/admin-spaces": ["./libs/admin/spaces/src/index.ts"]
+      "@novan/admin-settings": ["./libs/admin/settings/src/index.ts"],
+      "@novan/admin-spaces": ["./libs/admin/spaces/src/index.ts"],
+      "@novan/api-delivery": ["./libs/api/delivery/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

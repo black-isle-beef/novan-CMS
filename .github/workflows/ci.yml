@@ -126,6 +126,13 @@ jobs:
       # continuous tasks). One project at a time, because admin-e2e and api-e2e share the API port.
       - name: e2e (Playwright + axe)
         run: npx nx affected -t e2e --parallel=1
+        # The API purges the CDN through the fake Cloudflare API that api-e2e starts and checks
+        # (apps/api-e2e/src/support/fake-cloudflare.ts). Outside api-e2e nothing listens there, and failed
+        # purges are only logged.
+        env:
+          CLOUDFLARE_ZONE_ID: e2e-zone
+          CLOUDFLARE_API_TOKEN: e2e-token
+          CLOUDFLARE_API_URL: http://127.0.0.1:54399/client/v4
       - name: Upload Playwright traces and reports
         if: failure()
         uses: actions/upload-artifact@v7

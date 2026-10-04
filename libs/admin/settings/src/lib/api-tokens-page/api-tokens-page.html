@@ -1,0 +1,146 @@
+<h1 class="mb-1">API tokens</h1>
+<p class="lead text-muted mb-4">
+  Tokens let a website read content from {{ context.currentSpace()?.name ?? 'this space' }}. Keep them secret, like
+  passwords.
+</p>
+
+@if (actionError(); as message) {
+  <ds-alert variant="danger" class="mb-3">{{ message }}</ds-alert>
+}
+@if (status(); as message) {
+  <ds-alert variant="success" class="mb-3">{{ message }}</ds-alert>
+}
+
+@if (created(); as token) {
+  <section aria-labelledby="created-heading" class="border border-success rounded p-4 mb-5">
+    <h2 id="created-heading" #createdHeading tabindex="-1" class="h4">Copy your new token</h2>
+    <p>
+      This is the only time we show it. Store it where your website keeps its other secrets. If you lose it, revoke
+      it and create another.
+    </p>
+    <label for="created-token" class="form-label">{{ token.name }} ({{ kindLabel(token.scope).toLowerCase() }} token)</label>
+    <div class="input-group">
+      <input
+        #tokenField
+        id="created-token"
+        type="text"
+        class="form-control font-monospace"
+        [value]="token.token"
+        readonly
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button type="button" class="btn btn-primary" (click)="copy(tokenField)">Copy token</button>
+    </div>
+    <p class="form-text mb-0" role="status">{{ copyStatus() }}</p>
+  </section>
+}
+
+@if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (tokens(); as list) {
+  @if (list.length) {
+    <div class="table-responsive mb-5">
+      <table class="table align-middle">
+        <caption class="visually-hidden">
+          API tokens
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Type</th>
+            <th scope="col">Token</th>
+            <th scope="col">Created</th>
+            <th scope="col">Last used</th>
+            <th scope="col"><span class="visually-hidden">Status and actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (token of list; track token.id) {
+            <tr>
+              <th scope="row" class="fw-normal">{{ token.name }}</th>
+              <td>{{ kindLabel(token.scope) }}</td>
+              <td><code>{{ token.hint }}</code></td>
+              <td>
+                {{ token.createdAt | date: 'd MMM y' }}
+                @if (token.createdByName) {
+                  <span class="d-block small text-muted">by {{ token.createdByName }}</span>
+                }
+              </td>
+              <td>{{ token.lastUsedAt ? (token.lastUsedAt | date: 'd MMM y, HH:mm') : 'Never' }}</td>
+              <td class="text-end">
+                @if (token.revokedAt) {
+                  <ds-badge variant="secondary">Revoked {{ token.revokedAt | date: 'd MMM y' }}</ds-badge>
+                } @else {
+                  <button type="button" class="btn btn-sm btn-outline-danger" (click)="confirmRevoke(token)">
+                    Revoke<span class="visually-hidden"> {{ token.name }}</span>
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <p class="mb-5">There are no tokens yet. Create one for each website that reads this space's content.</p>
+  }
+
+  <section aria-labelledby="create-heading" class="col-lg-7">
+    <h2 id="create-heading" class="h4">Create a token</h2>
+
+    <form [formGroup]="form" (ngSubmit)="create()" novalidate>
+      <div class="mb-3">
+        <label for="token-name" class="form-label">Name</label>
+        <input
+          id="token-name"
+          type="text"
+          class="form-control"
+          formControlName="name"
+          autocomplete="off"
+          required
+          maxlength="120"
+          [class.is-invalid]="nameInvalid()"
+          [attr.aria-invalid]="nameInvalid()"
+          [attr.aria-describedby]="nameInvalid() ? 'token-name-hint token-name-error' : 'token-name-hint'"
+        />
+        <div id="token-name-hint" class="form-text">Say where it is used, like "Main website" or "Preview server".</div>
+        @if (nameInvalid()) {
+          <div id="token-name-error" class="invalid-feedback d-block">Enter a name for the token.</div>
+        }
+      </div>
+
+      <fieldset class="mb-4">
+        <legend class="form-label fs-6">Type</legend>
+        @for (kind of tokenKinds; track kind.scope) {
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="radio"
+              formControlName="scope"
+              [id]="'token-scope-' + kind.scope"
+              [value]="kind.scope"
+              [attr.aria-describedby]="'token-scope-' + kind.scope + '-hint'"
+            />
+            <label class="form-check-label" [for]="'token-scope-' + kind.scope">{{ kind.label }}</label>
+            <div class="form-text mt-0" [id]="'token-scope-' + kind.scope + '-hint'">{{ kind.description }}</div>
+          </div>
+        }
+      </fieldset>
+
+      <button type="submit" class="btn btn-primary" [disabled]="creating()" [attr.aria-busy]="creating()">
+        Create token
+      </button>
+    </form>
+  </section>
+} @else {
+  <ds-spinner label="Loading API tokens" />
+}
+
+<ds-modal [open]="revoking() !== null" (openChange)="!$event && revoking.set(null)" [heading]="revokeHeading()" size="sm">
+  <p class="mb-0">Websites using this token stop receiving content straight away. You cannot undo this.</p>
+  <div dsModalFooter class="d-flex justify-content-end gap-2">
+    <ds-button variant="secondary" (pressed)="revoking.set(null)">Cancel</ds-button>
+    <ds-button variant="danger" (pressed)="revoke()">Revoke token</ds-button>
+  </div>
+</ds-modal>

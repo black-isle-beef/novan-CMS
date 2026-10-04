@@ -239,7 +239,7 @@ export class EntriesService {
         const data = validateData(model, type, version.data, 'publish', await loadAssets(tx, spaceId, model, type, version.data));
 
         const path = entryPath(entry.folderId ? await folderPath(tx, model.environmentId, entry.folderId) : null, entry.slug);
-        const tags = cacheTags({ id: entry.id, contentType: type.apiId, path });
+        const tags = cacheTags({ id: entry.id, environmentId: model.environmentId, contentType: type.apiId });
         // now() is the transaction's start, so both rows get the same time.
         const published = {
           spaceId,
@@ -536,7 +536,7 @@ async function takeOffline(tx: DbTransaction, model: EntryModel, entry: EntryRow
     contentType: type.apiId,
     locale: entry.locale,
     path,
-    cacheTags: removed?.cacheTags ?? cacheTags({ id: entry.id, contentType: type.apiId, path }),
+    cacheTags: removed?.cacheTags ?? cacheTags({ id: entry.id, environmentId: entry.environmentId, contentType: type.apiId }),
     actorId: user.id,
   };
 }

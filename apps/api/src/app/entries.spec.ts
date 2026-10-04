@@ -323,7 +323,7 @@ describe('entries API', () => {
         const [published] = await db.serviceDb.select().from(publishedContent).where(eq(publishedContent.entryId, entry.id));
         expect(published).toMatchObject({ contentTypeApiId: 'article', fullPath: '/hello-world', locale: 'en-GB' });
         expect(published.data).toMatchObject({ title: 'Hello world', content: [hero(1, 'One'), hero(2, 'Two')] });
-        expect(published.cacheTags).toEqual([`entry:${entry.id}`, 'type:article', 'path:/hello-world']);
+        expect(published.cacheTags).toEqual([`entry:${entry.id}`, `type:${published.environmentId}:article`]);
         expect(await db.serviceDb.select().from(assetUsages).where(eq(assetUsages.entryId, entry.id))).toEqual([
           { assetId: uid(50), entryId: entry.id, spaceId, fieldPath: 'image' },
         ]);

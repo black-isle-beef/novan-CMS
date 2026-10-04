@@ -5,7 +5,32 @@ export type Database = {
   
   "public": {
           Tables: {
-            "asset_usages": {
+            "api_tokens": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"environment_id": string,"id": string,"last_used_at": string | null,"name": string,"revoked_at": string | null,"scope": string,"space_id": string,"token_hash": string,"token_hint": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"environment_id": string,"id"?: string,"last_used_at"?: string | null,"name": string,"revoked_at"?: string | null,"scope": string,"space_id": string,"token_hash": string,"token_hint": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"environment_id"?: string,"id"?: string,"last_used_at"?: string | null,"name"?: string,"revoked_at"?: string | null,"scope"?: string,"space_id"?: string,"token_hash"?: string,"token_hint"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "api_tokens_environment_id_space_id_fkey"
+      columns: ["environment_id","space_id"]
+isOneToOne: false
+      referencedRelation: "environments"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "api_tokens_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"asset_usages": {
                   Row: {
                     "asset_id": string,"entry_id": string,"field_path": string,"space_id": string
                   }
