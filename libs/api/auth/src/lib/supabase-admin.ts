@@ -2,8 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 /**
- * Supabase client with the service-role key, for Auth admin calls (invites). API server only:
- * the key must never reach the admin app, the SDK or a client site.
+ * Supabase client with the service-role key, for Auth admin calls (invites) and the media bucket
+ * (signed uploads, checking and serving files). API server only: the key must never reach the admin
+ * app, the SDK or a client site.
  */
 @Injectable()
 export class SupabaseAdmin {
@@ -11,6 +12,11 @@ export class SupabaseAdmin {
 
   get auth(): SupabaseClient['auth']['admin'] {
     return this.getClient().auth.admin;
+  }
+
+  /** Storage as the service role: bypasses storage RLS, so callers check the space themselves. */
+  get storage(): SupabaseClient['storage'] {
+    return this.getClient().storage;
   }
 
   private getClient(): SupabaseClient {

@@ -1,0 +1,80 @@
+<ds-modal
+  [open]="request() !== null && !closing()"
+  (openChange)="!$event && cancel()"
+  (closed)="closed()"
+  [heading]="heading()"
+  size="lg"
+>
+  @if (request(); as req) {
+    @if (canUpload()) {
+      <details class="mb-3">
+        <summary>Upload new files</summary>
+        <div class="mt-2">
+          <nv-media-uploader [spaceId]="req.spaceId" [accept]="req.accept" (uploaded)="uploaded($event)" />
+        </div>
+      </details>
+    }
+
+    <div class="mb-3">
+      <label for="media-picker-search" class="form-label">Search the library</label>
+      <input
+        id="media-picker-search"
+        type="search"
+        class="form-control"
+        aria-describedby="media-picker-count"
+        [value]="search()"
+        (input)="setSearch($event)"
+      />
+    </div>
+
+    @if (error(); as message) {
+      <ds-alert variant="danger">{{ message }}</ds-alert>
+    } @else if (assets() === null) {
+      <ds-spinner label="Loading the media library" />
+    } @else {
+      <p id="media-picker-count" class="small text-body-secondary" aria-live="polite">
+        {{ shown().length === 1 ? '1 file' : shown().length + ' files'
+        }}{{ selected().length ? ', ' + selected().length + ' chosen' : '' }}
+      </p>
+      @if (shown().length) {
+        <ul class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 g-3 list-unstyled mb-0">
+          @for (asset of shown(); track asset.id) {
+            <li class="col">
+              <div
+                class="rounded h-100 p-2 border"
+                [class.border-primary]="isSelected(asset)"
+                [class.border-3]="isSelected(asset)"
+              >
+                <button
+                  type="button"
+                  class="btn w-100 p-0 text-start border-0"
+                  [attr.aria-pressed]="isSelected(asset)"
+                  (click)="toggle(asset)"
+                >
+                  <nv-asset-thumb [asset]="asset" [url]="urls().get(asset.id)" />
+                  <span class="d-block small fw-semibold text-break mt-2">{{ asset.title || asset.filename }}</span>
+                </button>
+                @if (isSelected(asset)) {
+                  <p class="small text-primary mb-0" aria-hidden="true">
+                    <i class="bi bi-check-circle-fill"></i> Chosen
+                  </p>
+                }
+                @if (asset.kind === 'image' && !asset.alt) {
+                  <ds-badge variant="danger">No alt text</ds-badge>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p>No files here yet{{ canUpload() ? '. Upload one above.' : '.' }}</p>
+      }
+    }
+  }
+  <div dsModalFooter class="d-flex justify-content-end gap-2">
+    <button type="button" class="btn btn-outline-secondary" (click)="cancel()">Cancel</button>
+    <button type="button" class="btn btn-primary" [disabled]="!selected().length" (click)="choose()">
+      {{ request()?.multiple && selected().length > 1 ? 'Choose ' + selected().length + ' files' : 'Choose' }}
+    </button>
+  </div>
+</ds-modal>

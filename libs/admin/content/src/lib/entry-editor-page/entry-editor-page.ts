@@ -21,6 +21,7 @@ import {
   DsSpinnerComponent,
 } from '@black-isle-beef/novan-design-system';
 import { describePath, errorsFromIssues, FieldForm, FieldFormContext, fieldId } from '@novan/admin-fields';
+import { MediaPicker, MediaPickerDialog } from '@novan/admin-media';
 import { problemCode, problemFieldErrors, problemMessage, SpaceContext } from '@novan/admin-spaces';
 import {
   type BlockType,
@@ -63,10 +64,11 @@ const clock = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
     DsModalComponent,
     DsSpinnerComponent,
     FieldForm,
+    MediaPickerDialog,
     RouterLink,
     VersionHistory,
   ],
-  providers: [FieldFormContext],
+  providers: [FieldFormContext, MediaPicker],
   templateUrl: './entry-editor-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -76,6 +78,7 @@ export class EntryEditorPage {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   private readonly form = inject(FieldFormContext);
+  private readonly media = inject(MediaPicker);
   protected readonly context = inject(SpaceContext);
 
   /** Route parameters (component input binding). */
@@ -120,9 +123,12 @@ export class EntryEditorPage {
     const type = this.contentType();
     if (!type) return null;
     const blockTypes = this.blockTypes();
+    // Media items are checked against the previews the form has loaded (kind, alt text, still there).
+    this.form.assets();
+    const assets = (id: string) => this.form.assetInfo(id);
     return {
-      draft: buildEntrySchema(type.fields, { blockTypes, draft: true }),
-      publish: buildEntrySchema(type.fields, { blockTypes }),
+      draft: buildEntrySchema(type.fields, { blockTypes, draft: true, assets }),
+      publish: buildEntrySchema(type.fields, { blockTypes, assets }),
     };
   });
 
@@ -174,6 +180,7 @@ export class EntryEditorPage {
       const entryId = this.entryId();
       untracked(() => {
         this.context.currentSpaceId.set(spaceId);
+        this.media.connect(this.form, spaceId);
         void this.load(spaceId, entryId);
       });
     });

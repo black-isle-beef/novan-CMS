@@ -2,7 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { JWT_VERIFIER_CONFIG } from '@novan/api-auth';
 import { type ContentEvent, ContentEvents } from '@novan/api-content';
-import { auditEvents, DbService, entryVersions, publishedContent, spaces } from '@novan/api-db';
+import { assets, assetUsages, auditEvents, DbService, entryVersions, publishedContent, spaces } from '@novan/api-db';
 import type { Entry, EntryVersion } from '@novan/shared-schemas';
 import { and, eq } from 'drizzle-orm';
 import { SignJWT } from 'jose';
@@ -155,6 +155,18 @@ describe('entries API', () => {
       editor = await token(novanAdminId, [{ id: spaceId, role: 'editor' }]);
       viewer = await token(clientId, [{ id: spaceId, role: 'viewer' }]);
 
+      // The image the articles use (the media library's own tests upload real files).
+      await db.serviceDb.insert(assets).values({
+        id: uid(50),
+        spaceId,
+        path: `spaces/${spaceId}/${uid(50)}/cat.jpg`,
+        filename: 'cat.jpg',
+        mime: 'image/jpeg',
+        sizeBytes: 1,
+        width: 1,
+        height: 1,
+      });
+
       // One field of every type, and two block types.
       const heroBlock = await post(
         '/block-types',
@@ -258,7 +270,7 @@ describe('entries API', () => {
         ['boolean', { featured: 'yes' }, 'featured'],
         ['date', { when: '03/10/2026' }, 'when'],
         ['select', { category: 'sport' }, 'category'],
-        ['media', { image: { assetId: uid(50) } }, 'image.alt'],
+        ['media', { image: { assetId: 'not-an-id' } }, 'image.assetId'],
         ['link', { cta: { type: 'email', email: 'hi@example.com' } }, 'cta.type'],
         ['reference', { related: ['not-an-id'] }, 'related.0'],
         ['blocks', { content: [{ _uid: uid(1), _block: 'gallery' }] }, 'content.0._block'],
@@ -312,6 +324,9 @@ describe('entries API', () => {
         expect(published).toMatchObject({ contentTypeApiId: 'article', fullPath: '/hello-world', locale: 'en-GB' });
         expect(published.data).toMatchObject({ title: 'Hello world', content: [hero(1, 'One'), hero(2, 'Two')] });
         expect(published.cacheTags).toEqual([`entry:${entry.id}`, 'type:article', 'path:/hello-world']);
+        expect(await db.serviceDb.select().from(assetUsages).where(eq(assetUsages.entryId, entry.id))).toEqual([
+          { assetId: uid(50), entryId: entry.id, spaceId, fieldPath: 'image' },
+        ]);
 
         expect(events).toEqual([
           expect.objectContaining({ type: 'entry.published', entryId: entry.id, versionId: v1, path: '/hello-world', spaceId }),
@@ -394,6 +409,7 @@ describe('entries API', () => {
         expect(res.status).toBe(200);
         expect(res.body).toMatchObject({ status: 'draft', publishedVersionId: null, publishedPath: null, publishedAt: null });
         expect(await db.serviceDb.select().from(publishedContent).where(eq(publishedContent.entryId, entry.id))).toEqual([]);
+        expect(await db.serviceDb.select().from(assetUsages).where(eq(assetUsages.entryId, entry.id))).toEqual([]);
         expect(events).toEqual([expect.objectContaining({ type: 'entry.unpublished', entryId: entry.id, path: '/hello-world' })]);
         expect((await post(`/entries/${entry.id}/unpublish`)).body.code).toBe('not_published');
       });

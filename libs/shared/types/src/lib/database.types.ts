@@ -5,7 +5,57 @@ export type Database = {
   
   "public": {
           Tables: {
-            "audit_events": {
+            "asset_usages": {
+                  Row: {
+                    "asset_id": string,"entry_id": string,"field_path": string,"space_id": string
+                  }
+                  Insert: {
+                    "asset_id": string,"entry_id": string,"field_path": string,"space_id": string
+                  }
+                  Update: {
+                    "asset_id"?: string,"entry_id"?: string,"field_path"?: string,"space_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "asset_usages_asset_id_space_id_fkey"
+      columns: ["asset_id","space_id"]
+isOneToOne: false
+      referencedRelation: "assets"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "asset_usages_entry_id_space_id_fkey"
+      columns: ["entry_id","space_id"]
+isOneToOne: false
+      referencedRelation: "entries"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "asset_usages_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"assets": {
+                  Row: {
+                    "alt": string | null,"created_at": string,"deleted_at": string | null,"filename": string,"focal_x": number | null,"focal_y": number | null,"folder": string | null,"height": number | null,"id": string,"mime": string,"path": string,"revision": number,"size_bytes": number,"space_id": string,"tags": (string)[],"title": string | null,"updated_at": string,"uploaded_by": string | null,"width": number | null
+                  }
+                  Insert: {
+                    "alt"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"filename": string,"focal_x"?: number | null,"focal_y"?: number | null,"folder"?: string | null,"height"?: number | null,"id"?: string,"mime": string,"path": string,"revision"?: number,"size_bytes": number,"space_id": string,"tags"?: (string)[],"title"?: string | null,"updated_at"?: string,"uploaded_by"?: string | null,"width"?: number | null
+                  }
+                  Update: {
+                    "alt"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"filename"?: string,"focal_x"?: number | null,"focal_y"?: number | null,"folder"?: string | null,"height"?: number | null,"id"?: string,"mime"?: string,"path"?: string,"revision"?: number,"size_bytes"?: number,"space_id"?: string,"tags"?: (string)[],"title"?: string | null,"updated_at"?: string,"uploaded_by"?: string | null,"width"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "assets_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"audit_events": {
                   Row: {
                     "action": string,"actor_id": string | null,"created_at": string,"diff": Json | null,"id": string,"space_id": string,"target_id": string | null,"target_type": string | null
                   }

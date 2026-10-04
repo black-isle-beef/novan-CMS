@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { MediaApi, Thumbnails } from '@novan/admin-media';
 import { SpaceContext } from '@novan/admin-spaces';
 import { type ContentType, type Entry, type EntryVersion, fieldListSchema } from '@novan/shared-schemas';
 import { of, throwError } from 'rxjs';
@@ -63,6 +64,12 @@ const version = (id: string, extra: Partial<EntryVersion> = {}): EntryVersion =>
   ...extra,
 });
 
+/** The media library is not used by these forms. */
+const mediaStubs = [
+  { provide: MediaApi, useValue: { list: () => of([]) } },
+  { provide: Thumbnails, useValue: { urls: () => Promise.resolve(new Map()) } },
+];
+
 function fakeApi(initial: Entry = entry()) {
   return {
     getEntry: vi.fn(() => of(initial)),
@@ -99,6 +106,7 @@ async function render(role: 'editor' | 'author' | 'viewer', api = fakeApi()) {
     providers: [
       provideRouter([]),
       { provide: ContentApi, useValue: api },
+      ...mediaStubs,
       {
         provide: SpaceContext,
         useValue: {
@@ -223,6 +231,7 @@ describe('EntryEditorPage', () => {
         providers: [
           provideRouter([]),
           { provide: ContentApi, useValue: api },
+          ...mediaStubs,
           { provide: SpaceContext, useValue: { currentSpaceId: signal(null), canEditCurrent: signal(true), canPublishCurrent: signal(false) } },
         ],
       });

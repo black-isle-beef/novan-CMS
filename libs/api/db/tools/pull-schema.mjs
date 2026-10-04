@@ -57,9 +57,12 @@ for (const fk of compositeKeys) {
 }
 
 for (const column of emptyArrayDefaults) {
-  const wrong = `("${column.name}").array().default([""])`;
-  if (!source.includes(wrong)) throw new Error(`Array default of ${column.name} not found in ${pulled}`);
-  source = source.replaceAll(wrong, `("${column.name}").array().default([])`);
+  // A column whose name is already camelCase (`tags`) is pulled without the name: `tags: text().array()`.
+  const named = `("${column.name}").array().default([""])`;
+  const unnamed = new RegExp(`(\\b${camel(column.name)}: \\w+\\(\\)\\.array\\(\\)\\.default\\()\\[""\\]\\)`, 'g');
+  if (source.includes(named)) source = source.replaceAll(named, `("${column.name}").array().default([])`);
+  else if (unnamed.test(source)) source = source.replace(unnamed, '$1[])');
+  else throw new Error(`Array default of ${column.name} not found in ${pulled}`);
 }
 
 source = source.replaceAll(".default(')", '.default("")');

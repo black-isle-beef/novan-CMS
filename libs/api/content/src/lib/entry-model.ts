@@ -1,15 +1,18 @@
 import { HttpStatus } from '@nestjs/common';
 import { notFound, ProblemException } from '@novan/api-common';
-import { blockTypes, contentTypes, type DbTransaction, environments } from '@novan/api-db';
+import { assets, blockTypes, contentTypes, type DbTransaction, environments } from '@novan/api-db';
 import {
   type BlockTypeDef,
   buildEntrySchema,
   type ContentTypeKind,
   type EntryData,
   type FieldDef,
+  kindOfMime,
+  type MediaAssetInfo,
+  mediaRefs,
   slugSchema,
 } from '@novan/shared-schemas';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 /** What saving and publishing need to know about a content type. */
 export interface EntryContentType {
@@ -74,12 +77,47 @@ export function contentTypeById(model: EntryModel, id: string): EntryContentType
   return model.contentTypes.find((t) => t.id === id) as EntryContentType;
 }
 
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The live assets of the space that the data's media items point at (anything else is missing). */
+export async function loadAssets(
+  tx: DbTransaction,
+  spaceId: string,
+  model: EntryModel,
+  type: EntryContentType,
+  data: unknown,
+): Promise<ReadonlyMap<string, MediaAssetInfo>> {
+  const ids = [...new Set(mediaRefs(type.fields, isData(data) ? data : {}, model.blockTypes).map((ref) => ref.assetId))].filter(
+    (id) => uuidPattern.test(id),
+  );
+  if (!ids.length) return new Map();
+  const rows = await tx
+    .select({ id: assets.id, mime: assets.mime, alt: assets.alt })
+    .from(assets)
+    .where(and(eq(assets.spaceId, spaceId), inArray(assets.id, ids), isNull(assets.deletedAt)));
+  return new Map(rows.map((row) => [row.id, { kind: kindOfMime(row.mime), alt: row.alt }]));
+}
+
+const isData = (value: unknown): value is EntryData => typeof value === 'object' && value !== null && !Array.isArray(value);
+
 /**
  * Validates entry data with `buildEntrySchema` (a draft may be incomplete; publishing needs it complete)
- * and returns it as stored: defaults filled in, unknown keys dropped.
+ * and returns it as stored: defaults filled in, unknown keys dropped. With the space's `assets` (from
+ * {@link loadAssets}), media items are checked against the library: the right kind of file, still there
+ * to publish, and alt text where the field requires it.
  */
-export function validateData(model: EntryModel, type: EntryContentType, data: unknown, mode: 'draft' | 'publish'): EntryData {
-  const schema = buildEntrySchema(type.fields, { blockTypes: model.blockTypes, draft: mode === 'draft' });
+export function validateData(
+  model: EntryModel,
+  type: EntryContentType,
+  data: unknown,
+  mode: 'draft' | 'publish',
+  assets?: ReadonlyMap<string, MediaAssetInfo>,
+): EntryData {
+  const schema = buildEntrySchema(type.fields, {
+    blockTypes: model.blockTypes,
+    draft: mode === 'draft',
+    assets: assets && ((id) => assets.get(id) ?? null),
+  });
   const result = schema.safeParse(data);
   if (result.success) return result.data;
 

@@ -285,9 +285,22 @@ export interface EntrySchemaOptions {
   blockTypes?: readonly BlockTypeDef[];
   /**
    * Validate a draft: values may be incomplete (required fields empty, fewer characters or items than
-   * the minimum) but never malformed. Publishing validates without this.
+   * the minimum, missing alt text) but never malformed. Publishing validates without this.
    */
   draft?: boolean;
+  /**
+   * Looks up a media item's asset in the library: `null` when it is not there (or in the bin), `undefined`
+   * when the caller does not know. With it, an asset must be of a kind the field accepts and, to publish,
+   * must still be in the library; a field with `requireAlt` needs alt text on the item or the asset.
+   * Without it (or for unknown assets) only the item's shape is checked.
+   */
+  assets?: (assetId: string) => MediaAssetInfo | null | undefined;
+}
+
+/** What entry validation needs to know about an asset in the media library. */
+export interface MediaAssetInfo {
+  kind: (typeof mediaKinds)[number];
+  alt: string | null;
 }
 
 /** A block in a `blocks` field (docs/build/06-entries-versions.md). */
@@ -325,12 +338,14 @@ export function buildEntrySchema(fields: readonly FieldDef[], options: EntrySche
 class EntrySchemaBuilder {
   private readonly blockTypes: ReadonlyMap<string, BlockTypeDef> | null;
   private readonly draft: boolean;
+  private readonly assets: EntrySchemaOptions['assets'];
   private readonly nodes = new Map<string, z.ZodObject>();
   private readonly unions = new Map<string, z.ZodType<BlockNode>>();
 
   constructor(options: EntrySchemaOptions) {
     this.blockTypes = options.blockTypes ? new Map(options.blockTypes.map((type) => [type.apiId, type])) : null;
     this.draft = options.draft ?? false;
+    this.assets = options.assets;
   }
 
   /** Whether an empty value is an error here (never in a draft). */
@@ -453,11 +468,22 @@ class EntrySchemaBuilder {
   }
 
   private media(field: FieldDefOf<'media'>): z.ZodType {
-    // The asset's kind (`accept`) is checked by the API against the media library (package 07).
+    // The item's own alt text overrides the library's; empty means "use the library's".
     return z
       .object({ assetId: uuid, alt: z.string().max(500).optional() }, typeError('a media item'))
       .superRefine((item, ctx) => {
-        if (field.requireAlt && !item.alt?.trim()) {
+        const asset = this.assets?.(item.assetId);
+        if (asset === null) {
+          if (!this.draft) {
+            ctx.addIssue({ code: 'custom', message: 'This file is no longer in the media library. Choose another.', path: ['assetId'] });
+          }
+          return;
+        }
+        if (asset && !field.accept.includes(asset.kind)) {
+          ctx.addIssue({ code: 'custom', message: `Choose ${acceptedKinds(field.accept)}.`, path: ['assetId'] });
+          return;
+        }
+        if (field.requireAlt && !this.draft && asset && !item.alt?.trim() && !asset.alt?.trim()) {
           ctx.addIssue({ code: 'custom', message: 'Describe the image for people who cannot see it.', path: ['alt'] });
         }
       });
@@ -620,6 +646,79 @@ function isEmptyDoc(doc: ProseMirrorNode): boolean {
     }
   });
   return empty;
+}
+
+const kindNames: Record<(typeof mediaKinds)[number], string> = { image: 'an image', video: 'a video', file: 'a file' };
+
+/** "an image", "an image or a video". */
+function acceptedKinds(kinds: readonly (typeof mediaKinds)[number][]): string {
+  const names = kinds.map((kind) => kindNames[kind]);
+  return names.length > 1 ? `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}` : (names[0] ?? 'a file');
+}
+
+// --- Media references ---------------------------------------------------------------------------
+
+/** One media item in entry data, and where it is. */
+export interface MediaRef {
+  assetId: string;
+  /** Dotted, with blocks named by `_uid`: `image`, `gallery.2`, `body.<uid>.image`, `seo.ogImage`. */
+  path: string;
+}
+
+/**
+ * Every media item in entry data, following the field definitions through groups and blocks (block
+ * fields need `blockTypes`). Values of the wrong shape are skipped, so it is safe on unvalidated data.
+ */
+export function mediaRefs(
+  fields: readonly FieldDef[],
+  data: EntryData,
+  blockTypes: readonly BlockTypeDef[] = [],
+): MediaRef[] {
+  const types = new Map(blockTypes.map((type) => [type.apiId, type]));
+  const refs: MediaRef[] = [];
+
+  const visitFields = (defs: readonly FieldDef[], values: unknown, path: string): void => {
+    if (typeof values !== 'object' || values === null || Array.isArray(values)) return;
+    for (const field of defs) visitField(field, (values as EntryData)[field.apiId], path ? `${path}.${field.apiId}` : field.apiId);
+  };
+
+  const visitNodes = (nodes: unknown, path: string): void => {
+    if (!Array.isArray(nodes)) return;
+    for (const value of nodes) {
+      const node = value as Partial<BlockNode> | null;
+      if (typeof node !== 'object' || node === null || typeof node._uid !== 'string') continue;
+      const at = `${path}.${node._uid}`;
+      const type = typeof node._block === 'string' ? types.get(node._block) : undefined;
+      if (type) visitFields(type.fields, node, at);
+      visitNodes(node.children, `${at}.children`);
+    }
+  };
+
+  const visitField = (field: FieldDef, value: unknown, path: string): void => {
+    switch (field.type) {
+      case 'media': {
+        const items = field.multiple ? (Array.isArray(value) ? value : []) : [value];
+        items.forEach((item: unknown, index) => {
+          const assetId = typeof item === 'object' && item !== null ? (item as { assetId?: unknown }).assetId : undefined;
+          if (typeof assetId === 'string') refs.push({ assetId, path: field.multiple ? `${path}.${index}` : path });
+        });
+        return;
+      }
+      case 'group':
+        if (field.multiple) {
+          if (Array.isArray(value)) value.forEach((item, index) => visitFields(field.fields, item, `${path}.${index}`));
+        } else {
+          visitFields(field.fields, value, path);
+        }
+        return;
+      case 'blocks':
+        visitNodes(value, path);
+        return;
+    }
+  };
+
+  visitFields(fields, data, '');
+  return refs;
 }
 
 function walkBlocks(
