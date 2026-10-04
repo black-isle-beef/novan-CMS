@@ -79,8 +79,12 @@ All require `Authorization: Bearer <token>`; the space and environment come from
 - **OpenAPI** is generated at runtime from the routes: request schemas from each route's `ZodValidationPipe`,
   responses from `@ApiResponse(schema)`. Management routes without `@ApiResponse` are documented without a
   response body for now. `/v1/docs` serves the OpenAPI 3.1 JSON.
-- **Admin:** a **Settings** link (admins, developers, agency staff) opens **API tokens**. `nx run api:serve-e2e`
-  starts the API with `apps/api-e2e/api.e2e.env`, pointing purges at a fake Cloudflare the e2e tests read.
+- **Admin:** a **Settings** link (admins, developers, agency staff) opens **API tokens**.
+- **e2e purge check:** `api-e2e` starts a fake Cloudflare API and checks the purges it receives when the API was
+  started with `CLOUDFLARE_ZONE_ID=e2e-zone CLOUDFLARE_API_TOKEN=e2e-token
+  CLOUDFLARE_API_URL=http://127.0.0.1:54399/client/v4`, as CI's e2e step sets them; otherwise that one test is
+  skipped. Both e2e projects share the one `api:serve` task: a second API target competes for port 3000 and
+  breaks Playwright's web server in CI.
 - CORS on the Delivery API is unchanged (admin origin only); the SDK (09) decides whether browsers call it.
 
 ## Out of scope

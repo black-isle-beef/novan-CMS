@@ -1,8 +1,16 @@
 import { createServer, type Server } from 'node:http';
 
-/** Where `apps/api-e2e/api.e2e.env` points the API's Cloudflare client. */
 export const FAKE_CLOUDFLARE_PORT = 54399;
 export const fakeCloudflareUrl = `http://127.0.0.1:${FAKE_CLOUDFLARE_PORT}`;
+
+/**
+ * Whether the API was started pointing at this fake, so its purges can be checked. CI's e2e step sets these
+ * for every task it runs (the API inherits them, and .env.local never overrides them):
+ *   CLOUDFLARE_ZONE_ID=e2e-zone CLOUDFLARE_API_TOKEN=e2e-token CLOUDFLARE_API_URL=http://127.0.0.1:54399/client/v4
+ * Locally, export the same before `nx e2e api-e2e`, with no API already running.
+ */
+export const purgesAreRecorded =
+  process.env['CLOUDFLARE_ZONE_ID'] === 'e2e-zone' && process.env['CLOUDFLARE_API_URL'] === `${fakeCloudflareUrl}/client/v4`;
 
 export interface RecordedPurge {
   zone: string;

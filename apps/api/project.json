@@ -27,18 +27,6 @@
       "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
       "executor": "nx:noop"
     },
-    "serve-e2e": {
-      "continuous": true,
-      "executor": "@nx/js:node",
-      "dependsOn": ["build"],
-      "options": {
-        "buildTarget": "api:build:development",
-        "runBuildTargetDependencies": false,
-        "watch": false,
-        "inspect": false,
-        "runtimeArgs": ["--env-file=apps/api-e2e/api.e2e.env"]
-      }
-    },
     "serve": {
       "continuous": true,
       "executor": "@nx/js:node",

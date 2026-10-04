@@ -1,9 +1,9 @@
 import type { CreatedApiToken, DeliveryEntry, Entry } from '@novan/shared-schemas';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fakeCloudflareUrl, type RecordedPurge } from '../support/fake-cloudflare';
+import { fakeCloudflareUrl, purgesAreRecorded, type RecordedPurge } from '../support/fake-cloudflare';
 
-// Runs against the API as `nx run api:serve-e2e` starts it, with the local Supabase stack seeded
+// Runs against the API as `nx run api:serve` starts it, with the local Supabase stack seeded
 // (`npm run db:reset`): it signs in as the seeded Novan Admin, an admin of the demo space.
 const envFile = resolve(import.meta.dirname, '../../../../.env.local');
 if (existsSync(envFile)) process.loadEnvFile(envFile);
@@ -53,7 +53,7 @@ describe('publishing reaches the Delivery API and purges the CDN', () => {
     if (token) await call('POST', `${management}/api-tokens/${token.id}/revoke`, session);
   });
 
-  it('a page is not delivered until it is published, then is, with purges for its tags', async () => {
+  it('a page is not delivered until it is published, then is', async () => {
     const created = await call<Entry>('POST', `${management}/environments/main/entries`, session, {
       contentType: 'page',
       data: { title: 'Delivered by e2e', slug },
@@ -65,7 +65,6 @@ describe('publishing reaches the Delivery API and purges the CDN', () => {
     expect(before.status).toBe(404);
     expect(before.headers.get('cache-control')).toBe('no-store');
 
-    const purgedBefore = (await purges()).length;
     const published = await call<Entry>('POST', `${management}/environments/main/entries/${page.id}/publish`, session);
     expect(published.status, JSON.stringify(published.body)).toBe(200);
 
@@ -74,31 +73,39 @@ describe('publishing reaches the Delivery API and purges the CDN', () => {
     expect(delivered.body).toMatchObject({ id: page.id, path: `/${slug}`, data: { title: 'Delivered by e2e' } });
     expect(delivered.headers.get('cache-control')).toBe('public, max-age=0, s-maxage=31536000, stale-while-revalidate=60');
     expect(delivered.headers.get('cache-tag')).toContain(`entry:${page.id}`);
-
-    await vi.waitFor(async () => expect((await purges()).length).toBeGreaterThan(purgedBefore));
-    const purge = (await purges()).slice(purgedBefore).find((p) => p.body.tags?.includes(`entry:${page.id}`));
-    expect(purge).toBeDefined();
-    expect(purge?.zone).toBe('e2e-zone');
-    expect(purge?.authorization).toBe('Bearer e2e-token');
-    const tags = purge?.body.tags ?? [];
-    expect(tags).toEqual(
-      expect.arrayContaining([`entry:${page.id}`, `overflow:${demoSpaceId}`, expect.stringMatching(/^type:[0-9a-f-]{36}:page$/), expect.stringMatching(/^sitemap:/), expect.stringMatching(/^entries:/)]),
-    );
   });
 
-  it('publishing a change delivers the new content and purges again', async () => {
+  it('publishing a change delivers the new content', async () => {
     await call('PATCH', `${management}/environments/main/entries/${page.id}`, session, { data: { title: 'Changed by e2e', slug } });
     const draft = await call<DeliveryEntry>('GET', `${baseUrl}/v1/delivery/pages?path=/${slug}`, token.token);
     expect(draft.body.data['title']).toBe('Delivered by e2e');
 
-    const purgedBefore = (await purges()).length;
     await call('POST', `${management}/environments/main/entries/${page.id}/publish`, session);
     const delivered = await call<DeliveryEntry>('GET', `${baseUrl}/v1/delivery/pages?path=/${slug}`, token.token);
     expect(delivered.body.data['title']).toBe('Changed by e2e');
+  });
+
+  // Needs the API pointed at the fake Cloudflare API (CI's e2e step does; see `purgesAreRecorded`).
+  it.skipIf(!purgesAreRecorded)('publishing purges the CDN by the entry, its type, the lists and the sitemap', async () => {
+    const purgedBefore = (await purges()).length;
+    await call('POST', `${management}/environments/main/entries/${page.id}/publish`, session);
+
     await vi.waitFor(async () => {
       const recent = (await purges()).slice(purgedBefore);
       expect(recent.some((p) => p.body.tags?.includes(`entry:${page.id}`))).toBe(true);
     });
+    const purge = (await purges()).slice(purgedBefore).find((p) => p.body.tags?.includes(`entry:${page.id}`));
+    expect(purge?.zone).toBe('e2e-zone');
+    expect(purge?.authorization).toBe('Bearer e2e-token');
+    expect(purge?.body.tags).toEqual(
+      expect.arrayContaining([
+        `entry:${page.id}`,
+        `overflow:${demoSpaceId}`,
+        expect.stringMatching(/^type:[0-9a-f-]{36}:page$/),
+        expect.stringMatching(/^sitemap:/),
+        expect.stringMatching(/^entries:/),
+      ]),
+    );
   });
 
   it('unpublishing takes the page off the Delivery API', async () => {
