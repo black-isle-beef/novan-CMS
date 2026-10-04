@@ -4,7 +4,8 @@ import { ProblemException } from './problem';
 
 /** Validates a request body or param with a schema from `@novan/shared-schemas`. Use as `@Body(new ZodValidationPipe(schema))`. */
 export class ZodValidationPipe<S extends z.ZodType> implements PipeTransform<unknown, z.infer<S>> {
-  constructor(private readonly schema: S) {}
+  /** Also read by the OpenAPI document (`buildOpenApiDocument`). */
+  constructor(readonly schema: S) {}
 
   transform(value: unknown): z.infer<S> {
     const result = this.schema.safeParse(value);

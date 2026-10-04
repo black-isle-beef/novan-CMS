@@ -1,3 +1,5 @@
+import { cacheTag } from '@novan/api-common';
+
 /** An entry's address: its folder's path (none for the top level) and its slug. */
 export function entryPath(folderPath: string | null, slug: string): string {
   return `${folderPath ?? ''}/${slug}`;
@@ -9,6 +11,6 @@ export function lastSegment(path: string): string {
 }
 
 /** Cache tags of a published entry, purged when it changes (package 08). */
-export function cacheTags(entry: { id: string; contentType: string; path: string }): string[] {
-  return [`entry:${entry.id}`, `type:${entry.contentType}`, `path:${entry.path}`];
+export function cacheTags(entry: { id: string; environmentId: string; contentType: string }): string[] {
+  return [cacheTag.entry(entry.id), cacheTag.type(entry.environmentId, entry.contentType)];
 }

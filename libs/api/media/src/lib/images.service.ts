@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { notFound } from '@novan/api-common';
+import { cacheTag, notFound } from '@novan/api-common';
 import { assets, assetUsages, DbService } from '@novan/api-db';
 import type { ImageTransform } from '@novan/shared-schemas';
 import { and, eq, exists, isNull } from 'drizzle-orm';
@@ -61,7 +61,7 @@ export class ImagesService {
     const headers: Record<string, string> = {
       'Content-Type': contentType,
       'Cache-Control': v === asset.revision ? LONG_CACHE : SHORT_CACHE,
-      'Cache-Tag': `asset:${id}`,
+      'Cache-Tag': cacheTag.asset(id),
       'X-Content-Type-Options': 'nosniff',
       // A file opened on its own cannot run script or load anything (SVG is sanitised as well).
       'Content-Security-Policy': "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox",

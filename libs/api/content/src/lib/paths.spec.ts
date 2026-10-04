@@ -11,7 +11,7 @@ describe('paths', () => {
     expect(lastSegment('/home')).toBe('home');
   });
 
-  it('tags a published entry by id, type and address', () => {
-    expect(cacheTags({ id: 'e1', contentType: 'page', path: '/home' })).toEqual(['entry:e1', 'type:page', 'path:/home']);
+  it('tags a published entry by id, and by type within its environment', () => {
+    expect(cacheTags({ id: 'e1', environmentId: 'env1', contentType: 'page' })).toEqual(['entry:e1', 'type:env1:page']);
   });
 });

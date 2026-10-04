@@ -1,4 +1,5 @@
 export * from './lib/content-model';
+export * from './lib/delivery';
 export * from './lib/entries';
 export * from './lib/entry-diff';
 export * from './lib/fields';

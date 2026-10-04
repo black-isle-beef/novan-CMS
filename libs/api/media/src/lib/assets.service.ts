@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
-import { badRequest, conflict, forbidden, notFound } from '@novan/api-common';
+import { badRequest, cacheTag, conflict, forbidden, notFound } from '@novan/api-common';
 import type { AuthUser } from '@novan/api-auth';
 import {
   assets,
@@ -277,7 +277,7 @@ export class AssetsService {
       if (path !== current.path) await this.storage.remove([current.path]);
       return readAsset(tx, spaceId, id);
     });
-    this.emit({ type: 'asset.replaced', spaceId, assetId: id, cacheTags: [`asset:${id}`], actorId: user.id });
+    this.emit({ type: 'asset.replaced', spaceId, assetId: id, cacheTags: [cacheTag.asset(id)], actorId: user.id });
     return result;
   }
 
@@ -304,7 +304,7 @@ export class AssetsService {
         });
       }),
     );
-    this.emit({ type: 'asset.deleted', spaceId, assetId: id, cacheTags: [`asset:${id}`], actorId: user.id });
+    this.emit({ type: 'asset.deleted', spaceId, assetId: id, cacheTags: [cacheTag.asset(id)], actorId: user.id });
   }
 
   /** Takes the asset out of the bin. */

@@ -7,7 +7,7 @@
   "targets": {
     "e2e": {
       "executor": "@nx/vitest:test",
-      "dependsOn": ["api:build", "api:serve"],
+      "dependsOn": ["api:build", "api:serve-e2e"],
       "options": {
         "configFile": "apps/api-e2e/vitest.config.mts",
         "watch": false

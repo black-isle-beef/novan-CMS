@@ -28,7 +28,7 @@ export class Shell implements OnInit {
 
   protected readonly navItems = computed<NavItem[]>(() => {
     const spaceId = this.spaces.currentSpaceId();
-    const section = /^\/spaces\/[^/]+\/(content|media|members|schema)(\/|$)/.exec(this.url())?.[1] ?? null;
+    const section = /^\/spaces\/[^/]+\/(content|media|members|schema|settings)(\/|$)/.exec(this.url())?.[1] ?? null;
     const inSchema = section === 'schema';
     return [
       { label: 'Spaces', href: '/spaces', active: this.url().startsWith('/spaces') && section === null },
@@ -39,9 +39,12 @@ export class Shell implements OnInit {
             { label: 'People', href: `/spaces/${spaceId}/members`, active: section === 'members' },
           ]
         : []),
-      // Client roles never see the content model; the route guard and the API agree.
+      // Client roles never see the content model or API tokens; the route guards and the API agree.
       ...(spaceId && this.spaces.canModelCurrent()
-        ? [{ label: 'Schema', href: `/spaces/${spaceId}/schema`, active: inSchema }]
+        ? [
+            { label: 'Schema', href: `/spaces/${spaceId}/schema`, active: inSchema },
+            { label: 'Settings', href: `/spaces/${spaceId}/settings`, active: section === 'settings' },
+          ]
         : []),
       { label: 'Account', href: '/account', active: this.url().startsWith('/account') },
     ];
