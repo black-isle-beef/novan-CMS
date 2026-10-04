@@ -1,0 +1,116 @@
+<!-- Every element here comes from the checked model in rich-text-model.ts; text is only ever interpolated. -->
+<ng-template #nodesTpl let-nodes>
+  @for (node of nodes; track $index) {
+    @switch (node.kind) {
+      @case ('p') {
+        <p><ng-container *ngTemplateOutlet="nodesTpl; context: { $implicit: node.children }" /></p>
+      }
+      @case ('heading') {
+        @switch (node.level) {
+          @case (1) {
+            <h1><ng-container *ngTemplateOutlet="nodesTpl; context: { $implicit: node.children }" /></h1>
+          }
+          @case (3) {
+            <h3><ng-container *ngTemplateOutlet="nodesTpl; context: { $implicit: node.children }" /></h3>
+          }
+          @case (4) {
+            <h4><ng-container *ngTemplateOutlet="nodesTpl; context: { $implicit: node.children }" /></h4>
+          }
+          @case (5) {
+            <h5><ng-container *ngTemplateOutlet="nodesTpl; context: { $implicit: node.children }" /></h5>
+          }
+          @case (6) {
+            <h6><ng-container *ngTemplateOutlet="nodesTpl; context: { $implicit: node.children }" /></h6>
+          }
+          @default {
+            <h2><ng-container *ngTemplateOutlet="nodesTpl; context: { $implicit: node.children }" /></h2>
+          }
+        }
+      }
+      @case ('ul') {
+        <ul><ng-container *ngTemplateOutlet="nodesTpl; context: { $implicit: node.children }" /></ul>
+      }
+      @case ('ol') {
+        <ol [attr.start]="node.start"><ng-container *ngTemplateOutlet="nodesTpl; context: { $implicit: node.children }" /></ol>
+      }
+      @case ('li') {
+        <li><ng-container *ngTemplateOutlet="nodesTpl; context: { $implicit: node.children }" /></li>
+      }
+      @case ('blockquote') {
+        <blockquote class="blockquote">
+          <ng-container *ngTemplateOutlet="nodesTpl; context: { $implicit: node.children }" />
+        </blockquote>
+      }
+      @case ('pre') {
+        <pre><code>{{ node.text }}</code></pre>
+      }
+      @case ('hr') {
+        <hr />
+      }
+      @case ('br') {
+        <br />
+      }
+      @case ('img') {
+        <img
+          class="img-fluid"
+          [src]="node.src"
+          alt="{{ node.alt }}"
+          [attr.width]="node.width"
+          [attr.height]="node.height"
+          loading="lazy"
+          decoding="async"
+        />
+      }
+      @case ('text') {
+        <ng-container *ngTemplateOutlet="markTpl; context: { text: node.text, marks: node.marks, i: 0 }" />
+      }
+      @default {
+        <ng-container *ngTemplateOutlet="nodesTpl; context: { $implicit: node.children }" />
+      }
+    }
+  }
+</ng-template>
+
+<!-- Wraps text in its marks, outermost first. Elements and text sit on one line: whitespace around them
+     would add spaces between formatted words. -->
+<ng-template #markTpl let-text="text" let-marks="marks" let-i="i">
+  @if (i < marks.length) {
+    @let mark = marks[i];
+    @switch (mark.kind) {
+      @case ('link') {
+        @if (mark.link.internal && hasRouter) {
+          <a [routerLink]="mark.link.path" [queryParams]="mark.link.queryParams" [fragment]="mark.link.fragment"
+            ><ng-container *ngTemplateOutlet="markTpl; context: { text: text, marks: marks, i: i + 1 }"
+          /></a>
+        } @else {
+          <a [href]="mark.link.href"
+            ><ng-container *ngTemplateOutlet="markTpl; context: { text: text, marks: marks, i: i + 1 }"
+          /></a>
+        }
+      }
+      @case ('strong') {
+        <strong><ng-container *ngTemplateOutlet="markTpl; context: { text: text, marks: marks, i: i + 1 }" /></strong>
+      }
+      @case ('em') {
+        <em><ng-container *ngTemplateOutlet="markTpl; context: { text: text, marks: marks, i: i + 1 }" /></em>
+      }
+      @case ('u') {
+        <u><ng-container *ngTemplateOutlet="markTpl; context: { text: text, marks: marks, i: i + 1 }" /></u>
+      }
+      @case ('s') {
+        <s><ng-container *ngTemplateOutlet="markTpl; context: { text: text, marks: marks, i: i + 1 }" /></s>
+      }
+      @case ('code') {
+        <code><ng-container *ngTemplateOutlet="markTpl; context: { text: text, marks: marks, i: i + 1 }" /></code>
+      }
+      @case ('sub') {
+        <sub><ng-container *ngTemplateOutlet="markTpl; context: { text: text, marks: marks, i: i + 1 }" /></sub>
+      }
+      @case ('sup') {
+        <sup><ng-container *ngTemplateOutlet="markTpl; context: { text: text, marks: marks, i: i + 1 }" /></sup>
+      }
+    }
+  } @else {<ng-container>{{ text }}</ng-container>}
+</ng-template>
+
+<ng-container *ngTemplateOutlet="nodesTpl; context: { $implicit: nodes() }" />

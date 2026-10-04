@@ -73,6 +73,14 @@
         "watch": false
       }
     },
+    "test-bundle": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "cache": false,
+      "options": {
+        "command": "node --test apps/starter-site/tools/browser-bundle.test.mjs"
+      }
+    },
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",

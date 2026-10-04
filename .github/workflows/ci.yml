@@ -29,6 +29,8 @@ jobs:
         with:
           cache-name: lint-test-build
       - run: npx nx affected -t lint test build --parallel=3
+      # Client sites' browser bundles must not contain API tokens (package 09).
+      - run: npx nx affected -t test-bundle --parallel=3
 
   database:
     runs-on: ubuntu-latest

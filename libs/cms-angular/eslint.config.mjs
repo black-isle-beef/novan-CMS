@@ -11,7 +11,7 @@ export default [
       '@nx/dependency-checks': [
         'error',
         {
-          ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
+          ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}', '{projectRoot}/examples/**/*', '{projectRoot}/tools/**/*'],
         },
       ],
     },
@@ -38,6 +38,14 @@ export default [
           style: 'kebab-case',
         },
       ],
+    },
+  },
+  {
+    // The README's example: a client site's code, importing the package by name as sites do.
+    files: ['examples/**/*.ts'],
+    rules: {
+      '@nx/enforce-module-boundaries': 'off',
+      '@angular-eslint/component-selector': ['error', { type: 'element', prefix: 'site', style: 'kebab-case' }],
     },
   },
   {
