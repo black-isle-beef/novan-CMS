@@ -510,6 +510,14 @@ describe('buildEntrySchema', () => {
       expect(issues(schema, { body: [{ _uid: uid(1), _block: 'gallery' }] })).toEqual(['body.0._block: This block is not allowed here.']);
     });
 
+    it('keeps named style options', () => {
+      const body = [{ _uid: uid(1), _block: 'hero', _style: { tone: 'dark' } }];
+      expect(schema.parse({ body })).toEqual({ body });
+      expect(issues(schema, { body: [{ _uid: uid(1), _block: 'hero', _style: { tone: 'rgb(0,0,0)' } }] })).toEqual([
+        'body.0._style.tone: Use a named style option.',
+      ]);
+    });
+
     it('checks the range and requires at least one block', () => {
       const block = (n: number) => ({ _uid: uid(n), _block: 'cta' });
       expect(issues(schema, { body: [] })).toEqual([`body: ${REQUIRED_MESSAGE}`]);
@@ -552,6 +560,16 @@ describe('buildEntrySchema', () => {
         body: [{ _uid: uid(1), _block: 'hero', heading: 'Hi' }],
       });
       expect(issues(schema, { body: [{ _uid: uid(1), _block: 'hero' }] })).toEqual([`body.0.heading: ${REQUIRED_MESSAGE}`]);
+    });
+
+    it('keeps style options, and refuses raw values in them', () => {
+      const styled = { _uid: uid(1), _block: 'hero', heading: 'Hi', _style: { tone: 'brand', rounded: true, retired: 'old-value' } };
+      expect(schema.parse({ body: [styled] })).toEqual({ body: [styled] });
+      expect(issues(schema, { body: [{ ...styled, _style: { tone: '#ff0000' } }] })).toEqual([
+        'body.0._style.tone: Use a named style option.',
+      ]);
+      expect(issues(schema, { body: [{ ...styled, _style: { size: 12 } }] })).toHaveLength(1);
+      expect(issues(schema, { body: [{ ...styled, _style: ['brand'] }] })).toHaveLength(1);
     });
 
     it('rejects block types the field does not allow, or that do not exist', () => {

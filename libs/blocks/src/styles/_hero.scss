@@ -1,0 +1,75 @@
+// _hero.scss — HeroBlock (libs/blocks/src/lib/components/hero). Design-system tokens only: Sass spacing tokens, colour custom properties, rem.
+@use '@black-isle-beef/novan-design-system/styles/tokens' as ds;
+@use 'tones';
+
+@include tones.tones('novan-hero-block');
+
+.novan-hero-block {
+  --novan-hero-block-min-height: 28rem;
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.novan-hero-block--height-compact {
+  --novan-hero-block-min-height: 18rem;
+}
+
+.novan-hero-block--height-tall {
+  --novan-hero-block-min-height: 40rem;
+}
+
+.novan-hero-block__inner {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--novan-hero-block-min-height);
+  padding-block: ds.$ds-spacing-scale-10;
+}
+
+// The image fills the block behind the text, under a layer of the tone's surface colour so the text keeps
+// its contrast whatever the photo looks like.
+.novan-hero-block__image {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.novan-hero-block--has-image .novan-hero-block__inner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: color-mix(in srgb, var(--novan-hero-block-surface) 85%, transparent);
+}
+
+.novan-hero-block__content {
+  display: grid;
+  gap: ds.$ds-spacing-scale-5;
+  justify-items: start;
+}
+
+.novan-hero-block__heading {
+  max-inline-size: 22ch;
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3rem);
+}
+
+.novan-hero-block__subheading {
+  max-inline-size: 60ch;
+  margin: 0;
+}
+
+.novan-hero-block--alignment-center .novan-hero-block__content {
+  justify-items: center;
+  text-align: center;
+}
+
+@media (forced-colors: active) {
+  .novan-hero-block--has-image .novan-hero-block__inner::before {
+    background-color: Canvas;
+  }
+}

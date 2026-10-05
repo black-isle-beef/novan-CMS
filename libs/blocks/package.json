@@ -2,5 +2,11 @@
   "name": "@novan/blocks",
   "version": "0.0.1",
   "sideEffects": false,
-  "private": true
+  "private": true,
+  "peerDependencies": {
+    "@angular/common": "~22.2.0",
+    "@angular/core": "~22.2.0",
+    "@angular/router": "~22.2.0",
+    "@black-isle-beef/cms-angular": "^0.2.0"
+  }
 }

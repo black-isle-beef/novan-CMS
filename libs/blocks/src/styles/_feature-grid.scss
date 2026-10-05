@@ -1,0 +1,70 @@
+// _feature-grid.scss — FeatureGridBlock (libs/blocks/src/lib/components/feature-grid). Design-system tokens only: Sass spacing tokens, colour custom properties, rem.
+@use '@black-isle-beef/novan-design-system/styles/tokens' as ds;
+@use 'tones';
+
+@include tones.tones('novan-feature-grid-block');
+@include tones.block-spacing('novan-feature-grid-block');
+
+.novan-feature-grid-block {
+  --novan-feature-grid-block-columns: 3;
+}
+
+.novan-feature-grid-block--columns-two {
+  --novan-feature-grid-block-columns: 2;
+}
+
+.novan-feature-grid-block--columns-four {
+  --novan-feature-grid-block-columns: 4;
+}
+
+.novan-feature-grid-block__inner {
+  display: grid;
+  gap: ds.$ds-spacing-scale-4;
+}
+
+.novan-feature-grid-block__heading {
+  margin: 0;
+}
+
+.novan-feature-grid-block__intro {
+  max-inline-size: 60ch;
+  margin: 0;
+}
+
+.novan-feature-grid-block__list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ds.$ds-spacing-scale-6;
+  margin: ds.$ds-spacing-scale-5 0 0;
+  padding: 0;
+  list-style: none;
+
+  @media (min-width: 36rem) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 62rem) {
+    grid-template-columns: repeat(var(--novan-feature-grid-block-columns), 1fr);
+  }
+}
+
+.novan-feature-grid-block__item {
+  display: grid;
+  align-content: start;
+  gap: ds.$ds-spacing-scale-3;
+}
+
+.novan-feature-grid-block__icon {
+  color: var(--novan-feature-grid-block-accent);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.novan-feature-grid-block__title {
+  margin: 0;
+}
+
+.novan-feature-grid-block__text {
+  margin: 0;
+  color: var(--novan-feature-grid-block-muted);
+}

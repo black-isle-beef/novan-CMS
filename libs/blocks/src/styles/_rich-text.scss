@@ -1,0 +1,40 @@
+// _rich-text.scss — RichTextBlock (libs/blocks/src/lib/components/rich-text). Design-system tokens only: Sass spacing tokens, colour custom properties, rem.
+@use '@black-isle-beef/novan-design-system/styles/tokens' as ds;
+@use 'tones';
+
+@include tones.tones('novan-rich-text-block');
+@include tones.block-spacing('novan-rich-text-block');
+
+// The light tone sits between other blocks on the page background, so it needs less space.
+.novan-rich-text-block--tone-light {
+  padding-block: ds.$ds-spacing-scale-6;
+}
+
+.novan-rich-text-block--empty {
+  display: none;
+}
+
+.novan-rich-text-block__body {
+  display: block;
+  max-inline-size: 45rem;
+
+  > :last-child {
+    margin-block-end: 0;
+  }
+
+  blockquote {
+    margin-inline: 0;
+    padding-inline-start: ds.$ds-spacing-scale-4;
+    border-inline-start: 0.25rem solid var(--novan-rich-text-block-accent);
+    font-size: 1.25rem;
+  }
+
+  img {
+    max-inline-size: 100%;
+    block-size: auto;
+  }
+}
+
+.novan-rich-text-block--width-wide .novan-rich-text-block__body {
+  max-inline-size: none;
+}

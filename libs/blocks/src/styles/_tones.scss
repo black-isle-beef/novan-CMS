@@ -1,0 +1,55 @@
+// _tones.scss — the colour schemes editors pick with a block's `tone` option. Each tone is a surface and text
+// pair from the design system's tokens that passes WCAG AA together, so no combination an editor can choose
+// is hard to read. Links, headings and focus rings inside the block follow the tone.
+@use '@black-isle-beef/novan-design-system/styles/tokens' as ds;
+
+@mixin tones($block) {
+  .#{$block} {
+    --#{$block}-surface: var(--ds-color-surface-body);
+    --#{$block}-text: var(--ds-color-text-body);
+    --#{$block}-muted: var(--ds-color-text-muted);
+    --#{$block}-accent: var(--ds-color-brand-primary);
+
+    display: block;
+    background-color: var(--#{$block}-surface);
+    color: var(--#{$block}-text);
+  }
+
+  .#{$block}--tone-brand,
+  .#{$block}--tone-dark {
+    --#{$block}-text: var(--ds-color-text-inverse);
+    --#{$block}-muted: var(--ds-color-text-inverse);
+    --#{$block}-accent: var(--ds-color-text-inverse);
+    // Read by the design system's `a[href]` rule, so links in rich text stay readable on the dark surface.
+    --bs-link-color: var(--ds-color-text-inverse);
+    --ds-link-hover-color: var(--ds-color-text-inverse);
+
+    a[href]:not(.btn):focus-visible {
+      outline: 0.1875rem solid var(--ds-color-text-inverse);
+      outline-offset: 0.125rem;
+    }
+  }
+
+  .#{$block}--tone-brand {
+    --#{$block}-surface: var(--ds-color-brand-primary);
+  }
+
+  .#{$block}--tone-dark {
+    --#{$block}-surface: var(--ds-color-neutral-gray-900);
+  }
+
+  // Forced colours replace the tone; keep the block's edges visible.
+  @media (forced-colors: active) {
+    .#{$block}--tone-brand,
+    .#{$block}--tone-dark {
+      border-block: 0.0625rem solid CanvasText;
+    }
+  }
+}
+
+/** Vertical rhythm shared by full-width blocks. */
+@mixin block-spacing($block) {
+  .#{$block} {
+    padding-block: ds.$ds-spacing-scale-10;
+  }
+}

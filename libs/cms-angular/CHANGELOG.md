@@ -2,6 +2,11 @@
 
 All notable changes to `@black-isle-beef/cms-angular`. The package follows [semantic versioning](https://semver.org).
 
+## 0.2.0
+
+- `<novan-blocks>` gives a block component with a `settings` input the block's style options (`_style`, added to
+  block data in docs/build/10-blocks-starter-site.md), or `null` when it has none. `NovanBlockNode` has `_style`.
+
 ## 0.1.0
 
 First release (docs/build/09-angular-sdk.md).

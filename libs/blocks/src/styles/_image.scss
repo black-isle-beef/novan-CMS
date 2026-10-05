@@ -1,0 +1,49 @@
+// _image.scss — ImageBlock (libs/blocks/src/lib/components/image). Design-system tokens only: Sass spacing tokens, colour custom properties, rem.
+@use '@black-isle-beef/novan-design-system/styles/tokens' as ds;
+
+.novan-image-block {
+  --novan-image-block-max-width: 75rem;
+  --novan-image-block-radius: 0;
+
+  display: block;
+  padding-block: ds.$ds-spacing-scale-6;
+  padding-inline: ds.$ds-spacing-scale-4;
+}
+
+.novan-image-block--width-narrow {
+  --novan-image-block-max-width: 45rem;
+}
+
+.novan-image-block--width-full {
+  --novan-image-block-max-width: none;
+
+  padding-inline: 0;
+}
+
+.novan-image-block--rounded {
+  --novan-image-block-radius: 1rem;
+}
+
+.novan-image-block__figure {
+  max-inline-size: var(--novan-image-block-max-width);
+  margin: 0 auto;
+}
+
+.novan-image-block__image {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  border-radius: var(--novan-image-block-radius);
+}
+
+.novan-image-block__caption {
+  margin-block-start: ds.$ds-spacing-scale-3;
+  padding-inline: ds.$ds-spacing-scale-4;
+  color: var(--ds-color-text-muted);
+  font-size: 0.875rem;
+}
+
+.novan-image-block--width-full .novan-image-block__caption {
+  max-inline-size: 75rem;
+  margin-inline: auto;
+}

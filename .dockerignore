@@ -1,0 +1,15 @@
+# Build context for the apps' Dockerfiles (built from the repository root). Keep secrets and local state out.
+.env
+.env.*
+!.env.example
+node_modules
+dist
+tmp
+coverage
+.nx
+.angular
+.git
+**/test-results
+**/playwright-report
+supabase/.temp
+supabase/.branches

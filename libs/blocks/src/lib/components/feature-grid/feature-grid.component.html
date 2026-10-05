@@ -1,0 +1,49 @@
+<section class="novan-feature-grid-block__inner container" [attr.aria-labelledby]="headingText() ? headingId : null">
+  @if (headingText(); as heading) {
+    @switch (resolved().headingLevel) {
+      @case ('h3') {
+        <h3 class="novan-feature-grid-block__heading" [id]="headingId">{{ heading }}</h3>
+      }
+      @case ('h4') {
+        <h4 class="novan-feature-grid-block__heading" [id]="headingId">{{ heading }}</h4>
+      }
+      @default {
+        <h2 class="novan-feature-grid-block__heading" [id]="headingId">{{ heading }}</h2>
+      }
+    }
+  }
+  @if (introText(); as intro) {
+    <p class="novan-feature-grid-block__intro lead">{{ intro }}</p>
+  }
+
+  @if (items().length) {
+    <ul class="novan-feature-grid-block__list">
+      @for (item of items(); track $index) {
+        <li class="novan-feature-grid-block__item">
+          @if (item.icon) {
+            <i class="novan-feature-grid-block__icon bi" [class]="'bi-' + item.icon" aria-hidden="true"></i>
+          }
+          @if (item.title) {
+            @switch (itemLevel()) {
+              @case ('h2') {
+                <h2 class="novan-feature-grid-block__title h5">{{ item.title }}</h2>
+              }
+              @case ('h4') {
+                <h4 class="novan-feature-grid-block__title h5">{{ item.title }}</h4>
+              }
+              @case ('h5') {
+                <h5 class="novan-feature-grid-block__title h5">{{ item.title }}</h5>
+              }
+              @default {
+                <h3 class="novan-feature-grid-block__title h5">{{ item.title }}</h3>
+              }
+            }
+          }
+          @if (item.text) {
+            <p class="novan-feature-grid-block__text">{{ item.text }}</p>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

@@ -18,7 +18,7 @@ Migration `0006_entries.sql`:
 
 ## Block tree format
 
-`data.body` (any `blocks` field) is an array of `{ "_uid": uuid, "_block": "<block api_id>", ...fields, "children"?: [...] }`. `_uid` is stable across versions so the editor and diffs can track blocks.
+`data.body` (any `blocks` field) is an array of `{ "_uid": uuid, "_block": "<block api_id>", "_style"?: {...}, ...fields, "children"?: [...] }` (`_style`, the block's chosen style options, was added in package 10). `_uid` is stable across versions so the editor and diffs can track blocks.
 
 ## Tasks
 

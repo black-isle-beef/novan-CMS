@@ -29,27 +29,50 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
   },
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'npx nx run starter-site:serve',
-    url: 'http://localhost:4300',
-    reuseExistingServer: true,
-    cwd: workspaceRoot,
-  },
+  // The site renders every page from the API, which reads the seeded content (`npm run db:reset`). `nx serve`
+  // gives the site the seeded delivery token (apps/starter-site/.env.serve). No `env` here: Nx would then not
+  // start these servers as tasks, and `nx e2e` could not run.
+  webServer: [
+    {
+      command: 'npx nx run api:serve',
+      url: 'http://localhost:3000/health',
+      reuseExistingServer: true,
+      cwd: workspaceRoot,
+      timeout: 180_000,
+    },
+    {
+      command: 'npx nx run starter-site:serve',
+      url: 'http://localhost:4300/health',
+      reuseExistingServer: true,
+      cwd: workspaceRoot,
+      timeout: 180_000,
+    },
+  ],
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: /gate-1\.spec\.ts/,
     },
 
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
+      testIgnore: /gate-1\.spec\.ts/,
     },
 
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+      testIgnore: /gate-1\.spec\.ts/,
+    },
+
+    // Gate 1 publishes a change to seeded content, so it runs once, after the other tests have read it.
+    {
+      name: 'gate-1',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /gate-1\.spec\.ts/,
+      dependencies: ['chromium', 'firefox', 'webkit'],
     },
 
     // Uncomment for mobile browsers support

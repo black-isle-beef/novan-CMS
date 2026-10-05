@@ -38,6 +38,21 @@ class SectionBlock {
   readonly children = input<NovanBlockNode[]>([]);
 }
 
+/** Takes its style options. */
+@Component({
+  selector: 'novan-test-banner',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `<p [attr.data-settings]="json()">{{ text() }}</p>`,
+})
+class BannerBlock {
+  static readonly novanBlock = { apiId: 'banner', schemaVersion: 1 };
+  readonly text = input<string>();
+  readonly settings = input<unknown>('unset');
+  protected json(): string {
+    return JSON.stringify(this.settings());
+  }
+}
+
 /** Has no `children` input: its children follow it. */
 @Component({
   selector: 'novan-test-divider',
@@ -62,7 +77,10 @@ const uid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0'
 function render(blocks: unknown[], { preview = false } = {}): HTMLElement {
   TestBed.configureTestingModule({
     providers: [
-      { provide: NOVAN_CMS_CONFIG, useValue: { blocks: defineBlocks({ hero: HeroBlock, section: SectionBlock, divider: DividerBlock }) } },
+      {
+        provide: NOVAN_CMS_CONFIG,
+        useValue: { blocks: defineBlocks({ hero: HeroBlock, section: SectionBlock, divider: DividerBlock, banner: BannerBlock }) },
+      },
       { provide: NovanPreview, useValue: { active: signal(preview) } },
     ],
   });
@@ -86,6 +104,19 @@ describe('NovanBlocks', () => {
     expect(heroes[0].querySelector('p')?.textContent).toBe('To the site');
     expect(heroes[1].querySelector('p')).toBeNull();
     expect(el.innerHTML).not.toContain('ignored');
+  });
+
+  it('gives a block with a settings input its style options, or null', () => {
+    const el = render([
+      { _uid: uid(1), _block: 'banner', text: 'Styled', _style: { tone: 'brand', rounded: true }, settings: 'a field' },
+      { _uid: uid(2), _block: 'banner', text: 'Plain' },
+      { _uid: uid(3), _block: 'banner', text: 'Malformed', _style: ['brand'] },
+      { _uid: uid(4), _block: 'hero', heading: 'No settings input', _style: { tone: 'brand' } },
+    ]);
+
+    const settings = [...el.querySelectorAll('novan-test-banner p')].map((p) => p.getAttribute('data-settings'));
+    expect(settings).toEqual(['{"tone":"brand","rounded":true}', 'null', 'null']);
+    expect(el.querySelector('novan-test-hero h2')?.textContent).toBe('No settings input');
   });
 
   it('gives children to a block that takes them, recursively', () => {

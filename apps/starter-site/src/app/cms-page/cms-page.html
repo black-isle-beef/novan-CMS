@@ -1,0 +1,31 @@
+@let state = page();
+@switch (state.status) {
+  @case ('found') {
+    @if (needsTitle()) {
+      <div class="container pt-8">
+        <h1>{{ state.page.data.title }}</h1>
+      </div>
+    }
+    <novan-blocks [blocks]="state.page.data.body" />
+  }
+  @case ('not-found') {
+    @if (state.notFound; as notFound) {
+      <div class="container pt-8">
+        <h1>{{ notFound.title || 'Page not found' }}</h1>
+      </div>
+      <novan-blocks [blocks]="notFound.body" />
+    } @else {
+      <div class="container py-10">
+        <h1>Page not found</h1>
+        <p class="lead">There is no page at this address.</p>
+        <a routerLink="/">Go to the home page</a>
+      </div>
+    }
+  }
+  @default {
+    <div class="container py-10">
+      <h1>This page is not available right now</h1>
+      <p class="lead mb-0">Please try again in a few minutes.</p>
+    </div>
+  }
+}

@@ -35,6 +35,27 @@ test('the server reads the tokens from its environment', () => {
   }
 });
 
+// An undefined custom property fails silently (the declaration is dropped), so check the blocks' styles use
+// only properties the built stylesheet declares (docs/build/10-blocks-starter-site.md).
+test('every custom property the block styles use is declared in the built stylesheet', () => {
+  const css = browser.filter((file) => file.path.endsWith('.css')).map((file) => file.text).join('\n');
+  const stylesDir = resolve(import.meta.dirname, '../../../libs/blocks/src/styles');
+  const used = new Set(
+    readdirSync(stylesDir).flatMap((name) => [...readFileSync(join(stylesDir, name), 'utf8').matchAll(/var\((--[a-z][a-z0-9-]*)\)/g)].map((m) => m[1])),
+  );
+  // Design-system and Bootstrap properties must be global (`:root`): the design system also declares some
+  // inside showcase classes such as `.ds-lf`, which blocks cannot rely on. A block's own properties are
+  // declared on the block. Interpolated names (`--#{$block}-surface`) do not match the pattern above.
+  const declaredIn = (scope) =>
+    [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter(([, selector]) => scope(selector))
+      .flatMap(([, , body]) => [...body.matchAll(/(--[a-z][a-z0-9-]*)\s*:/g)].map((m) => m[1]));
+  const global = new Set(declaredIn((selector) => selector.includes(':root')));
+  const anywhere = new Set(declaredIn(() => true));
+  const missing = [...used].filter((name) => !(name.startsWith('--novan-') ? anywhere : global).has(name));
+  assert.deepEqual(missing, [], `undeclared custom properties: ${missing.join(', ')}`);
+});
+
 test('no token, token variable or token-shaped value is in the browser bundle', () => {
   const values = tokenEnv.map((name) => process.env[name]).filter((value) => value && value.length >= 8);
   for (const file of browser) {

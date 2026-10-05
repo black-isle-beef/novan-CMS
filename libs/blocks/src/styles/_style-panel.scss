@@ -1,0 +1,62 @@
+// _style-panel.scss — CmsStylePanelComponent (libs/blocks/src/lib/cms-style-panel), the editor's style form.
+@use '@black-isle-beef/novan-design-system/styles/tokens' as ds;
+
+.novan-style-panel {
+  display: block;
+}
+
+.novan-style-panel__layout {
+  display: grid;
+  gap: ds.$ds-spacing-scale-5;
+
+  @media (min-width: 64rem) {
+    grid-template-columns: minmax(16rem, 22rem) 1fr;
+    align-items: start;
+  }
+}
+
+.novan-style-panel__form {
+  display: grid;
+  gap: ds.$ds-spacing-scale-4;
+  padding: ds.$ds-spacing-scale-4;
+  border: 0.0625rem solid var(--ds-color-neutral-gray-300);
+  border-radius: 0.5rem;
+}
+
+.novan-style-panel__title,
+.novan-style-panel__preview-title {
+  margin: 0;
+}
+
+.novan-style-panel__field {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.novan-style-panel__legend {
+  float: none;
+  inline-size: auto;
+  margin-block-end: ds.$ds-spacing-scale-3;
+  font-size: inherit;
+}
+
+.novan-style-panel__reset {
+  justify-self: start;
+}
+
+.novan-style-panel__preview {
+  display: grid;
+  gap: ds.$ds-spacing-scale-3;
+  padding: ds.$ds-spacing-scale-4;
+  background-color: var(--ds-color-surface-muted);
+  border-radius: 0.5rem;
+}
+
+@media (forced-colors: active) {
+  .novan-style-panel__form,
+  .novan-style-panel__preview {
+    border: 0.0625rem solid CanvasText;
+  }
+}
