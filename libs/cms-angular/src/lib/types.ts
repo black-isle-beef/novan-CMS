@@ -49,6 +49,8 @@ export interface NovanAsset {
 export interface NovanBlockNode {
   _uid: string;
   _block: string;
+  /** The style options an editor chose, e.g. `{ tone: 'brand' }`; given to the component's `settings` input. */
+  _style?: Record<string, string | boolean>;
   children?: NovanBlockNode[];
   [field: string]: unknown;
 }

@@ -1,0 +1,10 @@
+<ds-header [navItems]="navItems()">
+  <a dsBrand class="fw-semibold text-decoration-none" routerLink="/">{{ siteName() }}</a>
+</ds-header>
+
+<!-- `#ds-main-content` is the target of the header's "Skip to main content" link. -->
+<main id="ds-main-content" tabindex="-1" #main>
+  <router-outlet />
+</main>
+
+<ds-footer [linkGroups]="footerGroups()" [organizationName]="organisationName()" />

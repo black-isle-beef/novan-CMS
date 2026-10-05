@@ -2,8 +2,8 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { JWT_VERIFIER_CONFIG } from '@novan/api-auth';
 import { ENTRY_SOURCE, type EntrySource, type StoredEntry } from '@novan/api-content-model';
-import { auditEvents, DbService, spaces } from '@novan/api-db';
-import { blockTypeSchema, contentTypeSchema } from '@novan/shared-schemas';
+import { auditEvents, blockTypes, contentTypes, DbService, publishedContent, spaces } from '@novan/api-db';
+import { blockTypeSchema, buildEntrySchema, contentTypeSchema, type FieldDef } from '@novan/shared-schemas';
 import { and, eq, sql } from 'drizzle-orm';
 import { SignJWT } from 'jose';
 import { existsSync } from 'node:fs';
@@ -144,24 +144,45 @@ describe('content model API', () => {
       if (spaceId) await db.serviceDb.delete(spaces).where(eq(spaces.id, spaceId));
     });
 
-    it('an editor reads the seeded page type and five block types, stored as the API would store them', async () => {
+    it('an editor reads the seeded page type, singletons and five block types, stored as the API would store them', async () => {
       const editor = await as('editor');
       const types = await request(app.getHttpServer()).get(base(demoSpaceId, 'content-types')).auth(editor, { type: 'bearer' });
       const blocks = await request(app.getHttpServer()).get(base(demoSpaceId, 'block-types')).auth(editor, { type: 'bearer' });
 
       expect(types.status).toBe(200);
-      expect(types.body.map((t: { apiId: string }) => t.apiId)).toEqual(['page']);
+      expect(types.body.map((t: { apiId: string }) => t.apiId).sort()).toEqual(['navigation', 'notFound', 'page', 'siteSettings']);
       expect(blocks.body.map((b: { apiId: string }) => b.apiId).sort()).toEqual(['cta', 'featureGrid', 'hero', 'image', 'richText']);
       // Parsing fills every default, so equality proves the seed is valid and already canonical.
       for (const type of types.body) expect(contentTypeSchema.parse(type)).toEqual(type);
       for (const block of blocks.body) expect(blockTypeSchema.parse(block)).toEqual(block);
-      expect(types.body[0].fields.find((f: { apiId: string }) => f.apiId === 'body').allowedBlocks).toEqual([
+      const page = types.body.find((t: { apiId: string }) => t.apiId === 'page');
+      expect(page.fields.find((f: { apiId: string }) => f.apiId === 'body').allowedBlocks).toEqual([
         'hero',
         'richText',
         'image',
         'featureGrid',
         'cta',
       ]);
+    });
+
+    it('seeds published pages and singletons that pass publish validation unchanged', async () => {
+      const [types, blocks, published] = await Promise.all([
+        db.serviceDb.select().from(contentTypes).where(eq(contentTypes.spaceId, demoSpaceId)),
+        db.serviceDb.select().from(blockTypes).where(eq(blockTypes.spaceId, demoSpaceId)),
+        db.serviceDb.select().from(publishedContent).where(eq(publishedContent.spaceId, demoSpaceId)),
+      ]);
+      const blockDefs = blocks.map((block) => ({
+        apiId: block.apiId,
+        fields: block.fields as FieldDef[],
+        allowedChildren: block.allowedChildren,
+      }));
+
+      expect(published.map((row) => row.fullPath).sort()).toEqual(['/about', '/contact', '/home', '/navigation', '/not-found', '/site-settings']);
+      for (const row of published) {
+        const type = types.find((candidate) => candidate.apiId === row.contentTypeApiId);
+        const schema = buildEntrySchema((type?.fields ?? []) as FieldDef[], { blockTypes: blockDefs });
+        expect(schema.parse(row.data), row.fullPath).toEqual(row.data);
+      }
     });
 
     it('answers 404 for an unknown environment or type', async () => {

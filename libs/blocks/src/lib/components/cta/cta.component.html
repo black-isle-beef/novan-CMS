@@ -1,0 +1,21 @@
+<section class="novan-cta-block__inner container" [attr.aria-labelledby]="headingText() ? headingId : null">
+  @if (headingText(); as heading) {
+    @switch (resolved().headingLevel) {
+      @case ('h3') {
+        <h3 class="novan-cta-block__heading" [id]="headingId">{{ heading }}</h3>
+      }
+      @case ('h4') {
+        <h4 class="novan-cta-block__heading" [id]="headingId">{{ heading }}</h4>
+      }
+      @default {
+        <h2 class="novan-cta-block__heading" [id]="headingId">{{ heading }}</h2>
+      }
+    }
+  }
+  @if (bodyText(); as text) {
+    <p class="novan-cta-block__text lead">{{ text }}</p>
+  }
+  @if (link(); as link) {
+    <novan-block-action [link]="link" [on]="actionOn()" />
+  }
+</section>

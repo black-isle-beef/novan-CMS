@@ -1,0 +1,76 @@
+<div class="novan-style-panel__layout">
+  <form class="novan-style-panel__form" [attr.aria-labelledby]="uid + '-title'" (submit)="$event.preventDefault()">
+    <h2 class="novan-style-panel__title h5" [id]="uid + '-title'">{{ definition().name }} style</h2>
+
+    @for (field of fields(); track field.key) {
+      @switch (field.kind) {
+        @case ('select') {
+          <div class="novan-style-panel__field">
+            <label class="form-label" [for]="controlId(field.key)">{{ field.label }}</label>
+            <select
+              class="form-select"
+              [id]="controlId(field.key)"
+              [attr.aria-describedby]="field.hint ? hintId(field.key) : null"
+              (change)="onSelect(field.key, $event)"
+            >
+              @for (option of field.options; track option.value) {
+                <option [value]="option.value" [selected]="resolved()[field.key] === option.value">{{ option.label }}</option>
+              }
+            </select>
+            @if (field.hint) {
+              <div class="form-text" [id]="hintId(field.key)">{{ field.hint }}</div>
+            }
+          </div>
+        }
+        @case ('radio') {
+          <fieldset class="novan-style-panel__field" [attr.aria-describedby]="field.hint ? hintId(field.key) : null">
+            <legend class="form-label novan-style-panel__legend">{{ field.label }}</legend>
+            @for (option of field.options; track option.value) {
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  [name]="controlId(field.key)"
+                  [id]="controlId(field.key, option.value)"
+                  [value]="option.value"
+                  [checked]="resolved()[field.key] === option.value"
+                  (change)="update(field.key, option.value)"
+                />
+                <label class="form-check-label" [for]="controlId(field.key, option.value)">{{ option.label }}</label>
+              </div>
+            }
+            @if (field.hint) {
+              <div class="form-text" [id]="hintId(field.key)">{{ field.hint }}</div>
+            }
+          </fieldset>
+        }
+        @case ('toggle') {
+          <div class="novan-style-panel__field form-check form-switch">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              role="switch"
+              [id]="controlId(field.key)"
+              [checked]="resolved()[field.key] === true"
+              [attr.aria-describedby]="field.hint ? hintId(field.key) : null"
+              (change)="onToggle(field.key, $event)"
+            />
+            <label class="form-check-label" [for]="controlId(field.key)">{{ field.label }}</label>
+            @if (field.hint) {
+              <div class="form-text" [id]="hintId(field.key)">{{ field.hint }}</div>
+            }
+          </div>
+        }
+      }
+    }
+
+    <button type="button" class="btn btn-outline-secondary novan-style-panel__reset" (click)="reset()">Reset to defaults</button>
+  </form>
+
+  @if (showPreview()) {
+    <section class="novan-style-panel__preview" [attr.aria-labelledby]="uid + '-preview'">
+      <h2 class="novan-style-panel__preview-title h6" [id]="uid + '-preview'">Preview</h2>
+      <ng-container *ngComponentOutlet="definition().component; inputs: previewInputs()" />
+    </section>
+  }
+</div>

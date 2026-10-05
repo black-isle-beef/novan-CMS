@@ -1,0 +1,13 @@
+// _novan-blocks.scss — every block's styles. A site adds them after the design system in its styles.scss:
+//
+//   @use '@black-isle-beef/novan-design-system/styles/styles';
+//   @use 'novan-blocks';
+//
+// with `libs/blocks/src/styles` in the build's `stylePreprocessorOptions.includePaths`. Blocks have no
+// component stylesheets (the repo's SCSS audit keeps styles global), so this is the only place they live.
+@use 'hero';
+@use 'rich-text';
+@use 'image';
+@use 'feature-grid';
+@use 'cta';
+@use 'style-panel';

@@ -307,9 +307,23 @@ export interface MediaAssetInfo {
 export interface BlockNode {
   _uid: string;
   _block: string;
+  /** The block's style options, by settings key: named presets and switches (docs/build/10-blocks-starter-site.md). */
+  _style?: BlockStyle;
   children?: BlockNode[];
   [field: string]: unknown;
 }
+
+/** A block's chosen style options, e.g. `{ tone: 'brand', rounded: true }`. */
+export type BlockStyle = Record<string, string | boolean>;
+
+/**
+ * `_style` holds named presets (`brand`, `h2`) and switches only, never raw values like `#fff`. Values are not
+ * checked against the block type's style options: the block component falls back to its default for a value
+ * it does not know, so renaming an option never makes stored pages invalid.
+ */
+const blockStyleSchema = z
+  .record(apiIdSchema, z.union([z.string().max(40).regex(/^[a-z][a-z0-9-]*$/, 'Use a named style option.'), z.boolean()]))
+  .refine((style) => Object.keys(style).length <= 12, 'Use 12 style options or fewer.');
 
 export const REQUIRED_MESSAGE = 'This field is required.';
 
@@ -535,6 +549,7 @@ class EntrySchemaBuilder {
       const node: z.ZodType<BlockNode> = z.looseObject({
         _uid: uuid,
         _block: allowed.length ? z.enum(allowed as [string, ...string[]], 'This block is not allowed here.') : apiIdSchema,
+        _style: blockStyleSchema.optional(),
         children: z.array(z.lazy(() => node)).optional(),
       }) as unknown as z.ZodType<BlockNode>;
       union = node;
@@ -565,7 +580,13 @@ class EntrySchemaBuilder {
     const children = type.allowedChildren?.length
       ? z.array(this.blockUnion(type.allowedChildren)).optional()
       : z.undefined({ error: 'This block cannot contain other blocks.' }).optional();
-    const node = z.object({ _uid: uuid, _block: z.literal(apiId), ...this.shape(type.fields), children });
+    const node = z.object({
+      _uid: uuid,
+      _block: z.literal(apiId),
+      _style: blockStyleSchema.optional(),
+      ...this.shape(type.fields),
+      children,
+    });
     this.nodes.set(apiId, node);
     return node;
   }

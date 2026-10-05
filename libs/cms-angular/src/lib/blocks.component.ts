@@ -16,7 +16,8 @@ interface RenderedBlock {
 
 /**
  * Renders a block tree (a `blocks` field) with the components registered through `defineBlocks`. Each
- * block's fields are set on the component's inputs of the same name. A component with a `children` input
+ * block's fields are set on the component's inputs of the same name, and its style options (`_style`) on a
+ * `settings` input, which therefore wins over a field called `settings`. A component with a `children` input
  * gets the child blocks to place itself (with its own `<novan-blocks>`); otherwise they follow it. Blocks
  * with no registered component are skipped, with a warning box in preview mode.
  */
@@ -71,6 +72,8 @@ export class NovanBlocks {
     for (const [key, value] of Object.entries(node)) {
       if (!key.startsWith('_') && key !== 'children' && names.has(key)) inputs[key] = value;
     }
+    // The block's style options; the component checks them against its own options.
+    if (names.has('settings')) inputs['settings'] = isPlainObject(node._style) ? node._style : null;
     const takesChildren = names.has('children');
     if (takesChildren) inputs['children'] = node.children ?? [];
     return { uid: node._uid, block: node._block, component, inputs, children: takesChildren ? null : children };
@@ -85,6 +88,10 @@ export class NovanBlocks {
     }
     return names;
   }
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isBlockNode(value: unknown): value is NovanBlockNode {

@@ -11,7 +11,8 @@ export default [
       '@nx/dependency-checks': [
         'error',
         {
-          ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
+          // src/testing holds spec helpers (axe-core, vitest), which are not part of the library.
+          ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}', '{projectRoot}/src/testing/**'],
         },
       ],
     },

@@ -231,7 +231,9 @@ export class HeroBlock implements NovanBlock<HeroFields> {
 `defineBlocks({ hero: HeroBlock })` refuses a component registered under a different api id.
 
 `<novan-blocks [blocks]="...">` sets each block's fields on the inputs with the same name and ignores
-other fields. Child blocks (`children`) go to a component with a `children` input, which places them with
+other fields. The style options an editor chose for the block (`_style`, e.g. `{ tone: 'brand' }`) go to a
+`settings` input, as `null` when there are none; check them against your own options, because stored values
+can be older than your component. Child blocks (`children`) go to a component with a `children` input, which places them with
 its own `<novan-blocks>`. For a component without one, the renderer puts them after the block. A block with
 no registered component shows nothing on the live site, and a warning box in preview.
 

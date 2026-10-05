@@ -1,18 +1,25 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideHttpClient, withFetch } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
-import { defineBlocks, provideNovanCms } from '@black-isle-beef/cms-angular';
-import { appRoutes } from './app.routes';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { type ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { provideRouter, withComponentInputBinding, withInMemoryScrolling, withRouterConfig } from '@angular/router';
+import { provideNovanCms } from '@black-isle-beef/cms-angular';
+import { novanBlocks } from '@novan/blocks';
+import { appRoutes } from './app.routes';
+import { cacheTagInterceptor } from './cache/cache-tags';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideClientHydration(withEventReplay()),
     provideBrowserGlobalErrorListeners(),
-    provideRouter(appRoutes),
-    provideHttpClient(withFetch()),
+    provideRouter(
+      appRoutes,
+      // Resolved data reaches the components as inputs; the page also sees the layout's `site`.
+      withComponentInputBinding(),
+      withRouterConfig({ paramsInheritanceStrategy: 'always' }),
+      withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' }),
+    ),
+    provideHttpClient(withFetch(), withInterceptors([cacheTagInterceptor])),
     // No tokens here: this config is in the browser bundle. The server adds them (app.config.server.ts).
-    // The blocks arrive with package 10.
-    provideNovanCms({ blocks: defineBlocks({}) }),
+    provideNovanCms({ blocks: novanBlocks }),
   ],
 };

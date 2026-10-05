@@ -1,2 +1,4 @@
 // Novan design system: tokens, Bootstrap 5, Bootstrap Icons and component styles.
 @use '@black-isle-beef/novan-design-system/styles/styles';
+// The CMS blocks (libs/blocks/src/styles, on the build's stylePreprocessorOptions.includePaths).
+@use 'novan-blocks';

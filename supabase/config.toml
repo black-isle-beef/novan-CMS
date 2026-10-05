@@ -118,12 +118,20 @@ enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
-# Uncomment to configure local storage buckets
-# [storage.buckets.images]
-# public = false
-# file_size_limit = "50MiB"
-# allowed_mime_types = ["image/png", "image/jpeg"]
-# objects_path = "./images"
+# The media library's bucket (created by migration 0007, whose settings these repeat). Locally, the files the
+# seeded pages use (supabase/seed.sql) are uploaded from objects_path, keyed by their path under it.
+[storage.buckets.media]
+public = false
+file_size_limit = "50MiB"
+allowed_mime_types = [
+  "image/jpeg", "image/png", "image/gif", "image/webp", "image/avif", "image/svg+xml",
+  "video/mp4", "video/webm", "video/quicktime",
+  "application/pdf", "text/plain", "text/csv", "application/zip",
+  "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+]
+objects_path = "./seed/media"
 
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]

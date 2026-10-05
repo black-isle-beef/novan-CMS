@@ -1,0 +1,26 @@
+// _cta.scss — CtaBlock (libs/blocks/src/lib/components/cta). Design-system tokens only: Sass spacing tokens, colour custom properties, rem.
+@use '@black-isle-beef/novan-design-system/styles/tokens' as ds;
+@use 'tones';
+
+@include tones.tones('novan-cta-block');
+@include tones.block-spacing('novan-cta-block');
+
+.novan-cta-block__inner {
+  display: grid;
+  gap: ds.$ds-spacing-scale-4;
+  justify-items: start;
+}
+
+.novan-cta-block__heading {
+  margin: 0;
+}
+
+.novan-cta-block__text {
+  max-inline-size: 60ch;
+  margin: 0;
+}
+
+.novan-cta-block--alignment-center .novan-cta-block__inner {
+  justify-items: center;
+  text-align: center;
+}

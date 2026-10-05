@@ -48,9 +48,10 @@ jobs:
       - uses: supabase/setup-cli@v3
         with:
           version: ${{ steps.supabase-version.outputs.version }}
-      # Postgres, Auth and Storage only: Auth and Storage own the `auth` and `storage` schemas the migrations use.
+      # Postgres, Auth and Storage: Auth and Storage own the `auth` and `storage` schemas the migrations use. Kong
+      # stays up because start and db reset seed the config.toml buckets (and their objects) through the gateway.
       - name: Start Supabase
-        run: supabase start -x realtime,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+        run: supabase start -x realtime,imgproxy,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
       - run: supabase db reset
       - name: pgTAP tests
         run: supabase test db

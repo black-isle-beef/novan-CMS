@@ -22,6 +22,9 @@
           }
         ],
         "styles": ["apps/starter-site/src/styles.scss"],
+        "stylePreprocessorOptions": {
+          "includePaths": ["libs/blocks/src/styles"]
+        },
         "server": "apps/starter-site/src/main.server.ts",
         "ssr": {
           "entry": "apps/starter-site/src/server.ts"
@@ -33,7 +36,7 @@
           "budgets": [
             {
               "type": "initial",
-              "maximumWarning": "800kb",
+              "maximumWarning": "850kb",
               "maximumError": "1.5mb"
             },
             {
