@@ -31,9 +31,8 @@ test.describe('@schema', () => {
     // The seeded model is listed.
     await page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Schema' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Schema' })).toBeVisible();
-    await expect(page.getByRole('rowheader', { name: 'Page' })).toBeVisible();
-    for (const block of ['Hero', 'Rich text', 'Image', 'Feature grid', 'Call to action']) {
-      await expect(page.getByRole('rowheader', { name: block })).toBeVisible();
+    for (const type of ['Page', 'Page not found', 'Hero', 'Rich text', 'Image', 'Feature grid', 'Call to action']) {
+      await expect(page.getByRole('rowheader', { name: type, exact: true })).toBeVisible();
     }
     await expectNoAxeViolations(page);
 
