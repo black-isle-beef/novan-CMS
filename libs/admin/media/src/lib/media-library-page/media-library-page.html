@@ -99,7 +99,7 @@
         <div class="mb-4 btn-group" role="group" aria-label="Show as">
           <button
             type="button"
-            class="btn btn-outline-secondary"
+            class="btn btn-secondary"
             [class.active]="view() === 'grid'"
             [attr.aria-pressed]="view() === 'grid'"
             (click)="view.set('grid')"
@@ -108,7 +108,7 @@
           </button>
           <button
             type="button"
-            class="btn btn-outline-secondary"
+            class="btn btn-secondary"
             [class.active]="view() === 'list'"
             [attr.aria-pressed]="view() === 'list'"
             (click)="view.set('list')"

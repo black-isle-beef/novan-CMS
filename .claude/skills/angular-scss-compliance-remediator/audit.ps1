@@ -91,6 +91,9 @@ foreach ($file in $files) {
             Test-Pattern $file 'Angular control flow' '\*ng(If|For|Switch)' 'Replace structural directive syntax with @if, @for, or @switch.'
             Test-Pattern $file 'Inline styling' '(^|\s)style\s*=' 'Move styling into the appropriate global stylesheet and use Bootstrap utilities.'
             Test-Pattern $file 'Inline style binding' '\[style(?:\.|\])' 'Use a semantic class and the appropriate global stylesheet.'
+            # The design system themes btn-primary, btn-secondary and the solid semantic variants only; Bootstrap's
+            # outline variants fall back to its theme map (btn-outline-secondary renders in the purple accent).
+            Test-Pattern $file 'Design-system buttons' '\bbtn-outline-' 'Use a design-system button variant: btn-secondary for secondary actions, btn-danger for destructive ones.'
         }
         { $_ -in @('.scss', '.css') } {
             Test-Pattern $file 'Hardcoded SCSS colors' '(#([0-9A-Fa-f]{3,8})\b|\b(?:rgba?|hsla?)\s*\()' 'Reference Bootstrap or repository SCSS variables.'

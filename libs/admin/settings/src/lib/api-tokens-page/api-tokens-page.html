@@ -72,7 +72,7 @@
                 @if (token.revokedAt) {
                   <ds-badge variant="secondary">Revoked {{ token.revokedAt | date: 'd MMM y' }}</ds-badge>
                 } @else {
-                  <button type="button" class="btn btn-sm btn-outline-danger" (click)="confirmRevoke(token)">
+                  <button type="button" class="btn btn-sm btn-danger" (click)="confirmRevoke(token)">
                     Revoke<span class="visually-hidden"> {{ token.name }}</span>
                   </button>
                 }

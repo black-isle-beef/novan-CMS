@@ -16,10 +16,10 @@
         <span class="text-body-secondary small">{{ node.folder.path }}</span>
         @if (canManageFolders()) {
           <span class="d-inline-flex gap-1 ms-auto">
-            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="renameFolder.emit(node.folder)">
+            <button type="button" class="btn btn-sm btn-secondary" (click)="renameFolder.emit(node.folder)">
               Rename<span class="visually-hidden"> {{ node.folder.name }} folder</span>
             </button>
-            <button type="button" class="btn btn-sm btn-outline-danger" (click)="deleteFolder.emit(node.folder)">
+            <button type="button" class="btn btn-sm btn-danger" (click)="deleteFolder.emit(node.folder)">
               Delete<span class="visually-hidden"> {{ node.folder.name }} folder</span>
             </button>
           </span>

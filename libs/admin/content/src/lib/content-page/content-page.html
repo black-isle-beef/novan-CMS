@@ -33,7 +33,7 @@
     @if (canEdit()) {
       <div class="d-flex gap-2 mb-4">
         <button type="button" class="btn btn-primary" [disabled]="!contentTypes().length" (click)="openNew()">{{ copy.newPage }}</button>
-        <button type="button" class="btn btn-outline-primary" (click)="openNewFolder()">New folder</button>
+        <button type="button" class="btn btn-secondary" (click)="openNewFolder()">New folder</button>
       </div>
     }
   </div>
@@ -83,7 +83,7 @@
             <span>{{ entry.title }}</span>
             <span class="text-body-secondary small">{{ entry.path }}</span>
             @if (canPublish()) {
-              <button type="button" class="btn btn-sm btn-outline-primary" (click)="restore(entry)">
+              <button type="button" class="btn btn-sm btn-secondary" (click)="restore(entry)">
                 Restore<span class="visually-hidden"> {{ entry.title }}</span>
               </button>
             }
@@ -151,7 +151,7 @@
       </select>
     </div>
     <div class="d-flex justify-content-end gap-2">
-      <button type="button" class="btn btn-outline-secondary" (click)="creating.set(false)">Cancel</button>
+      <button type="button" class="btn btn-secondary" (click)="creating.set(false)">Cancel</button>
       <button type="submit" class="btn btn-primary">Create page</button>
     </div>
   </form>
@@ -217,7 +217,7 @@
         </select>
       </div>
       <div class="d-flex justify-content-end gap-2">
-        <button type="button" class="btn btn-outline-secondary" (click)="folderDialog.set(null)">Cancel</button>
+        <button type="button" class="btn btn-secondary" (click)="folderDialog.set(null)">Cancel</button>
         <button type="submit" class="btn btn-primary">{{ dialog.folder ? 'Save folder' : 'Add folder' }}</button>
       </div>
     </form>

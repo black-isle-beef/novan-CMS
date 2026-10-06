@@ -36,7 +36,7 @@
               [checked]="device() === d.id"
               (change)="setDevice(d.id)"
             />
-            <label class="btn btn-outline-secondary" [for]="'nv-editor-device-' + d.id">
+            <label class="btn btn-secondary" [for]="'nv-editor-device-' + d.id">
               <i [class]="'bi bi-' + d.icon + ' me-1'" aria-hidden="true"></i>{{ d.label
               }}<span class="visually-hidden">, {{ d.width }} pixels wide</span>
             </label>
@@ -55,7 +55,7 @@
             [checked]="view() === 'draft'"
             (change)="setView('draft')"
           />
-          <label class="btn btn-outline-secondary" for="nv-editor-view-draft">Draft</label>
+          <label class="btn btn-secondary" for="nv-editor-view-draft">Draft</label>
           <input
             type="radio"
             class="btn-check"
@@ -66,7 +66,7 @@
             [attr.aria-describedby]="published() ? null : 'nv-editor-live-hint'"
             (change)="setView('live')"
           />
-          <label class="btn btn-outline-secondary" for="nv-editor-view-live">Live</label>
+          <label class="btn btn-secondary" for="nv-editor-view-live">Live</label>
         </div>
       </fieldset>
     </div>

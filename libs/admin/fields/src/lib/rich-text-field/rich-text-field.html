@@ -18,8 +18,8 @@
         <button
           type="button"
           class="btn btn-sm"
-          [class.btn-outline-secondary]="!isActive(tool)"
-          [class.btn-secondary]="isActive(tool)"
+          [class.btn-secondary]="!isActive(tool)"
+          [class.btn-primary]="isActive(tool)"
           [title]="tool.label"
           [tabIndex]="i === focusIndex() ? 0 : -1"
           [attr.aria-pressed]="tool.toggle ? isActive(tool) : null"
@@ -52,8 +52,8 @@
           (keydown.escape)="$event.preventDefault(); cancelLink()"
         />
         <button type="button" class="btn btn-sm btn-primary" (click)="saveLink()">Apply</button>
-        <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeLink()">Remove link</button>
-        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="cancelLink()">Cancel</button>
+        <button type="button" class="btn btn-sm btn-danger" (click)="removeLink()">Remove link</button>
+        <button type="button" class="btn btn-sm btn-secondary" (click)="cancelLink()">Cancel</button>
       </div>
       <nv-field-messages
         help="A web address like https://example.com, or a page address like /about."

@@ -39,6 +39,20 @@ test.describe('@shell', () => {
     await expect(spaceMenu(page).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page');
     await expectNoAxeViolations(page);
 
+    // A link styled as a button keeps the button's text colour, not the global link colour (axe cannot
+    // always measure text on the rounded button, so this checks it directly), at rest and hovered.
+    const newPage = page.getByRole('link', { name: 'New page' });
+    const colours = () =>
+      newPage.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return { text: style.color, fill: style.backgroundColor, underline: style.textDecorationLine };
+      });
+    const atRest = await colours();
+    expect(atRest.text).not.toBe(atRest.fill);
+    expect(atRest.underline).toBe('none');
+    await newPage.hover();
+    await expect.poll(async () => (await colours()).text).not.toBe((await colours()).fill);
+
     // Every client screen, including a page in the editor, in plain language.
     const screens: [path: string, heading: string][] = [
       ['', 'Dashboard'],
@@ -157,6 +171,34 @@ test.describe('@shell', () => {
     await expect(spaceMenu(page)).toHaveCount(0);
     await page.getByRole('navigation', { name: 'Primary' }).getByRole('button').first().click();
     await expect(page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Pages' })).toBeVisible();
+    await expectNoAxeViolations(page);
+  });
+
+  test('only the screen scrolls: the header and space menu stay in the window, and a new screen starts at its top', async ({ page }) => {
+    await signIn(page, client);
+    // A short window, so the dashboard is taller than it.
+    await page.setViewportSize({ width: 1280, height: 420 });
+    await page.getByRole('link', { name: 'Demo site' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+
+    const main = page.getByRole('main');
+    expect(await main.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    await main.evaluate((el) => (el.scrollTop = el.scrollHeight));
+
+    const layout = await page.evaluate(() => ({
+      windowScrolls: document.documentElement.scrollHeight > window.innerHeight,
+      menuBottom: document.querySelector('ds-sidebar')?.getBoundingClientRect().bottom ?? Infinity,
+      headerTop: document.querySelector('ds-header')?.getBoundingClientRect().top ?? -1,
+      height: window.innerHeight,
+    }));
+    expect(layout.windowScrolls).toBe(false);
+    expect(layout.menuBottom).toBeLessThanOrEqual(layout.height);
+    expect(layout.headerTop).toBe(0);
+    await expect(spaceMenu(page).getByRole('button', { name: /sidebar/ })).toBeInViewport();
+
+    await spaceMenu(page).getByRole('link', { name: 'Pages' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Pages' })).toBeVisible();
+    await expect.poll(() => main.evaluate((el) => el.scrollTop)).toBe(0);
     await expectNoAxeViolations(page);
   });
 });

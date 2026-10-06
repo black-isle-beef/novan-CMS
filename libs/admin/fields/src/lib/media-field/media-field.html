@@ -30,14 +30,14 @@
               <div class="d-flex gap-2">
                 <button
                   type="button"
-                  class="btn btn-sm btn-outline-primary"
+                  class="btn btn-sm btn-secondary"
                   [id]="id() + '-change-' + i"
                   [attr.aria-describedby]="errorsAt(itemPath(i) + '.assetId').length ? id() + '-asset-' + i + '-error' : null"
                   (click)="choose(i)"
                 >
                   Change<span class="visually-hidden"> {{ itemName(item, i) }} in {{ field().label }}</span>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-danger" (click)="remove(i)">
+                <button type="button" class="btn btn-sm btn-danger" (click)="remove(i)">
                   Remove<span class="visually-hidden"> {{ itemName(item, i) }} from {{ field().label }}</span>
                 </button>
               </div>
@@ -49,7 +49,7 @@
             [errorId]="id() + '-asset-' + i + '-error'"
           />
         } @else if (!disabled()) {
-          <button type="button" class="btn btn-outline-primary" [id]="id() + '-choose-' + i" (click)="choose(i)">
+          <button type="button" class="btn btn-secondary" [id]="id() + '-choose-' + i" (click)="choose(i)">
             Choose {{ what() }}<span class="visually-hidden"> for {{ field().label }}</span>
           </button>
         } @else {
@@ -110,7 +110,7 @@
         </div>
       }
       @if (!library() && field().multiple && !disabled()) {
-        <button type="button" class="btn btn-sm btn-outline-danger mt-2" (click)="remove(i)">
+        <button type="button" class="btn btn-sm btn-danger mt-2" (click)="remove(i)">
           Remove item {{ i + 1 }}<span class="visually-hidden"> from {{ field().label }}</span>
         </button>
       }
@@ -118,11 +118,11 @@
   }
   @if (field().multiple && !disabled()) {
     @if (library()) {
-      <button type="button" class="btn btn-sm btn-outline-primary mt-2" [id]="id() + '-add'" (click)="choose(null)">
+      <button type="button" class="btn btn-sm btn-secondary mt-2" [id]="id() + '-add'" (click)="choose(null)">
         Add from the media library<span class="visually-hidden"> to {{ field().label }}</span>
       </button>
     } @else {
-      <button type="button" class="btn btn-sm btn-outline-primary mt-2" [id]="id() + '-add'" (click)="add()">
+      <button type="button" class="btn btn-sm btn-secondary mt-2" [id]="id() + '-add'" (click)="add()">
         Add an item<span class="visually-hidden"> to {{ field().label }}</span>
       </button>
     }
