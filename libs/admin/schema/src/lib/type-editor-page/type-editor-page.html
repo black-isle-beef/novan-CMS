@@ -189,7 +189,7 @@
     </details>
 
     <div class="d-flex flex-wrap gap-2">
-      <button type="submit" class="btn btn-primary" [disabled]="saving()" [attr.aria-busy]="saving()">
+      <button type="submit" class="btn btn-primary" [disabled]="saving()" [attr.aria-busy]="saving()" [attr.aria-keyshortcuts]="shortcutKeys.save">
         {{ isNew() ? 'Create ' + noun() : 'Save changes' }}
       </button>
       <a class="btn btn-outline-secondary" [routerLink]="['/spaces', spaceId(), 'schema']">Back to schema</a>

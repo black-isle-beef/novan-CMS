@@ -5,6 +5,7 @@ import type { AuthUser } from '@novan/api-auth';
 import {
   assets,
   assetUsages,
+  completeOnboardingStep,
   DbService,
   type DbTransaction,
   organisations,
@@ -203,6 +204,8 @@ export class AssetsService {
         targetId: body.assetId,
         diff: { filename, mime: file.mime, sizeBytes: file.bytes.length },
       });
+      // The checklist's "Add your logo" step: the first image in the library (the logo field arrives in package 14).
+      if (kindOfMime(file.mime) === 'image') await completeOnboardingStep(tx, spaceId, 'logo');
       // Last, so a refused row leaves the file pending rather than placed.
       await this.storage.place(pending, assetPath(spaceId, body.assetId, filename), file.bytes, file.mime);
       return readAsset(tx, spaceId, body.assetId);

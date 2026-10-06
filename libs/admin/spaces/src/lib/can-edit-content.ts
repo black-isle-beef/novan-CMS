@@ -1,4 +1,4 @@
-// Kept free of `@novan/shared-schemas` imports, like can-model.ts: the shell loads this at startup.
+// Kept free of `@novan/shared-schemas` imports, like permissions.ts: the shell loads this at startup.
 
 /** Roles that write drafts and add folders. The API and RLS apply the same rule (0006_entries.sql). */
 const authorRoles: readonly string[] = ['admin', 'developer', 'editor', 'author'];

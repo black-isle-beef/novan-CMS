@@ -5,6 +5,7 @@ import { expectNoAxeViolations } from './axe';
 /** Seeded local users (supabase/seed.sql). */
 export const agency = { email: 'agency@novan.test', password: 'password123' };
 export const client = { email: 'client@novan.test', password: 'password123' };
+export const developer = { email: 'developer@novan.test', password: 'password123' };
 
 /** The seeded agency user's TOTP secret (supabase/seed.sql). */
 const agencyTotp = new TOTP({ secret: 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP', digits: 6, period: 30 });

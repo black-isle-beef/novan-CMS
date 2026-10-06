@@ -1,7 +1,7 @@
 import type { Route } from '@angular/router';
 import { requireAgencyStaff } from '@novan/admin-auth';
 
-/** Space screens, shown inside the signed-in layout. */
+/** Space screens, shown inside the signed-in layout. A space's home, its dashboard, is in @novan/admin-dashboard. */
 export const spacesRoutes: Route[] = [
   {
     path: 'spaces',
@@ -14,11 +14,9 @@ export const spacesRoutes: Route[] = [
     canActivate: [requireAgencyStaff],
     loadComponent: () => import('./create-space-page/create-space-page').then((m) => m.CreateSpacePage),
   },
-  // Space home: its content (package 06, @novan/admin-content).
-  { path: 'spaces/:spaceId', pathMatch: 'full', redirectTo: 'spaces/:spaceId/content' },
   {
     path: 'spaces/:spaceId/members',
-    title: 'People | Novan CMS',
+    title: 'Team | Novan CMS',
     loadComponent: () => import('./members-page/members-page').then((m) => m.MembersPage),
   },
 ];

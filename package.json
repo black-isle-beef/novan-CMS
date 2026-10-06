@@ -91,6 +91,8 @@
     "@nestjs/core": "^12.1.2",
     "@nestjs/platform-express": "^12.1.2",
     "@nestjs/throttler": "^6.7.1",
+    "@supabase/auth-js": "^2.117.2",
+    "@supabase/storage-js": "^2.117.2",
     "@supabase/supabase-js": "^2.117.2",
     "@tiptap/core": "^3.31.4",
     "@tiptap/extension-subscript": "^3.31.4",

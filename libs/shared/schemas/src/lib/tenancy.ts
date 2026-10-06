@@ -51,6 +51,45 @@ export const spaceSummarySchema = z.object({
 });
 export type SpaceSummary = z.infer<typeof spaceSummarySchema>;
 
+/** PATCH `/spaces/:spaceId` (space admins and agency staff): what the Space settings screen changes. */
+export const updateSpaceRequestSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120).optional(),
+    /** The site's origin, e.g. `https://www.example.com`, or null to forget it. */
+    previewUrl: z
+      .url({ protocol: /^https?$/, error: 'Enter a web address starting with https:// or http://.' })
+      .max(2048)
+      .transform((url) => url.replace(/\/+$/, ''))
+      .nullable()
+      .optional(),
+  })
+  .refine((body) => body.name !== undefined || body.previewUrl !== undefined, 'Change the name or the site address.');
+export type UpdateSpaceRequest = z.input<typeof updateSpaceRequestSchema>;
+
+// --- onboarding checklist (supabase/migrations/0009_onboarding.sql) -------------
+
+/** Steps in the order the dashboard lists them. */
+export const onboardingSteps = ['logo', 'homePage', 'newPage', 'publish'] as const;
+export const onboardingStepSchema = z.enum(onboardingSteps);
+export type OnboardingStep = z.infer<typeof onboardingStepSchema>;
+
+/** `spaces.settings.onboarding`: when each step was first done, and when the checklist was dismissed. */
+export const onboardingSchema = z.object({
+  completed: z.partialRecord(onboardingStepSchema, z.string()),
+  dismissedAt: z.string().nullable(),
+});
+export type Onboarding = z.infer<typeof onboardingSchema>;
+
+/** GET `/spaces/:spaceId/onboarding`. `checklist` is null for spaces created before the checklist existed. */
+export const onboardingResponseSchema = z.object({ checklist: onboardingSchema.nullable() });
+export type OnboardingResponse = z.infer<typeof onboardingResponseSchema>;
+
+// --- view as (agency staff) ----------------------------------------------------
+
+/** POST `/spaces/:spaceId/view-as`: agency staff start (`role`) or stop (`null`) viewing a space as a role. Audited only. */
+export const viewAsRequestSchema = z.object({ role: spaceRoleSchema.nullable() });
+export type ViewAsRequest = z.infer<typeof viewAsRequestSchema>;
+
 // --- members and invites ------------------------------------------------------
 
 export const memberSchema = z.object({

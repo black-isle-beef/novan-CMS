@@ -1,0 +1,5 @@
+// Signed-in layout (libs/admin/shell): the screen beside the space menu may shrink below its content's
+// widest line, so wide tables scroll inside it instead of pushing the page sideways.
+.nv-shell__main {
+  min-width: 0;
+}

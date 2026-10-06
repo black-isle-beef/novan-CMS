@@ -1,0 +1,70 @@
+<h1 class="mb-1">Space settings</h1>
+<p class="lead text-body-secondary mb-4">The space’s name, and where its site lives.</p>
+
+@if (space(); as current) {
+  <div class="col-lg-7">
+    @if (error(); as message) {
+      <ds-alert variant="danger" class="mb-4">{{ message }}</ds-alert>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="mb-3">
+        <label for="space-settings-name" class="form-label">Client or site name</label>
+        <input
+          id="space-settings-name"
+          type="text"
+          class="form-control"
+          formControlName="name"
+          autocomplete="organization"
+          required
+          [class.is-invalid]="invalid('name')"
+          [attr.aria-invalid]="invalid('name')"
+          [attr.aria-describedby]="invalid('name') ? 'space-settings-name-error' : null"
+        />
+        @if (invalid('name')) {
+          <div id="space-settings-name-error" class="invalid-feedback">
+            {{ serverErrors()['name']?.join(' ') || 'Enter a name of up to 120 characters.' }}
+          </div>
+        }
+      </div>
+
+      <div class="mb-3">
+        <label for="space-settings-url" class="form-label">Site address</label>
+        <input
+          id="space-settings-url"
+          type="url"
+          class="form-control"
+          formControlName="previewUrl"
+          autocomplete="url"
+          spellcheck="false"
+          aria-describedby="space-settings-url-hint"
+          [class.is-invalid]="invalid('previewUrl')"
+          [attr.aria-invalid]="invalid('previewUrl')"
+        />
+        <div id="space-settings-url-hint" [class]="invalid('previewUrl') ? 'invalid-feedback' : 'form-text'">
+          {{
+            serverErrors()['previewUrl']?.join(' ') ||
+              'Where the site is published, for example https://www.example.com. Leave empty if it has no address yet.'
+          }}
+        </div>
+      </div>
+
+      <dl class="mb-4">
+        <dt>Short name</dt>
+        <dd><code>{{ current.slug }}</code> <span class="text-body-secondary small">(cannot be changed)</span></dd>
+      </dl>
+
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="busy()"
+        [attr.aria-busy]="busy()"
+        [attr.aria-keyshortcuts]="shortcutKeys.save"
+      >
+        Save settings
+      </button>
+    </form>
+  </div>
+} @else {
+  <nv-skeleton label="Loading the space settings" [lines]="4" />
+}

@@ -1,0 +1,38 @@
+<section class="card mb-5" aria-labelledby="onboarding-heading">
+  <div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+      <div>
+        <h2 id="onboarding-heading" class="h4 mb-1">Get started</h2>
+        <p id="onboarding-progress-text" class="text-body-secondary mb-0">{{ doneCount() }} of {{ steps().length }} done</p>
+      </div>
+      @if (canDismiss()) {
+        <ds-button variant="secondary" size="sm" (pressed)="dismiss.emit()">Dismiss checklist</ds-button>
+      }
+    </div>
+    <ds-progress class="d-block mb-4" [value]="doneCount()" [max]="steps().length" label="Getting started" />
+
+    <ol class="list-unstyled mb-0">
+      @for (step of steps(); track step.key) {
+        <li class="d-flex gap-3 py-2" [class.border-top]="!$first">
+          <i
+            class="bi fs-4"
+            [class.bi-check-circle-fill]="step.done"
+            [class.text-success]="step.done"
+            [class.bi-circle]="!step.done"
+            [class.text-body-secondary]="!step.done"
+            aria-hidden="true"
+          ></i>
+          <div class="flex-grow-1">
+            <h3 class="h6 mb-1">
+              {{ step.title }}<span class="visually-hidden">{{ step.done ? ' (done)' : ' (not done yet)' }}</span>
+            </h3>
+            <p class="small text-body-secondary mb-1">{{ step.hint }}</p>
+            @if (!step.done) {
+              <a [routerLink]="step.link" [queryParams]="step.queryParams">{{ step.action }}</a>
+            }
+          </div>
+        </li>
+      }
+    </ol>
+  </div>
+</section>

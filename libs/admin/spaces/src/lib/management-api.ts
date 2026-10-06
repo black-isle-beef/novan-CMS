@@ -6,8 +6,10 @@ import type {
   InviteRequest,
   MeResponse,
   Member,
+  OnboardingResponse,
   SpaceRole,
   SpaceSummary,
+  UpdateSpaceRequest,
 } from '@novan/shared-schemas';
 import type { Observable } from 'rxjs';
 
@@ -27,6 +29,24 @@ export class ManagementApi {
 
   createSpace(body: CreateSpaceRequest): Observable<SpaceSummary> {
     return this.http.post<SpaceSummary>(`${this.base}/spaces`, body);
+  }
+
+  updateSpace(spaceId: string, body: UpdateSpaceRequest): Observable<SpaceSummary> {
+    return this.http.patch<SpaceSummary>(`${this.base}/spaces/${spaceId}`, body);
+  }
+
+  onboarding(spaceId: string): Observable<OnboardingResponse> {
+    return this.http.get<OnboardingResponse>(`${this.base}/spaces/${spaceId}/onboarding`);
+  }
+
+  dismissOnboarding(spaceId: string): Observable<OnboardingResponse> {
+    return this.http.post<OnboardingResponse>(`${this.base}/spaces/${spaceId}/onboarding/dismiss`, {});
+  }
+
+  /** Audits agency staff starting (ole) or stopping (
+ull) viewing the space as a role. */
+  viewAs(spaceId: string, role: SpaceRole | null): Observable<void> {
+    return this.http.post<void>(`${this.base}/spaces/${spaceId}/view-as`, { role });
   }
 
   listMembers(spaceId: string): Observable<Member[]> {

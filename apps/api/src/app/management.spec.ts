@@ -145,6 +145,35 @@ describe('management API', () => {
       expect(res.body.code).toBe('agency_staff_only');
     });
 
+    it('answers 403 when a member who is not an admin changes the space settings', async () => {
+      const res = await request(app.getHttpServer())
+        .patch(`/v1/management/spaces/${demoSpaceId}`)
+        .auth(await clientEditor(), { type: 'bearer' })
+        .send({ name: 'Renamed' });
+
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe('insufficient_role');
+    });
+
+    it('answers 403 when a viewer dismisses the onboarding checklist', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/v1/management/spaces/${demoSpaceId}/onboarding/dismiss`)
+        .auth(await clientViewer(), { type: 'bearer' });
+
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe('insufficient_role');
+    });
+
+    it('only agency staff record viewing a space as a role', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/v1/management/spaces/${demoSpaceId}/view-as`)
+        .auth(await clientEditor(), { type: 'bearer' })
+        .send({ role: 'viewer' });
+
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe('agency_staff_only');
+    });
+
     it('requires agency staff to complete MFA', async () => {
       const res = await request(app.getHttpServer())
         .get('/v1/management/spaces')
@@ -211,6 +240,71 @@ describe('management API', () => {
         .from(auditEvents)
         .where(eq(auditEvents.spaceId, spaceId));
       expect(audit).toEqual([{ action: 'space.created', actorId: agencyId }]);
+    });
+
+    it('a new space opens with an empty onboarding checklist; the seeded demo space has none', async () => {
+      const staff = await agencyStaff();
+      const created = await request(app.getHttpServer()).get(`/v1/management/spaces/${spaceId}/onboarding`).auth(staff, { type: 'bearer' });
+      const seeded = await request(app.getHttpServer())
+        .get(`/v1/management/spaces/${demoSpaceId}/onboarding`)
+        .auth(await clientViewer(), { type: 'bearer' });
+
+      expect(created.status).toBe(200);
+      expect(created.body).toEqual({ checklist: { completed: {}, dismissedAt: null } });
+      expect(seeded.body).toEqual({ checklist: null });
+    });
+
+    it('a space admin renames the space and sets its site address, audited', async () => {
+      const res = await request(app.getHttpServer())
+        .patch(`/v1/management/spaces/${spaceId}`)
+        .auth(await agencyStaff(), { type: 'bearer' })
+        .send({ name: 'Acme Limited', previewUrl: 'https://www.acme.example/' });
+
+      expect(res.status).toBe(200);
+      // The staff token was minted before the space existed, so it carries no role there.
+      expect(res.body).toMatchObject({ id: spaceId, name: 'Acme Limited', previewUrl: 'https://www.acme.example', role: null });
+      const [audit] = await db.serviceDb
+        .select({ diff: auditEvents.diff })
+        .from(auditEvents)
+        .where(and(eq(auditEvents.spaceId, spaceId), eq(auditEvents.action, 'space.updated')));
+      expect(audit.diff).toEqual({
+        name: { from: 'Acme Ltd', to: 'Acme Limited' },
+        previewUrl: { from: null, to: 'https://www.acme.example' },
+      });
+    });
+
+    it('refuses a site address that is not a web address', async () => {
+      const res = await request(app.getHttpServer())
+        .patch(`/v1/management/spaces/${spaceId}`)
+        .auth(await agencyStaff(), { type: 'bearer' })
+        .send({ previewUrl: 'javascript:alert(1)' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toHaveProperty('previewUrl');
+    });
+
+    it('agency staff viewing as a role is audited, and grants nothing', async () => {
+      const staff = await agencyStaff();
+      const start = await request(app.getHttpServer())
+        .post(`/v1/management/spaces/${spaceId}/view-as`)
+        .auth(staff, { type: 'bearer' })
+        .send({ role: 'editor' });
+      const stop = await request(app.getHttpServer())
+        .post(`/v1/management/spaces/${spaceId}/view-as`)
+        .auth(staff, { type: 'bearer' })
+        .send({ role: null });
+
+      expect([start.status, stop.status]).toEqual([204, 204]);
+      const audit = await db.serviceDb
+        .select({ action: auditEvents.action, diff: auditEvents.diff, actorId: auditEvents.actorId })
+        .from(auditEvents)
+        .where(and(eq(auditEvents.spaceId, spaceId), inArray(auditEvents.action, ['view_as.started', 'view_as.stopped'])));
+      expect(audit).toEqual(
+        expect.arrayContaining([
+          { action: 'view_as.started', diff: { role: 'editor' }, actorId: agencyId },
+          { action: 'view_as.stopped', diff: null, actorId: agencyId },
+        ]),
+      );
     });
 
     it('rejects a duplicate slug with 409', async () => {

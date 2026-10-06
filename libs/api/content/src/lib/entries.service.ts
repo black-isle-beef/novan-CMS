@@ -3,6 +3,7 @@ import { badRequest, conflict, forbidden, notFound } from '@novan/api-common';
 import type { AuthUser, SpaceAccess } from '@novan/api-auth';
 import {
   assetUsages,
+  completeOnboardingStep,
   contentTypes,
   DbService,
   type DbTransaction,
@@ -26,6 +27,7 @@ import {
   type EntrySummary,
   type EntryVersion,
   entryTitle,
+  HOME_SLUG,
   type listEntriesQuerySchema,
   type MediaRef,
   mediaRefs,
@@ -157,6 +159,7 @@ export class EntriesService {
           targetId: entry.id,
           diff: { environment: env, contentType: type.apiId, slug },
         });
+        if (type.kind === 'page') await completeOnboardingStep(tx, spaceId, 'newPage');
         return readEntry(tx, model.environmentId, entry.id);
       });
     } catch (error) {
@@ -177,6 +180,7 @@ export class EntriesService {
           autosave: false,
           slug: slugInData(type, data) ?? entry.slug,
         });
+        if (isHomePage(entry, type)) await completeOnboardingStep(tx, spaceId, 'homePage');
         return readEntry(tx, model.environmentId, id);
       });
     } catch (error) {
@@ -219,6 +223,7 @@ export class EntriesService {
         } else {
           await saveVersion(tx, entry, user, data, { message: null, autosave: true, slug });
         }
+        if (isHomePage(entry, type)) await completeOnboardingStep(tx, spaceId, 'homePage');
         return readEntry(tx, model.environmentId, id);
       });
     } catch (error) {
@@ -268,6 +273,7 @@ export class EntriesService {
           targetId: entry.id,
           diff: { environment: env, versionId, path, ...(entry.publishedVersionId ? { previousVersionId: entry.publishedVersionId } : {}) },
         });
+        await completeOnboardingStep(tx, spaceId, 'publish');
 
         const saved = await readEntry(tx, model.environmentId, id);
         event = {
@@ -546,11 +552,16 @@ async function findEntry(tx: DbTransaction, envId: string, id: string): Promise<
     .select()
     .from(entries)
     .where(and(eq(entries.id, id), eq(entries.environmentId, envId)));
-  if (!entry) throw notFound('entry_not_found', 'There is no such page or entry here.');
+  if (!entry) throw notFound('entry_not_found', 'This page does not exist, or has been deleted.');
   return entry;
 }
 
 /** An entry that is not in the bin. */
+/** The site's home page: the top-level page with the home slug, at `/` (as the Delivery API reads it). */
+function isHomePage(entry: EntryRow, type: { kind: string }): boolean {
+  return type.kind === 'page' && entry.folderId === null && entry.slug === HOME_SLUG;
+}
+
 async function liveEntry(tx: DbTransaction, envId: string, id: string): Promise<EntryRow> {
   const entry = await findEntry(tx, envId, id);
   if (entry.deletedAt) throw conflict('entry_deleted', 'This is in the bin. Restore it first.');
@@ -575,7 +586,7 @@ async function readEntry(tx: DbTransaction, envId: string, id: string): Promise<
     .leftJoin(folders, eq(folders.id, entries.folderId))
     .leftJoin(publishedContent, eq(publishedContent.entryId, entries.id))
     .where(and(eq(entries.id, id), eq(entries.environmentId, envId)));
-  if (!row) throw notFound('entry_not_found', 'There is no such page or entry here.');
+  if (!row) throw notFound('entry_not_found', 'This page does not exist, or has been deleted.');
   return {
     ...toSummary(row),
     data: row.data as EntryData,

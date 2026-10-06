@@ -72,7 +72,7 @@ beforeAll(() => {
   };
 });
 
-async function render(role: 'editor' | 'author' | 'viewer') {
+async function render(role: 'editor' | 'author' | 'viewer', add?: string) {
   const api = fakeApi();
   TestBed.configureTestingModule({
     imports: [ContentPage],
@@ -92,6 +92,7 @@ async function render(role: 'editor' | 'author' | 'viewer') {
   });
   const fixture = TestBed.createComponent(ContentPage);
   fixture.componentRef.setInput('spaceId', spaceId);
+  if (add) fixture.componentRef.setInput('add', add);
   await fixture.whenStable();
   await new Promise((resolve) => setTimeout(resolve));
   await fixture.whenStable();
@@ -114,7 +115,7 @@ async function render(role: 'editor' | 'author' | 'viewer') {
 describe('ContentPage', () => {
   it('shows folders and pages as a tree, with their status in words', async () => {
     const { el, click } = await render('editor');
-    expect(el.querySelector('h1')?.textContent).toBe('Content');
+    expect(el.querySelector('h1')?.textContent).toBe('Pages');
 
     const folder = el.querySelector<HTMLButtonElement>('[aria-expanded]') as HTMLButtonElement;
     expect(folder.textContent?.replace(/\s+/g, ' ').trim()).toBe('Blog folder');
@@ -166,6 +167,19 @@ describe('ContentPage', () => {
 
     expect(api.createEntry).toHaveBeenCalledWith(spaceId, { contentType: 'page', folderId: null, slug: 'about-us', data: { title: 'About Us' } });
     expect(navigate).toHaveBeenCalledWith(['/spaces', spaceId, 'content', 'new']);
+  });
+
+  it('opens the New page dialog from a ?add=page link (the dashboard), then drops the parameter', async () => {
+    const navigate = vi.spyOn(Router.prototype, 'navigate').mockResolvedValue(true);
+    const { el } = await render('author', 'page');
+
+    expect(el.querySelector<HTMLDialogElement>('ds-modal dialog')?.open).toBe(true);
+    expect(navigate).toHaveBeenCalledWith([], { queryParams: { add: null }, queryParamsHandling: 'merge', replaceUrl: true });
+  });
+
+  it('ignores ?add=page for someone who cannot add pages', async () => {
+    const { el } = await render('viewer', 'page');
+    expect(el.querySelector<HTMLDialogElement>('ds-modal dialog')?.open).toBe(false);
   });
 
   it('asks for a title before creating', async () => {

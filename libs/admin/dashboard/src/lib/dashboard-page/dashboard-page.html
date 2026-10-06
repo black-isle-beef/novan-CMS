@@ -1,0 +1,65 @@
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h1 class="mb-1">{{ copy.dashboard }}</h1>
+    <p class="lead text-body-secondary mb-0">{{ context.currentSpace()?.name ?? 'Your site' }} at a glance.</p>
+  </div>
+  @if (context.canEditCurrent()) {
+    <a class="btn btn-primary" [routerLink]="['/spaces', spaceId(), 'content']" [queryParams]="{ add: 'page' }">
+      <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>{{ copy.newPage }}
+    </a>
+  }
+</div>
+
+@if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (loading()) {
+  <nv-skeleton label="Loading the dashboard" [lines]="8" [heading]="true" />
+} @else {
+  @if (showChecklist() && checklist(); as list) {
+    <nv-onboarding-checklist
+      [spaceId]="spaceId()"
+      [checklist]="list"
+      [homePageId]="homePageId()"
+      [canEdit]="context.canEditCurrent()"
+      [canDismiss]="context.canEditCurrent()"
+      (dismiss)="dismissChecklist()"
+    />
+  }
+
+  <div class="row g-5">
+    <section class="col-lg-6" aria-labelledby="recent-heading">
+      <h2 id="recent-heading" class="h4">Recently edited</h2>
+      @if (recent().length) {
+        <ul class="list-unstyled mb-0">
+          @for (entry of recent(); track entry.id) {
+            <li class="py-2" [class.border-top]="!$first">
+              <a [routerLink]="['/spaces', spaceId(), 'content', entry.id]">{{ entry.title }}</a>
+              <div class="small text-body-secondary">Edited {{ edited(entry) }}</div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p>No pages yet.</p>
+      }
+    </section>
+
+    <section class="col-lg-6" aria-labelledby="drafts-heading">
+      <h2 id="drafts-heading" class="h4">Drafts awaiting review</h2>
+      <p class="small text-body-secondary">Pages with changes that are not on the live site yet.</p>
+      @if (drafts().length) {
+        <ul class="list-unstyled mb-0">
+          @for (entry of drafts(); track entry.id) {
+            <li class="d-flex flex-wrap align-items-center gap-2 py-2" [class.border-top]="!$first">
+              <a [routerLink]="['/spaces', spaceId(), 'content', entry.id]">{{ entry.title }}</a>
+              @for (badge of statusBadges(entry); track badge.label) {
+                <ds-badge [variant]="badge.variant">{{ badge.label }}</ds-badge>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p>Nothing waiting. Every change is live.</p>
+      }
+    </section>
+  </div>
+}

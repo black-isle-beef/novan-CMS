@@ -1,5 +1,5 @@
-<h1 class="mb-1">Content</h1>
-<p class="lead text-muted mb-4">Pages and other content of {{ context.currentSpace()?.name ?? 'this space' }}.</p>
+<h1 class="mb-1">{{ copy.pages }}</h1>
+<p class="lead text-muted mb-4">The pages of {{ context.currentSpace()?.name ?? 'this site' }}, and the content they share.</p>
 
 @if (status(); as message) {
   <div id="content-status" tabindex="-1" class="mb-3">
@@ -15,7 +15,7 @@
 @if (loadError(); as message) {
   <ds-alert variant="danger">{{ message }}</ds-alert>
 } @else if (loading()) {
-  <ds-spinner label="Loading content" />
+  <nv-skeleton label="Loading pages" [lines]="6" />
 } @else {
   <div class="d-flex flex-wrap align-items-end gap-3 mb-4">
     <div class="flex-grow-1">
@@ -32,7 +32,7 @@
     </div>
     @if (canEdit()) {
       <div class="d-flex gap-2 mb-4">
-        <button type="button" class="btn btn-primary" [disabled]="!contentTypes().length" (click)="openNew()">New page</button>
+        <button type="button" class="btn btn-primary" [disabled]="!contentTypes().length" (click)="openNew()">{{ copy.newPage }}</button>
         <button type="button" class="btn btn-outline-primary" (click)="openNewFolder()">New folder</button>
       </div>
     }
@@ -94,7 +94,7 @@
   }
 }
 
-<ds-modal [open]="creating()" (openChange)="!$event && creating.set(false)" heading="New page" size="md">
+<ds-modal [open]="creating()" (openChange)="!$event && creating.set(false)" [heading]="copy.newPage" size="md">
   <form novalidate (submit)="$event.preventDefault(); create()">
     <div class="mb-3">
       <label for="new-entry-type" class="form-label">Type</label>

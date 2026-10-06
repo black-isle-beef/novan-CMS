@@ -1,7 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
-import { ADMIN_CONFIG, authInterceptor } from '@novan/admin-auth';
+import { ADMIN_CONFIG, authInterceptor, viewAsReadOnlyInterceptor } from '@novan/admin-auth';
 import { environment } from '../environments/environment';
 import { appRoutes } from './app.routes';
 
@@ -9,7 +9,8 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(appRoutes, withComponentInputBinding()),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    // Writes are refused while agency staff view a space as another role, before the token is attached.
+    provideHttpClient(withInterceptors([viewAsReadOnlyInterceptor, authInterceptor])),
     { provide: ADMIN_CONFIG, useValue: environment },
   ],
 };
