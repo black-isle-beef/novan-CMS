@@ -21,7 +21,11 @@ test.describe('@auth', () => {
     await page.getByLabel('Short name').fill(`acme-ltd-${run}`.toLowerCase());
     await page.getByRole('button', { name: 'Create space' }).click();
 
-    await expect(page.getByRole('heading', { level: 1, name: 'People' })).toBeVisible();
+    // A new space opens on its dashboard; its team is under Settings.
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    await page.getByRole('navigation', { name: 'Space' }).getByRole('link', { name: 'Settings', exact: true }).click();
+    await page.getByRole('main').getByRole('link', { name: 'Team' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Team' })).toBeVisible();
     await expect(page.getByText('Who can sign in to Acme Ltd')).toBeVisible();
     await expect(page.getByRole('rowheader', { name: /Agency User/ })).toBeVisible();
     await expectNoAxeViolations(page);

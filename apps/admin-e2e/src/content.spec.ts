@@ -19,10 +19,11 @@ test.describe('@content', () => {
   }, testInfo) => {
     const title = `E2E page ${Date.now()} ${testInfo.project.name}`;
 
-    // The client is an editor of the demo site, whose home is now its content.
+    // The client is an editor of the demo site.
     await signIn(page, client);
     await page.getByRole('link', { name: 'Demo site' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();
+    await page.getByRole('navigation', { name: 'Space' }).getByRole('link', { name: 'Pages' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Pages' })).toBeVisible();
     await expectNoAxeViolations(page);
 
     // Create the page; its slug follows the title.
@@ -85,7 +86,7 @@ test.describe('@content', () => {
     // Clean up: delete it, and find it in the bin.
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
     await page.getByRole('dialog', { name: `Delete ${title}?` }).getByRole('button', { name: 'Delete' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Pages' })).toBeVisible();
     await page.getByText(/^Bin \(\d+\)$/).click();
     await expect(page.getByRole('button', { name: `Restore ${title}` })).toBeVisible();
   });

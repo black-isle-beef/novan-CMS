@@ -14,7 +14,7 @@ export interface TotpEnrolment {
 /** Session state and auth actions for the admin, backed by Supabase Auth. */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly auth = inject(SupabaseClientService).client.auth;
+  private readonly auth = inject(SupabaseClientService).auth;
   private readonly origin = inject(DOCUMENT).location.origin;
 
   private readonly sessionState = signal<Session | null>(null);

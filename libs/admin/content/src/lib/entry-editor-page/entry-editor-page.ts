@@ -13,15 +13,10 @@ import {
   untracked,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import {
-  DsAlertComponent,
-  DsBadgeComponent,
-  DsButtonComponent,
-  DsModalComponent,
-  DsSpinnerComponent,
-} from '@black-isle-beef/novan-design-system';
+import { DsAlertComponent, DsBadgeComponent, DsButtonComponent, DsModalComponent } from '@black-isle-beef/novan-design-system';
 import { describePath, errorsFromIssues, FieldForm, FieldFormContext, fieldId } from '@novan/admin-fields';
 import { MediaPicker, MediaPickerDialog } from '@novan/admin-media';
+import { Confirm, copy, type HasUnsavedChanges, Shortcuts, shortcutKeys, Skeleton, warnBeforeUnload } from '@novan/admin-shell';
 import { problemCode, problemFieldErrors, problemMessage, SpaceContext } from '@novan/admin-spaces';
 import {
   type BlockType,
@@ -53,7 +48,8 @@ const clock = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
 /**
  * Edits one page or entry in a form generated from its content type: save draft (and autosave),
  * publish, unpublish, move, delete, and the version history. Drafts may be incomplete; publishing checks
- * every required field. Errors use the same `buildEntrySchema` as the API.
+ * every required field. Errors use the same `buildEntrySchema` as the API. Ctrl+S saves and Ctrl+Shift+P publishes;
+ * leaving with unsaved changes asks first.
  */
 @Component({
   selector: 'nv-entry-editor-page',
@@ -62,24 +58,27 @@ const clock = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
     DsBadgeComponent,
     DsButtonComponent,
     DsModalComponent,
-    DsSpinnerComponent,
     FieldForm,
     MediaPickerDialog,
     RouterLink,
+    Skeleton,
     VersionHistory,
   ],
   providers: [FieldFormContext, MediaPicker],
   templateUrl: './entry-editor-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class EntryEditorPage {
+export class EntryEditorPage implements HasUnsavedChanges {
   private readonly api = inject(ContentApi);
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   private readonly form = inject(FieldFormContext);
   private readonly media = inject(MediaPicker);
+  private readonly confirm = inject(Confirm);
   protected readonly context = inject(SpaceContext);
+  protected readonly copy = copy;
+  protected readonly shortcutKeys = shortcutKeys;
 
   /** Route parameters (component input binding). */
   readonly spaceId = input.required<string>();
@@ -182,6 +181,8 @@ export class EntryEditorPage {
   });
 
   private autosaveTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Set once the page is deleted, so leaving does not ask about its unsaved changes. */
+  private discarded = false;
 
   constructor() {
     effect(() => {
@@ -202,6 +203,15 @@ export class EntryEditorPage {
       untracked(() => this.scheduleAutosave(due));
     });
     inject(DestroyRef).onDestroy(() => this.cancelAutosave());
+    const shortcuts = inject(Shortcuts);
+    shortcuts.register('save', () => void this.save());
+    shortcuts.register('publish', () => void this.publish());
+    warnBeforeUnload(() => this.hasUnsavedChanges());
+  }
+
+  /** Changes the person could still lose: typed but not saved (autosave may be pending). */
+  hasUnsavedChanges(): boolean {
+    return !this.discarded && this.canEdit() && this.dirty();
   }
 
   protected setData(data: Record<string, unknown>): void {
@@ -243,6 +253,13 @@ export class EntryEditorPage {
 
   protected async unpublish(): Promise<void> {
     if (!this.canPublish() || this.busy()) return;
+    const confirmed = await this.confirm.ask({
+      heading: `Unpublish ${this.title()}?`,
+      body: 'It comes off the live site straight away. The draft is kept, and you can publish it again later.',
+      confirmLabel: copy.unpublish,
+      destructive: true,
+    });
+    if (!confirmed) return;
     await this.run('saving', async () => {
       this.entry.set(await firstValueFrom(this.api.unpublish(this.spaceId(), this.entryId())));
       this.status.set('Unpublished. It is no longer on the site; the draft is kept.');
@@ -266,6 +283,7 @@ export class EntryEditorPage {
     this.cancelAutosave();
     await this.run('saving', async () => {
       await firstValueFrom(this.api.deleteEntry(this.spaceId(), this.entryId()));
+      this.discarded = true;
       await this.router.navigate(['/spaces', this.spaceId(), 'content']);
     });
   }

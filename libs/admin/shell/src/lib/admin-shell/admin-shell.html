@@ -1,0 +1,28 @@
+<!-- `#ds-main-content` is the target of the header's "Skip to main content" link. -->
+<ds-header [navItems]="headerNav()">
+  <a dsBrand routerLink="/spaces" class="fw-bold text-body text-decoration-none">Novan CMS</a>
+  <ng-container dsActions>
+    <nv-space-switcher />
+    @if (viewAsSpaceId(); as id) {
+      <nv-view-as-menu [spaceId]="id" />
+    }
+    <ds-button variant="secondary" size="sm" (pressed)="signOut()">Sign out</ds-button>
+  </ng-container>
+</ds-header>
+
+<div class="d-flex flex-grow-1">
+  @if (spaceNav().length && !narrow()) {
+    <ds-sidebar [items]="spaceNav()" ariaLabel="Space" />
+  }
+  <main id="ds-main-content" class="nv-shell__main flex-grow-1">
+    <div class="container py-6">
+      @if (context.viewingAs(); as role) {
+        <nv-view-as-banner [role]="role" />
+      }
+      <router-outlet />
+    </div>
+  </main>
+</div>
+
+<ds-toast-container position="bottom-end" />
+<nv-confirm-host />

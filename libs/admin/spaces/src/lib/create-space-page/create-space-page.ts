@@ -74,7 +74,8 @@ export class CreateSpacePage {
       // The new membership reaches the access token on refresh.
       await this.auth.refresh();
       await this.context.load();
-      await this.router.navigate(['/spaces', space.id, 'members']);
+      // New spaces open on their dashboard, with the getting-started checklist.
+      await this.router.navigate(['/spaces', space.id]);
     } catch (error) {
       this.error.set(problemMessage(error));
       this.serverErrors.set(problemFieldErrors(error));

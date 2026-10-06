@@ -147,7 +147,8 @@ describe('entries API', () => {
       subscription = app.get(ContentEvents).events$.subscribe((event) => events.push(event));
       const [space] = await db.serviceDb
         .insert(spaces)
-        .values({ organisationId, name: 'Entries test', slug: `entries-${run}` })
+        // With an onboarding checklist, as spaces created in the admin have (0009_onboarding.sql).
+        .values({ organisationId, name: 'Entries test', slug: `entries-${run}`, settings: { onboarding: { completed: {}, dismissedAt: null } } })
         .returning({ id: spaces.id });
       spaceId = space.id;
       developer = await token(agencyId, [{ id: spaceId, role: 'developer' }]);
@@ -507,6 +508,32 @@ describe('entries API', () => {
         expect(restored.body).toMatchObject({ deletedAt: null, folderId: null, path: '/inside', status: 'draft' });
         expect(await auditActions(page.id)).toEqual(expect.arrayContaining(['entry.deleted', 'entry.restored']));
       });
+    });
+
+    it('records onboarding steps as people do them: a new page, publishing, then editing the home page', async () => {
+      const checklist = async () =>
+        (await request(server()).get(`/v1/management/spaces/${spaceId}/onboarding`).auth(viewer, { type: 'bearer' })).body.checklist;
+      // Earlier tests created pages and published one.
+      expect(Object.keys((await checklist()).completed).sort()).toEqual(['newPage', 'publish']);
+
+      const home = await post('/entries', { contentType: 'article', data: { title: 'Home', slug: 'home', extra: {} } }, author);
+      expect(home.status).toBe(201);
+      expect((await checklist()).completed).not.toHaveProperty('homePage');
+      expect((await patch(`/entries/${home.body.id}`, { data: { title: 'Welcome', slug: 'home', extra: {} } }, author)).status).toBe(200);
+
+      const { completed, dismissedAt } = await checklist();
+      expect(Object.keys(completed).sort()).toEqual(['homePage', 'newPage', 'publish']);
+      expect(dismissedAt).toBeNull();
+    });
+
+    it('a viewer cannot dismiss the checklist; an author can, for everyone', async () => {
+      const dismiss = (as: string) =>
+        request(server()).post(`/v1/management/spaces/${spaceId}/onboarding/dismiss`).auth(as, { type: 'bearer' });
+
+      expect((await dismiss(viewer)).status).toBe(403);
+      const res = await dismiss(author);
+      expect(res.status).toBe(200);
+      expect(res.body.checklist.dismissedAt).toEqual(expect.any(String));
     });
 
     it('a member of the demo space cannot read this one, through the API or the database', async () => {

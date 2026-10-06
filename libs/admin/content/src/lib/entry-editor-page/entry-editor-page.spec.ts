@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { MediaApi, Thumbnails } from '@novan/admin-media';
+import { Confirm, Shortcuts } from '@novan/admin-shell';
 import { SpaceContext } from '@novan/admin-spaces';
 import { type ContentType, type Entry, type EntryVersion, fieldListSchema } from '@novan/shared-schemas';
 import { of, throwError } from 'rxjs';
@@ -234,6 +235,57 @@ describe('EntryEditorPage', () => {
     await click('Publish changes');
     expect(live().getAttribute('href')).toBe('https://www.example.com/home');
     expect(el.querySelector('#entry-live-hint')).toBeNull();
+  });
+
+  it("saves with Ctrl+S and publishes with Ctrl+Shift+P, through the shell's shortcuts", async () => {
+    const { type, api, fixture } = await render('editor');
+    const shortcuts = TestBed.inject(Shortcuts);
+    const press = async (init: KeyboardEventInit) => {
+      const event = new KeyboardEvent('keydown', { cancelable: true, ...init });
+      expect(shortcuts.handle(event)).toBe(true);
+      expect(event.defaultPrevented).toBe(true);
+      await fixture.whenStable();
+      await new Promise((resolve) => setTimeout(resolve));
+    };
+
+    await type('Title', 'Welcome');
+    await press({ key: 's', ctrlKey: true });
+    expect(api.saveEntry).toHaveBeenCalledWith(spaceId, entryId, { title: 'Welcome' });
+
+    await type('Summary', 'Hello');
+    await press({ key: 'P', metaKey: true, shiftKey: true });
+    expect(api.publish).toHaveBeenCalled();
+  });
+
+  it('asks before unpublishing, and does nothing when cancelled', async () => {
+    const { click, api } = await render('editor', fakeApi(entry({ status: 'published', publishedPath: '/home', publishedVersionId: 'v' })));
+    const confirm = TestBed.inject(Confirm);
+
+    void click('Unpublish');
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(confirm.request()?.heading).toBe('Unpublish Home?');
+    confirm.request()?.answer(false);
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(api.unpublish).not.toHaveBeenCalled();
+
+    void click('Unpublish');
+    await new Promise((resolve) => setTimeout(resolve));
+    confirm.request()?.answer(true);
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(api.unpublish).toHaveBeenCalled();
+  });
+
+  it('reports unsaved changes, so leaving asks first; never for someone who cannot edit', async () => {
+    const author = await render('author');
+    expect(author.fixture.componentInstance.hasUnsavedChanges()).toBe(false);
+    await author.type('Title', 'Welcome');
+    expect(author.fixture.componentInstance.hasUnsavedChanges()).toBe(true);
+    await author.click('Save draft');
+    expect(author.fixture.componentInstance.hasUnsavedChanges()).toBe(false);
+    TestBed.resetTestingModule();
+
+    const viewer = await render('viewer');
+    expect(viewer.fixture.componentInstance.hasUnsavedChanges()).toBe(false);
   });
 
   it('shows the API\'s field errors on the fields', async () => {

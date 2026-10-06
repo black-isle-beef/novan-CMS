@@ -19,6 +19,7 @@ import {
   DsModalComponent,
   DsSpinnerComponent,
 } from '@black-isle-beef/novan-design-system';
+import { Shortcuts, shortcutKeys } from '@novan/admin-shell';
 import { problemCode, problemFieldErrors, problemMessage, SpaceContext } from '@novan/admin-spaces';
 import {
   type BlockType,
@@ -157,7 +158,10 @@ export class TypeEditorPage {
     return own ? [...others, { apiId: own, name: `${this.name() || own} (this block)` }] : others;
   });
 
+  protected readonly shortcutKeys = shortcutKeys;
+
   constructor() {
+    inject(Shortcuts).register('save', () => void this.save());
     effect(() => {
       const spaceId = this.spaceId();
       const kind = this.kind();

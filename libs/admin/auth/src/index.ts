@@ -5,3 +5,5 @@ export * from './lib/auth.interceptor';
 export * from './lib/auth.routes';
 export * from './lib/auth.service';
 export * from './lib/supabase-client';
+export * from './lib/view-as';
+export * from './lib/view-as-read-only.interceptor';

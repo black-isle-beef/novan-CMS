@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
-import { SupabaseClientService } from '@novan/admin-auth';
+import { ADMIN_CONFIG, AuthService } from '@novan/admin-auth';
 import { type Asset, MEDIA_BUCKET } from '@novan/shared-schemas';
+import { StorageClient } from '@supabase/storage-js';
 
 /** Signed URLs last an hour; refresh them a little before. */
 const LIFETIME_S = 60 * 60;
@@ -13,7 +14,7 @@ const REFRESH_MS = (LIFETIME_S - 5 * 60) * 1000;
  */
 @Injectable({ providedIn: 'root' })
 export class Thumbnails {
-  private readonly storage = inject(SupabaseClientService).client.storage;
+  private readonly storage = storageClient();
   private readonly cache = new Map<string, { url: string; expires: number }>();
 
   /** URLs for the images and videos among `assets` (others get none), by asset id. */
@@ -44,4 +45,18 @@ export class Thumbnails {
     });
     return result;
   }
+}
+
+/**
+ * Supabase Storage as the signed-in user (as `supabase-js` would call it), created with the media library so
+ * the admin's initial bundle does not carry it.
+ */
+function storageClient(): StorageClient {
+  const config = inject(ADMIN_CONFIG);
+  const auth = inject(AuthService);
+  return new StorageClient(`${config.supabaseUrl.replace(/\/+$/, '')}/storage/v1`, { apikey: config.supabaseAnonKey }, (input, init) => {
+    const headers = new Headers(init?.headers);
+    headers.set('Authorization', `Bearer ${auth.accessToken() ?? config.supabaseAnonKey}`);
+    return fetch(input, { ...init, headers });
+  });
 }

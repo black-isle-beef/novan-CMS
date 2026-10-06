@@ -12,13 +12,8 @@ import {
   untracked,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import {
-  DsAlertComponent,
-  DsBadgeComponent,
-  DsButtonComponent,
-  DsModalComponent,
-  DsSpinnerComponent,
-} from '@black-isle-beef/novan-design-system';
+import { DsAlertComponent, DsBadgeComponent, DsButtonComponent, DsModalComponent } from '@black-isle-beef/novan-design-system';
+import { copy, Skeleton } from '@novan/admin-shell';
 import { problemFieldErrors, problemMessage, SpaceContext } from '@novan/admin-spaces';
 import { type ContentType, type EntrySummary, type Folder, slugify, slugSchema } from '@novan/shared-schemas';
 import { firstValueFrom } from 'rxjs';
@@ -38,7 +33,7 @@ interface FolderDialog {
 /** Pages and other content of a space as a folder tree, with search, new page and folder dialogs, and the bin. */
 @Component({
   selector: 'nv-content-page',
-  imports: [DsAlertComponent, DsBadgeComponent, DsButtonComponent, DsModalComponent, DsSpinnerComponent, PageTree, RouterLink],
+  imports: [DsAlertComponent, DsBadgeComponent, DsButtonComponent, DsModalComponent, PageTree, RouterLink, Skeleton],
   templateUrl: './content-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -51,6 +46,10 @@ export class ContentPage {
 
   /** Bound from the `:spaceId` route parameter. */
   readonly spaceId = input.required<string>();
+  /** `?add=page` (from the dashboard and the checklist) opens the New page dialog once the page types are loaded. */
+  readonly add = input<string | undefined>();
+
+  protected readonly copy = copy;
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
@@ -106,9 +105,16 @@ export class ContentPage {
       const spaceId = this.spaceId();
       untracked(() => {
         this.context.currentSpaceId.set(spaceId);
-        void this.load(spaceId);
+        void this.load(spaceId).then(() => this.openNewFromLink());
       });
     });
+  }
+
+  /** Opens the New page dialog for a `?add=page` link, then drops the parameter so a reload does not reopen it. */
+  private openNewFromLink(): void {
+    if (this.add() !== 'page' || !this.canEdit() || !this.contentTypes().length) return;
+    this.openNew();
+    void this.router.navigate([], { queryParams: { add: null }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
   protected setSearch(event: Event): void {

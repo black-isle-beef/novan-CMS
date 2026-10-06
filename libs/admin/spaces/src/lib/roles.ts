@@ -1,4 +1,5 @@
-import { type SpaceRole, spaceRoles } from '@novan/shared-schemas';
+// Type-only import from @novan/shared-schemas, so the shell can show role names without loading Zod.
+import type { SpaceRole } from '@novan/shared-schemas';
 
 export interface RoleOption {
   key: SpaceRole;
@@ -19,6 +20,5 @@ export function roleLabel(role: string | null | undefined): string {
   return roleOptions.find((option) => option.key === role)?.label ?? 'Agency staff';
 }
 
-export const isSpaceRole = (value: string): value is SpaceRole => (spaceRoles as readonly string[]).includes(value);
+export const isSpaceRole = (value: string): value is SpaceRole => roleOptions.some((option) => option.key === value);
 
-export { canModel } from './can-model';

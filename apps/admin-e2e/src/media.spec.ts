@@ -20,7 +20,7 @@ test.describe('@media', () => {
 
     await signIn(page, client);
     await page.getByRole('link', { name: 'Demo site' }).click();
-    await page.getByRole('link', { name: 'Media', exact: true }).click();
+    await page.getByRole('navigation', { name: 'Space' }).getByRole('link', { name: 'Media' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Media' })).toBeVisible();
     await expectNoAxeViolations(page);
 
@@ -57,7 +57,7 @@ test.describe('@media', () => {
     await details.getByRole('button', { name: 'Close file details' }).click();
 
     // A page with a hero block that uses it.
-    await page.getByRole('link', { name: 'Content', exact: true }).click();
+    await page.getByRole('navigation', { name: 'Space' }).getByRole('link', { name: 'Pages' }).click();
     await page.getByRole('button', { name: 'New page' }).click();
     const create = page.getByRole('dialog', { name: 'New page' });
     await create.getByLabel('Title').fill(`Media page ${run}`);
@@ -88,7 +88,7 @@ test.describe('@media', () => {
     await expect(page.getByText(/^Published\. It is live at \//)).toBeVisible();
 
     // The library now knows where the image is used, and warns before deleting it.
-    await page.getByRole('link', { name: 'Media', exact: true }).click();
+    await page.getByRole('navigation', { name: 'Space' }).getByRole('link', { name: 'Media' }).click();
     await page.getByRole('button', { name: new RegExp(`^${title(1)}`) }).click();
     await expect(details.getByText('Used on 1 published page')).toBeVisible();
     await expect(details.getByRole('link', { name: `Media page ${run}` })).toBeVisible();
@@ -111,13 +111,13 @@ test.describe('@media', () => {
       await expect(other.getByText('Moved to the bin.')).toBeVisible();
       await other.getByRole('button', { name: 'Close file details' }).click();
     }
-    await page.getByRole('link', { name: 'Content', exact: true }).click();
+    await page.getByRole('navigation', { name: 'Space' }).getByRole('link', { name: 'Pages' }).click();
     await page.getByRole('link', { name: `Media page ${run}` }).click();
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
     await page
       .getByRole('dialog', { name: `Delete Media page ${run}?` })
       .getByRole('button', { name: 'Delete' })
       .click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Pages' })).toBeVisible();
   });
 });

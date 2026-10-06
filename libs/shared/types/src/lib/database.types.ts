@@ -414,14 +414,23 @@ isOneToOne: false
             "auth_space_ids":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
+"complete_onboarding_step":
+{ Args: { "p_space_id": string,"p_step": string }; Returns: undefined
+                           },
 "custom_access_token_hook":
 { Args: { "event": Json }; Returns: Json
+                           },
+"dismiss_onboarding":
+{ Args: { "p_space_id": string }; Returns: undefined
                            },
 "has_space_role":
 { Args: { "roles": (string)[],"space": string }; Returns: boolean
                            },
 "is_agency_staff":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"onboarding_steps":
+{ Args: Record<PropertyKey, never>; Returns: (string)[]
                            }
           }
           Enums: {

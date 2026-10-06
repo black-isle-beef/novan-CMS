@@ -14,7 +14,7 @@ test.describe('@api-tokens', () => {
 
     await signInAsAgency(page);
     await page.getByRole('link', { name: 'Demo site' }).click();
-    await page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('navigation', { name: 'Space' }).getByRole('link', { name: 'API tokens' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'API tokens' })).toBeVisible();
     await expect(page).toHaveTitle('API tokens | Novan CMS');
     await expectNoAxeViolations(page);
@@ -67,13 +67,13 @@ test.describe('@api-tokens', () => {
     await expectNoAxeViolations(page);
   });
 
-  test('an editor has no Settings link and is sent away from the page', async ({ page }) => {
+  test('an editor has no API tokens link and is sent away from the page', async ({ page }) => {
     await signIn(page, client);
     await page.getByRole('link', { name: 'Demo site' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Settings' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Space' }).getByRole('link', { name: 'API tokens' })).toHaveCount(0);
 
     await page.goto(`/spaces/${demoSpaceId}/settings/api-tokens`);
-    await expect(page.getByRole('heading', { level: 1, name: 'Content' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
   });
 });

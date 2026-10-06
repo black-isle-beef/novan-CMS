@@ -1,0 +1,28 @@
+<h1 class="mb-1">{{ copy.settings }}</h1>
+<p class="lead text-body-secondary mb-4">How your site is set up, and who can change it.</p>
+
+@if (loading()) {
+  <nv-skeleton label="Loading settings" [lines]="6" />
+} @else {
+  <ul class="list-unstyled row g-4">
+    @for (item of links(); track item.title) {
+      <li class="col-md-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <h2 class="h5 card-title">
+              @if (item.link) {
+                <a [routerLink]="item.link">{{ item.title }}</a>
+              } @else {
+                {{ item.title }}
+              }
+            </h2>
+            <p class="card-text mb-0">{{ item.description }}</p>
+            @if (!item.link) {
+              <p class="card-text small text-body-secondary mt-2 mb-0">{{ item.missing }}</p>
+            }
+          </div>
+        </div>
+      </li>
+    }
+  </ul>
+}

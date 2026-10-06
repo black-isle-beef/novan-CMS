@@ -11,7 +11,7 @@ Novan CMS is a multi-tenant, headless-first CMS with an in-house visual page edi
 | Monorepo | Nx 23, TypeScript 6, one repo (`novan-CMS`) |
 | Platform | Supabase: Postgres, Auth, Storage, Realtime, pg_cron, Queues. One project per environment (local, staging, production), **not** one per client |
 | API | NestJS on Node 24 (`apps/api`), container-deployed. No CMS logic in Supabase Edge Functions |
-| Data access | Drizzle ORM (`postgres` driver) in the API; `supabase-js` in the admin only for auth, storage uploads and realtime |
+| Data access | Drizzle ORM (`postgres` driver) in the API; Supabase's client in the admin only for auth, storage uploads and realtime, as its separate packages (`@supabase/auth-js`, `@supabase/storage-js`) so each loads with the screens that need it (package 11) |
 | Schema source of truth | SQL migrations in `supabase/migrations`. Drizzle schema is pulled from the database (`drizzle-kit pull`), never hand-edited to diverge |
 | Admin | Angular 22 standalone app (`apps/admin`), Novan Design System, Angular CDK |
 | Client sites | Angular SSR behind Cloudflare, purged on publish. Prerender only static routes |
