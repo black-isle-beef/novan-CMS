@@ -449,12 +449,16 @@ values
   ('00000000-0000-4000-8000-000000000502', '00000000-0000-4000-8000-000000000702', '00000000-0000-4000-8000-000000000200',
    'body.00000000-0000-4000-8000-000000000913.image');
 
--- The starter site's delivery token, for local development only (NOVAN_DELIVERY_TOKEN in .env.example). It is
--- a fixed, public value so `npm run db:reset` leaves the site working; real tokens are created in the admin.
+-- The starter site's delivery and preview tokens, for local development only (NOVAN_DELIVERY_TOKEN and
+-- NOVAN_PREVIEW_TOKEN in .env.example). They are fixed, public values so `npm run db:reset` leaves the site and
+-- the visual editor working; real tokens are created in the admin.
 insert into public.api_tokens (space_id, environment_id, name, scope, token_hash, token_hint, created_by)
-select e.space_id, e.id, 'Starter site (local)', 'delivery',
-  encode(extensions.digest('nv_del_LocalStarterSiteDeliveryTokenSeedOnly000000', 'sha256'), 'hex'),
-  'nv_del_…0000', '00000000-0000-4000-8000-000000000001'
+select e.space_id, e.id, t.name, t.scope, encode(extensions.digest(t.token, 'sha256'), 'hex'), t.hint,
+  '00000000-0000-4000-8000-000000000001'
 from public.environments e
 join public.spaces s on s.id = e.space_id
+cross join (values
+  ('Starter site (local)', 'delivery', 'nv_del_LocalStarterSiteDeliveryTokenSeedOnly000000', 'nv_del_…0000'),
+  ('Starter site previews (local)', 'preview', 'nv_pre_LocalStarterSitePreviewTokenSeedOnly0000000', 'nv_pre_…0000')
+) as t (name, scope, token, hint)
 where s.slug = 'demo-site' and e.is_main;

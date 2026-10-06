@@ -1,5 +1,5 @@
 import { contentTypes, type Database, entries, entryVersions, folders, publishedContent } from '@novan/api-db';
-import { HOME_SLUG } from '@novan/shared-schemas';
+import { HOME_SLUG, sitePath } from '@novan/shared-schemas';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 // Named so the inferred return type of `contentSource` can be written out in declarations.
 import type { PgColumn, SubqueryWithSelection } from 'drizzle-orm/pg-core';
@@ -52,7 +52,7 @@ export function contentSource(db: Database, access: ApiTokenAccess) {
 export type ContentSource = ReturnType<typeof contentSource>;
 
 /** The top-level `home` page is the site's `/`. */
-export const publicPath = (path: string): string => (path === `/${HOME_SLUG}` ? '/' : path);
+export const publicPath = sitePath;
 export const storedPath = (path: string): string => (path === '/' ? `/${HOME_SLUG}` : path);
 
 /** ISO 8601 in UTC with microseconds, e.g. `2026-10-04T09:30:00.123456+00:00`. */

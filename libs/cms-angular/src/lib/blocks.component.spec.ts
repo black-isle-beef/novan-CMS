@@ -163,6 +163,28 @@ describe('NovanBlocks', () => {
     expect(note?.textContent).toContain('"carousel"');
   });
 
+  it('wraps every block, children and unknown blocks included, for the visual editor in preview', () => {
+    const tree = [
+      { _uid: uid(1), _block: 'divider', children: [{ _uid: uid(2), _block: 'hero', heading: 'Inside' }] },
+      { _uid: uid(3), _block: 'carousel' },
+    ];
+    const el = render(tree, { preview: true });
+    const wrappers = [...el.querySelectorAll<HTMLElement>('[data-novan-uid]')];
+    expect(wrappers.map((w) => [w.dataset['novanUid'], w.dataset['novanBlock']])).toEqual([
+      [uid(1), 'divider'],
+      [uid(2), 'hero'],
+      [uid(3), 'carousel'],
+    ]);
+    // A child's wrapper is inside its parent's, so selecting the child does not select the parent.
+    expect(wrappers[0].contains(wrappers[1])).toBe(true);
+    expect(wrappers[2].querySelector('[role="note"]')).not.toBeNull();
+  });
+
+  it('adds no wrappers on the live site', () => {
+    const el = render([{ _uid: uid(1), _block: 'hero', heading: 'Live' }]);
+    expect(el.querySelector('[data-novan-uid]')).toBeNull();
+  });
+
   it('skips malformed nodes and repeated ids', () => {
     const el = render([
       null,

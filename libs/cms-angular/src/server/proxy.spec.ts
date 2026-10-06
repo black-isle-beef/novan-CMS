@@ -1,5 +1,10 @@
 // Tests the @black-isle-beef/cms-angular/server entry point; the unit-test runner only looks under src/.
-import { createNovanProxy, type NovanProxyOptions, type NovanProxyResponse } from '@black-isle-beef/cms-angular/server';
+import {
+  createNovanPreviewVerifier,
+  createNovanProxy,
+  type NovanProxyOptions,
+  type NovanProxyResponse,
+} from '@black-isle-beef/cms-angular/server';
 
 const API = 'http://api.internal:3000';
 
@@ -116,6 +121,13 @@ describe('createNovanProxy', () => {
     expect(res.headers['cache-control']).toBe('private, no-store');
   });
 
+  it('takes a session from the verifier as a yes', async () => {
+    const session = { entryId: 'e', expiresAt: '2026-10-06T12:15:00Z', adminOrigin: 'https://admin.test' };
+    const { handler, fetch } = proxy({ verifyPreview: () => Promise.resolve(session) });
+    await handler({ method: 'GET', url: '/preview/pages?path=%2F', headers: { 'x-novan-preview': 'good' } }, response());
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('reports an unreachable API', async () => {
     const handler = createNovanProxy({ apiUrl: API, deliveryToken: 'nv_del_x', fetch: () => Promise.reject(new Error('ECONNREFUSED')) });
     const res = response();
@@ -126,5 +138,61 @@ describe('createNovanProxy', () => {
     const next = vi.fn();
     await handler({ method: 'GET', url: '/delivery/sitemap', headers: {} }, response(), next);
     expect(next).toHaveBeenCalledWith(expect.any(Error));
+  });
+});
+
+describe('createNovanPreviewVerifier', () => {
+  const session = { entryId: '00000000-0000-4000-8000-000000000101', expiresAt: '2099-01-01T00:00:00.000Z', adminOrigin: 'https://admin.test' };
+
+  function verifier(answer: () => Promise<Response>) {
+    const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(answer);
+    const verify = createNovanPreviewVerifier({ apiUrl: `${API}/`, previewToken: 'nv_pre_secret', fetch: fetch as unknown as typeof globalThis.fetch });
+    return { verify, fetch };
+  }
+
+  it('asks the Preview API with the site’s preview token, and remembers the answer', async () => {
+    const { verify, fetch } = verifier(() => Promise.resolve(Response.json(session)));
+    expect(await verify('signed')).toEqual(session);
+    expect(await verify('signed')).toEqual(session);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe(`${API}/v1/preview/session`);
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer nv_pre_secret', 'x-novan-preview': 'signed' });
+  });
+
+  it('refuses what the API refuses, and remembers that briefly', async () => {
+    const { verify, fetch } = verifier(() => Promise.resolve(Response.json({ code: 'preview_not_allowed' }, { status: 403 })));
+    expect(await verify('bad')).toBe(false);
+    expect(await verify('bad')).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed when the API is down or answers nonsense, and asks again next time', async () => {
+    for (const answer of [
+      () => Promise.reject(new Error('ECONNREFUSED')),
+      () => Promise.resolve(new Response('oops', { status: 500 })),
+      () => Promise.resolve(Response.json({ entryId: 1 })),
+      () => Promise.resolve(new Response('not json')),
+    ]) {
+      const { verify, fetch } = verifier(answer);
+      expect(await verify('signed')).toBe(false);
+      expect(await verify('signed')).toBe(false);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    }
+  });
+
+  it('refuses everything without a preview token, without asking', async () => {
+    const fetch = vi.fn(() => Promise.resolve(Response.json(session)));
+    const verify = createNovanPreviewVerifier({ apiUrl: API, previewToken: undefined, fetch: fetch as unknown as typeof globalThis.fetch });
+    expect(await verify('signed')).toBe(false);
+    expect(await verify('')).toBe(false);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('does not trust a session past its expiry', async () => {
+    const { verify, fetch } = verifier(() => Promise.resolve(Response.json({ ...session, expiresAt: '2000-01-01T00:00:00.000Z' })));
+    await verify('signed');
+    await verify('signed');
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });

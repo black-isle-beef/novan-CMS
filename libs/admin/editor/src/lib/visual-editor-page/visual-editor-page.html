@@ -1,0 +1,126 @@
+<nav aria-label="Breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'content']">{{ copy.pages }}</a></li>
+    @if (entry(); as e) {
+      <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'content', e.id]">{{ title() }}</a></li>
+    }
+    <li class="breadcrumb-item active" aria-current="page">Edit on the page</li>
+  </ol>
+</nav>
+
+@if (loadError(); as message) {
+  <h1>Edit on the page</h1>
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (loading()) {
+  <nv-skeleton label="Loading the page" [lines]="8" [heading]="true" />
+} @else if (entry(); as e) {
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+    <div>
+      <h1 class="mb-1">{{ title() }}</h1>
+      <p class="text-body-secondary mb-0">
+        Click a block on the page to select it.
+        <a [routerLink]="['/spaces', spaceId(), 'content', e.id]">Edit in the form instead</a>
+      </p>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-end gap-3">
+      <fieldset>
+        <legend class="form-label small mb-1">Screen size</legend>
+        <div class="btn-group" role="group">
+          @for (d of devices; track d.id) {
+            <input
+              type="radio"
+              class="btn-check"
+              name="nv-editor-device"
+              [id]="'nv-editor-device-' + d.id"
+              [checked]="device() === d.id"
+              (change)="setDevice(d.id)"
+            />
+            <label class="btn btn-outline-secondary" [for]="'nv-editor-device-' + d.id">
+              <i [class]="'bi bi-' + d.icon + ' me-1'" aria-hidden="true"></i>{{ d.label
+              }}<span class="visually-hidden">, {{ d.width }} pixels wide</span>
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend class="form-label small mb-1">Show</legend>
+        <div class="btn-group" role="group">
+          <input
+            type="radio"
+            class="btn-check"
+            name="nv-editor-view"
+            id="nv-editor-view-draft"
+            [checked]="view() === 'draft'"
+            (change)="setView('draft')"
+          />
+          <label class="btn btn-outline-secondary" for="nv-editor-view-draft">Draft</label>
+          <input
+            type="radio"
+            class="btn-check"
+            name="nv-editor-view"
+            id="nv-editor-view-live"
+            [checked]="view() === 'live'"
+            [disabled]="!published()"
+            [attr.aria-describedby]="published() ? null : 'nv-editor-live-hint'"
+            (change)="setView('live')"
+          />
+          <label class="btn btn-outline-secondary" for="nv-editor-view-live">Live</label>
+        </div>
+      </fieldset>
+    </div>
+  </div>
+
+  @if (!published()) {
+    <p id="nv-editor-live-hint" class="small text-body-secondary">This page is not live yet, so only the draft can be shown.</p>
+  }
+  @if (problem(); as message) {
+    <ds-alert variant="warning" class="mb-3">{{ message }}</ds-alert>
+  }
+
+  @if (!siteUrl()) {
+    <ds-alert variant="info" title="This site has no address yet">
+      The page can be shown here once the site's address is set in Space settings.
+      <a [routerLink]="['/spaces', spaceId(), 'content', e.id]">Edit the page in the form</a> meanwhile.
+    </ds-alert>
+  } @else {
+    <div class="row g-3">
+      <div class="col-lg-9">
+        <p class="small text-body-secondary mb-2" role="status">
+          @if (view() === 'live') {
+            Showing the live page. Switch to the draft to select blocks.
+          } @else if (bridge.ready(); as ready) {
+            Showing the draft of {{ ready.path }}.
+          } @else {
+            Connecting to your site…
+          }
+        </p>
+        <!-- Focusable, so keyboard users can scroll a page wider than the screen. -->
+        <div class="nv-editor-stage" tabindex="0" role="region" aria-label="Page preview">
+          @if (frameUrl()) {
+            <!-- The address is set by the component (frameUrl). -->
+            <iframe
+              #frame
+              [class]="'nv-editor-frame nv-editor-frame-' + device()"
+              [title]="(view() === 'live' ? 'Live page: ' : 'Draft of ') + title()"
+            ></iframe>
+          }
+        </div>
+      </div>
+
+      <aside class="col-lg-3" aria-labelledby="nv-editor-panel-heading">
+        <h2 id="nv-editor-panel-heading" class="h5">Block</h2>
+        <!-- Selection happens inside the frame; announce it here. -->
+        <div id="nv-editor-selection" role="status">
+          @if (selection(); as s) {
+            <p class="mb-1 fw-semibold">{{ s.name }}</p>
+            <p class="small text-body-secondary">Selected on the page.</p>
+          } @else {
+            <p class="text-body-secondary">Nothing selected. Click a block on the page to select it.</p>
+          }
+        </div>
+      </aside>
+    </div>
+  }
+}

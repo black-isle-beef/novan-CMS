@@ -48,6 +48,31 @@ export type CreateApiTokenRequest = z.input<typeof createApiTokenRequestSchema>;
 export const createdApiTokenSchema = apiTokenSchema.extend({ token: z.string() });
 export type CreatedApiToken = z.infer<typeof createdApiTokenSchema>;
 
+// --- Signed preview tokens (visual editor, package 12) ------------------------------------------
+
+/** How long a signed preview token works; the admin asks for a new one before then. */
+export const PREVIEW_TOKEN_TTL_SECONDS = 15 * 60;
+
+/**
+ * A signed preview token for one page, from `POST .../entries/:id/preview-token`. The admin opens the site
+ * with `?novan_preview=<token>`; the site's server checks it with `GET /v1/preview/session`.
+ */
+export const signedPreviewTokenSchema = z.object({
+  token: z.string(),
+  expiresAt: z.string(),
+});
+export type SignedPreviewToken = z.infer<typeof signedPreviewTokenSchema>;
+
+/** What `GET /v1/preview/session` says about a valid signed token. */
+export const previewSessionSchema = z.object({
+  /** The page being edited. */
+  entryId: z.uuid(),
+  expiresAt: z.string(),
+  /** The admin's origin: the only one the site's bridge takes messages from. */
+  adminOrigin: z.string(),
+});
+export type PreviewSession = z.infer<typeof previewSessionSchema>;
+
 // --- Delivery and Preview: responses ------------------------------------------------------------
 
 /**
@@ -97,6 +122,9 @@ export type Sitemap = z.infer<typeof sitemapSchema>;
 
 /** The top-level page with this slug is the site's home page, at `/`. */
 export const HOME_SLUG = 'home';
+
+/** A page's address on the site from its stored path: the top-level `home` page is `/`. */
+export const sitePath = (path: string): string => (path === `/${HOME_SLUG}` ? '/' : path);
 
 /** `/` (the home page) or a folder path and slug like `/blog/hello-world`. A trailing slash is ignored. */
 export const deliveryPathSchema = z

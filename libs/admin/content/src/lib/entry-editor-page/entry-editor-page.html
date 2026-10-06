@@ -58,6 +58,9 @@
             </button>
           }
         }
+        @if (isPage()) {
+          <a class="btn btn-outline-secondary" [routerLink]="['/spaces', spaceId(), 'pages', e.id, 'edit']">Edit on the page</a>
+        }
         <button type="button" class="btn btn-outline-secondary" (click)="historyOpen.set(true)">{{ copy.versionHistory }}</button>
         @if (liveUrl(); as url) {
           @if (liveIsCurrent()) {

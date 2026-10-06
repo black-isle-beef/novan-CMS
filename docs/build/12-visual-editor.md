@@ -56,6 +56,49 @@ All messages are `{ source: 'novan', v: 1, type, payload }`. The bridge only acc
 10. Validation messages in the side panel and a pre-publish checklist (missing required fields, missing alt text, heading order warnings from the bridge reading the DOM).
 11. Fallback: if the iframe never sends `ready` within 10 s, show the form view (06) with an explanation and a "check preview URL" link for developers.
 
+## Decisions made during this package
+
+### 12a — Bridge and preview
+
+- **Signed preview tokens** are `<payload>.<signature>` (base64url JSON `{ v, s: spaceId, n: environmentId,
+  e: entryId, x: expiry }`, HMAC-SHA256) signed with `PREVIEW_SIGNING_SECRET` (API only; required in production,
+  made up per process locally). `POST /v1/management/spaces/:spaceId/environments/:env/entries/:id/preview-token`
+  issues one to any member who can read the page (RLS decides; 404 for the bin or another space) for 15 minutes.
+  `GET /v1/preview/session` (preview token + `X-Novan-Preview`) exchanges it for `{ entryId, expiresAt,
+  adminOrigin }`, and refuses (403 `preview_not_allowed`) a token signed for another space or environment. The
+  Preview API's content routes still need only the `nv_pre_` token; the site's proxy checks the signed token.
+- **The admin origin comes from the API** (`ADMIN_URL`) in the session, not from site configuration. It travels
+  to the browser in transfer state (`novan:preview` is now `{ active, session }`), is the bridge's only trusted
+  origin, and goes into `Content-Security-Policy: frame-ancestors 'self' <admin>` on preview pages.
+- **SDK 0.3.0:** `createNovanPreviewVerifier` (`/server`) is the `verifyPreview` (answers cached for up to a
+  minute, refusals for 10 s, fails closed). `verifyPreview` may answer with the session; only a session starts the
+  bridge, and only inside a frame. `NovanPreview.withLiveData(page)` applies `update` to the page being edited
+  (matched by the session's `entryId`); sites read their page through it in a `computed`. The bridge entry has no
+  imports from the main entry (ng-packagr refuses the cycle), so `NovanBridgeHost`/`NovanBridgeHandle` live there.
+- **Protocol** (`libs/shared/types/src/lib/bridge.ts`) adds admin → site `token { token }`: the admin renews the
+  signed token two minutes before expiry and hands it over without reloading the frame. Rects are plain
+  `{ x, y, width, height }` in the frame's viewport. Validators are dependency-free; the SDK keeps a copy that
+  `src/bridge/protocol.spec.ts` holds in step.
+- **Wrappers:** in preview only, `<novan-blocks>` wraps each block (unknown ones too) in
+  `<div data-novan-uid data-novan-block>`; live pages are unchanged. The overlay sits outside `<body>`,
+  `aria-hidden`, with inline styles and a fixed accent colour, because the SDK cannot rely on a site's
+  stylesheet. Labels are the block's api id in words (`richText` → "Rich text").
+- **Clicks** in a block select it; links and submit buttons in it are not followed. Other clicks still work
+  (carousels, accordions).
+- **Admin:** new library `libs/admin/editor` (`@novan/admin-editor`); the page editor links to it ("Edit on the
+  page") for `page` entries. The selected block is announced in the panel (`role="status"`). The home page's
+  address on the site is `/` (`sitePath` in `@novan/shared-schemas`), which also fixes the page editor's "View
+  live page" link for the home page.
+- **Local setup:** `supabase/seed.sql` seeds a public preview token for the demo space
+  (`NOVAN_PREVIEW_TOKEN` in `apps/starter-site/.env.serve` and `.env.example`), and `admin-e2e` starts the starter
+  site, which the demo space's address already points at.
+- **Bundle:** the frame's address is set on the element by the page, not bound with `[src]`: Angular's
+  resource-URL sanitizer would otherwise add about 8 kB to the admin's initial bundle. The address is built only
+  from the space's http(s) address, a stored path and an encoded token. The initial bundle is 854 kB, as on
+  `main` (package 11's open budget issue).
+- **Not yet:** the `update` data must be in the delivered shape (expanded assets and references). 12b adds the
+  management endpoint that turns draft data into it.
+
 ## Out of scope
 
 Free drag-on-canvas positioning, custom CSS, A/B variants (phase 4).

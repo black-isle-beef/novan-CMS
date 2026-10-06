@@ -1,5 +1,5 @@
 // `@black-isle-beef/cms-angular/server`: runs in the site's Node server (`server.ts`), never in the browser.
-import type { NovanServerOptions } from '@black-isle-beef/cms-angular';
+import type { NovanPreviewSession, NovanServerOptions } from '@black-isle-beef/cms-angular';
 
 /** The parts of a Node `IncomingMessage` (or Express request) the proxy reads. */
 export interface NovanProxyRequest {
@@ -93,10 +93,79 @@ export function createNovanProxy(options: NovanProxyOptions): NovanProxyHandler 
 async function allowed(options: NovanServerOptions, signed: string): Promise<boolean> {
   if (!options.verifyPreview) return false;
   try {
-    return (await options.verifyPreview(signed)) === true;
+    const verdict = await options.verifyPreview(signed);
+    return verdict === true || (typeof verdict === 'object' && verdict !== null);
   } catch {
     return false;
   }
+}
+
+export interface NovanPreviewVerifierOptions {
+  /** The Novan API as the site's server reaches it. */
+  apiUrl: string;
+  /** The site's preview token (`nv_pre_...`). Without one, every signed token is refused. */
+  previewToken: string | undefined;
+  /** Replaced in tests. */
+  fetch?: typeof fetch;
+}
+
+/** How long an accepted signed token is trusted before the API is asked again (never past its expiry). */
+const ACCEPTED_FOR_MS = 60_000;
+/** How long a refused one is remembered, so a bad link cannot make the server call the API on every request. */
+const REFUSED_FOR_MS = 10_000;
+const MAX_REMEMBERED = 1000;
+
+/**
+ * The `verifyPreview` for `NovanServerOptions`: asks the Preview API (`GET /v1/preview/session`) whether the
+ * admin's signed token is valid for this site's space, and answers with the session, or `false`. Answers are
+ * kept briefly, so a page and the content requests it makes ask the API once. It fails closed: when the API
+ * cannot be reached, preview is refused.
+ */
+export function createNovanPreviewVerifier(options: NovanPreviewVerifierOptions): (signedToken: string) => Promise<NovanPreviewSession | false> {
+  const fetchFn = options.fetch ?? fetch;
+  const url = `${options.apiUrl.replace(/\/+$/, '')}/v1/preview/session`;
+  const remembered = new Map<string, { session: NovanPreviewSession | false; until: number }>();
+
+  const remember = (signed: string, session: NovanPreviewSession | false, until: number) => {
+    if (remembered.size >= MAX_REMEMBERED) {
+      const now = Date.now();
+      for (const [key, entry] of remembered) if (entry.until <= now) remembered.delete(key);
+      if (remembered.size >= MAX_REMEMBERED) remembered.clear();
+    }
+    remembered.set(signed, { session, until });
+  };
+
+  return async (signed) => {
+    if (!options.previewToken || !signed || signed.length > 4096) return false;
+    const now = Date.now();
+    const known = remembered.get(signed);
+    if (known && known.until > now) return known.session;
+
+    let response: Response;
+    try {
+      response = await fetchFn(url, {
+        headers: { Accept: 'application/json', Authorization: `Bearer ${options.previewToken}`, [PREVIEW_HEADER]: signed },
+        redirect: 'manual',
+      });
+    } catch {
+      return false;
+    }
+    if (response.status === 403) {
+      remember(signed, false, now + REFUSED_FOR_MS);
+      return false;
+    }
+    const session = response.ok ? toSession(await response.json().catch(() => null)) : null;
+    if (!session) return false;
+    remember(signed, session, Math.min(now + ACCEPTED_FOR_MS, Date.parse(session.expiresAt)));
+    return session;
+  };
+}
+
+function toSession(body: unknown): NovanPreviewSession | null {
+  if (typeof body !== 'object' || body === null) return null;
+  const { entryId, expiresAt, adminOrigin } = body as Record<string, unknown>;
+  if (typeof entryId !== 'string' || typeof expiresAt !== 'string' || typeof adminOrigin !== 'string') return null;
+  return Number.isNaN(Date.parse(expiresAt)) ? null : { entryId, expiresAt, adminOrigin };
 }
 
 function header(req: NovanProxyRequest, name: string): string | null {

@@ -1,8 +1,6 @@
-// `@black-isle-beef/cms-angular/bridge`: the visual editor bridge, loaded only in preview mode so other
-// visitors never download it. Package 12 (docs/build/12-visual-editor.md) adds the editing behaviour: block
-// outlines, `postMessage` with the admin and live updates.
+// `@black-isle-beef/cms-angular/bridge`: the visual editor bridge, loaded only in preview mode inside the admin's
+// frame, so other visitors never download it (docs/build/12-visual-editor.md). It imports nothing from the main
+// entry point, which loads it.
 
-/** Starts the bridge in the preview page; returns a function that stops it. */
-export function startNovanBridge(): () => void {
-  return () => undefined;
-}
+export { blockLabel, type NovanBridgeEnvironment, type NovanBridgeHandle, type NovanBridgeHost, startNovanBridge } from './bridge';
+export * from './protocol';

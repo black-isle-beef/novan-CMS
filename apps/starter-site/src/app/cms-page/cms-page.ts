@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, Injector, input } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
-import { applyNovanSeo, NovanBlocks } from '@black-isle-beef/cms-angular';
+import { applyNovanSeo, NovanBlocks, NovanPreview } from '@black-isle-beef/cms-angular';
 import type { SiteContent } from '../site/site-content';
 import type { CmsPageState } from './cms-page.resolver';
 
@@ -21,9 +21,17 @@ export class CmsPage {
   /** From the layout route's `siteContentResolver`. */
   readonly site = input<SiteContent | null>(null);
 
+  private readonly preview = inject(NovanPreview);
+
+  /** The page to show: in the visual editor, with the editor's unsaved changes. */
+  protected readonly shown = computed<CmsPageState>(() => {
+    const state = this.page();
+    return state.status === 'found' ? { ...state, page: this.preview.withLiveData(state.page) } : state;
+  });
+
   /** A page whose blocks include no hero still needs its title as the page's main heading. */
   protected readonly needsTitle = computed(() => {
-    const state = this.page();
+    const state = this.shown();
     return state.status === 'found' && !(state.page.data.body ?? []).some((block) => block?._block === 'hero');
   });
 
@@ -32,7 +40,7 @@ export class CmsPage {
 
   constructor() {
     effect(() => {
-      const state = this.page();
+      const state = this.shown();
       const siteName = this.site()?.siteName;
       const titled = (text: string) => (siteName && text !== siteName ? `${text} | ${siteName}` : text);
       if (state.status === 'found') {

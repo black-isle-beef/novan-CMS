@@ -2,6 +2,21 @@
 
 All notable changes to `@black-isle-beef/cms-angular`. The package follows [semantic versioning](https://semver.org).
 
+## 0.3.0
+
+The visual editor bridge (docs/build/12-visual-editor.md).
+
+- `createNovanPreviewVerifier` (`@black-isle-beef/cms-angular/server`): a `verifyPreview` that checks the admin's
+  signed preview tokens with the Preview API (`GET /v1/preview/session`).
+- **Breaking:** `verifyPreview` may answer with the session (`NovanPreviewSession`) as well as `true`/`false`;
+  only a session starts the visual editor bridge. `NovanBridgeModule.startNovanBridge` takes a `NovanBridgeHost`
+  and returns a `NovanBridgeHandle`.
+- The bridge (`@black-isle-beef/cms-angular/bridge`) outlines blocks, reports clicks, hovers and block positions to
+  the admin, and applies its updates and refreshed tokens. It talks only to the admin's origin.
+- `NovanPreview.withLiveData(page)` shows the editor's unsaved changes for the page being edited.
+- In preview mode `<novan-blocks>` wraps each block in `<div data-novan-uid data-novan-block>`, and pages are
+  served with `Content-Security-Policy: frame-ancestors 'self' <admin origin>`.
+
 ## 0.2.0
 
 - `<novan-blocks>` gives a block component with a `settings` input the block's style options (`_style`, added to

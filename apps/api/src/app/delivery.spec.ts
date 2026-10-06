@@ -528,6 +528,58 @@ describe('delivery and preview APIs', () => {
       });
     });
 
+    describe('signed preview tokens (visual editor)', () => {
+      const session = (signed: string | null, token = previewA) => {
+        const req = preview('/session', token);
+        return signed === null ? req : req.set('X-Novan-Preview', signed);
+      };
+
+      it('any member who can read a page gets one, and the Preview API exchanges it', async () => {
+        const viewerA = await jwt(clientId, [{ id: spaceA, role: 'viewer' }]);
+        const issued = await manage(spaceA, viewerA).post(`/environments/main/entries/${draftOnly.id}/preview-token`);
+        expect(issued.status, JSON.stringify(issued.body)).toBe(201);
+        const expiresIn = Date.parse(issued.body.expiresAt) - Date.now();
+        expect(expiresIn).toBeGreaterThan(14 * 60_000);
+        expect(expiresIn).toBeLessThanOrEqual(15 * 60_000);
+
+        const res = await session(issued.body.token);
+        expect(res.status, JSON.stringify(res.body)).toBe(200);
+        expect(res.body).toEqual({ entryId: draftOnly.id, expiresAt: issued.body.expiresAt, adminOrigin: 'http://localhost:4200' });
+        expect(res.headers['cache-control']).toBe('private, no-store');
+      });
+
+      it('refuses pages in another space, in the bin or that do not exist', async () => {
+        expect((await manage(spaceA, developerA).post(`/environments/main/entries/${secretB.id}/preview-token`)).status).toBe(404);
+        expect((await manage(spaceA, developerA).post(`/environments/main/entries/${randomUUID()}/preview-token`)).status).toBe(404);
+        expect((await manage(spaceB, developerA).post(`/environments/main/entries/${secretB.id}/preview-token`)).status).toBe(403);
+        expect((await manage(spaceA, developerA).post(`/environments/staging/entries/${home.id}/preview-token`)).status).toBe(404);
+      });
+
+      it('a site cannot use it without the space’s preview token, or with another space’s', async () => {
+        const issued = (await manage(spaceA, editorA).post(`/environments/main/entries/${home.id}/preview-token`)).body;
+        expect((await request(server()).get('/v1/preview/session').set('X-Novan-Preview', issued.token)).status).toBe(401);
+        expect((await session(issued.token, deliveryA)).status).toBe(403);
+
+        const previewB: CreatedApiToken = (await manage(spaceB, developerB).post('/api-tokens', { name: 'B previews', scope: 'preview' })).body;
+        const crossed = await session(issued.token, previewB);
+        expect(crossed.status).toBe(403);
+        expect(crossed.body.code).toBe('preview_not_allowed');
+        expect(crossed.headers['cache-control']).toBe('no-store');
+      });
+
+      it('refuses missing, altered and made-up signed tokens', async () => {
+        const issued = (await manage(spaceA, editorA).post(`/environments/main/entries/${home.id}/preview-token`)).body;
+        const [payload, signature] = (issued.token as string).split('.');
+        const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+        const altered = Buffer.from(JSON.stringify({ ...claims, e: secretB.id })).toString('base64url');
+        for (const signed of [null, '', 'nonsense', `${altered}.${signature}`, `${payload}.${'A'.repeat(signature.length)}`]) {
+          const res = await session(signed);
+          expect(res.status, String(signed)).toBe(403);
+          expect(res.body.code).toBe('preview_not_allowed');
+        }
+      });
+    });
+
     describe('a token for space A never returns space B content', () => {
       it('not by path, id, type or singleton', async () => {
         expect((await delivery('/pages?path=/secret')).status).toBe(404);

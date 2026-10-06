@@ -20,6 +20,9 @@ interface RenderedBlock {
  * `settings` input, which therefore wins over a field called `settings`. A component with a `children` input
  * gets the child blocks to place itself (with its own `<novan-blocks>`); otherwise they follow it. Blocks
  * with no registered component are skipped, with a warning box in preview mode.
+ *
+ * In preview mode each block is wrapped in a `<div data-novan-uid data-novan-block>`, which the visual
+ * editor's bridge outlines and measures. Other visitors get the blocks without wrappers.
  */
 @Component({
   selector: 'novan-blocks',
@@ -27,16 +30,25 @@ interface RenderedBlock {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @for (item of rendered(); track item.uid) {
-      @if (item.component) {
+      @if (preview.active()) {
+        <div [attr.data-novan-uid]="item.uid" [attr.data-novan-block]="item.block">
+          @if (item.component) {
+            <ng-container *ngComponentOutlet="item.component; inputs: item.inputs" />
+            @if (item.children) {
+              <novan-blocks [blocks]="item.children" />
+            }
+          } @else {
+            <div class="alert alert-warning" role="note">
+              This page uses a block called "{{ item.block }}" that this site cannot show yet. Ask your developer to
+              add it, or remove the block.
+            </div>
+          }
+        </div>
+      } @else if (item.component) {
         <ng-container *ngComponentOutlet="item.component; inputs: item.inputs" />
         @if (item.children) {
           <novan-blocks [blocks]="item.children" />
         }
-      } @else if (preview.active()) {
-        <div class="alert alert-warning" role="note">
-          This page uses a block called "{{ item.block }}" that this site cannot show yet. Ask your developer to add
-          it, or remove the block.
-        </div>
       }
     }
   `,
