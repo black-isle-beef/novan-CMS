@@ -37,12 +37,18 @@ package's checks (`examples/`).
 ```ts
 // examples/novan.server.ts
 import type { NovanServerOptions } from '@black-isle-beef/cms-angular';
+import { createNovanPreviewVerifier } from '@black-isle-beef/cms-angular/server';
+
+const apiUrl = process.env['NOVAN_API_URL'] || 'http://localhost:3000';
+const previewToken = process.env['NOVAN_PREVIEW_TOKEN'] || undefined;
 
 // Server only: imported by server.ts and app.config.server.ts, never by browser code.
 export const novanServerOptions: NovanServerOptions = {
-  apiUrl: process.env['NOVAN_API_URL'] || 'http://localhost:3000',
+  apiUrl,
   deliveryToken: process.env['NOVAN_DELIVERY_TOKEN'] ?? '',
-  previewToken: process.env['NOVAN_PREVIEW_TOKEN'] || undefined,
+  previewToken,
+  // Checks the admin's signed preview links with the Preview API.
+  verifyPreview: createNovanPreviewVerifier({ apiUrl, previewToken }),
 };
 ```
 
@@ -145,12 +151,14 @@ export const routes: Routes = [
 ```
 
 The page component renders the blocks and sets the SEO tags. `applyNovanSeo` sets the title, meta
-description, canonical link, robots `noindex` and Open Graph tags from the page's `title` and `seo` fields:
+description, canonical link, robots `noindex` and Open Graph tags from the page's `title` and `seo` fields.
+`NovanPreview.withLiveData` shows the visual editor's unsaved changes (see Preview); elsewhere it returns the
+page unchanged:
 
 ```ts
 // examples/cms-page.ts
-import { ChangeDetectionStrategy, Component, effect, inject, Injector, input } from '@angular/core';
-import { applyNovanSeo, NovanBlocks, type Page } from '@black-isle-beef/cms-angular';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, Injector, input } from '@angular/core';
+import { applyNovanSeo, NovanBlocks, NovanPreview, type Page } from '@black-isle-beef/cms-angular';
 
 @Component({
   selector: 'site-cms-page',
@@ -158,7 +166,7 @@ import { applyNovanSeo, NovanBlocks, type Page } from '@black-isle-beef/cms-angu
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main id="main-content">
-      @if (page(); as page) {
+      @if (shown(); as page) {
         <novan-blocks [blocks]="page.data.body" />
       } @else {
         <h1>Page not found</h1>
@@ -172,9 +180,13 @@ export class CmsPage {
   readonly page = input<Page | null>(null);
 
   private readonly injector = inject(Injector);
+  private readonly preview = inject(NovanPreview);
+
+  /** In the admin's visual editor, the page follows the editor's changes as they are made. */
+  protected readonly shown = computed(() => this.preview.withLiveData(this.page()));
 
   constructor() {
-    effect(() => applyNovanSeo(this.page(), { injector: this.injector, baseUrl: 'https://www.example.com' }));
+    effect(() => applyNovanSeo(this.shown(), { injector: this.injector, baseUrl: 'https://www.example.com' }));
   }
 }
 ```
@@ -277,20 +289,37 @@ Errors from the API arrive as `NovanApiError`, carrying the HTTP `status` and th
 
 ## Preview
 
-The admin opens preview links as `https://site/path?novan_preview=<signed token>`. Preview mode is on only
-when the server accepts that token through `verifyPreview` in `NovanServerOptions`. Without a verifier,
-preview stays off, so adding the parameter never shows drafts. Package 12 adds the signed-token exchange
-that supplies the verifier.
+The admin opens preview links as `https://site/path?novan_preview=<signed token>`. The token is signed by the
+API, lasts 15 minutes and is for one page. Preview mode is on only when the server accepts it through
+`verifyPreview` in `NovanServerOptions`; `createNovanPreviewVerifier` (from `/server`, as in
+`examples/novan.server.ts`) asks the Preview API (`GET /v1/preview/session`) with the site's preview token,
+and keeps each answer for up to a minute. Without a verifier preview stays off, so adding the parameter never
+shows drafts.
 
 In preview mode:
 
 - content comes from the Preview API (drafts) with the preview token;
 - the page is served with `Cache-Control: private, no-store`, and content requests use `cache: 'no-store'`;
+- the page is served with `Content-Security-Policy: frame-ancestors 'self' <admin>`, so only the admin can
+  frame it;
 - unknown blocks show a warning box;
-- the visual editor bridge (`@black-isle-beef/cms-angular/bridge`) is loaded. Other visitors never download it.
+- each block is wrapped in `<div data-novan-uid="..." data-novan-block="...">` for the visual editor.
 
 `inject(NovanPreview).active()` tells components whether preview is on.
 
+### Visual editor
+
+When the preview page is open in the admin's visual editor (inside its frame), the SDK loads the bridge
+(`@black-isle-beef/cms-angular/bridge`). Other visitors never download it. The bridge:
+
+- outlines the block under the pointer and the selected block, with the block's name;
+- tells the admin which block was clicked (links in it are not followed) and where every block is;
+- applies the editor's changes as they are made: read the page through `NovanPreview.withLiveData(page)` in a
+  `computed`, as `examples/cms-page.ts` does, and the page re-renders without reloading;
+- takes the fresh signed token the admin sends before the old one expires.
+
+It talks only to the admin's origin, which the Preview API gives with the session, and ignores every other
+message.
 ## Develop
 
 ```bash

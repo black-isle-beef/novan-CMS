@@ -7,8 +7,12 @@ export {
   NOVAN_BRIDGE_LOADER,
   NOVAN_CMS_CONFIG,
   NOVAN_CMS_SERVER,
+  type NovanBridgeHandle,
+  type NovanBridgeHost,
   type NovanBridgeModule,
   type NovanCmsConfig,
+  type NovanPreviewSession,
+  type NovanPreviewVerdict,
   type NovanServerOptions,
 } from './lib/config';
 export { provideNovanCms, provideNovanCmsServer } from './lib/provide';

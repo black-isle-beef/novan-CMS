@@ -1,0 +1,21 @@
+// Links styled as buttons (`<a class="btn btn-primary">`, router links included).
+//
+// The design system's global `a[href]` rule (link colour, underline) outranks `.btn`, so an anchor button
+// shows link-coloured, underlined text: invisible on btn-primary, and on btn-secondary once hovered. The
+// design system fixes this for its hero buttons only; this applies the same fix to every variant. Remove it
+// once the design system's link rule leaves `.btn` alone.
+a.btn[href] {
+  color: var(--bs-btn-color);
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--bs-btn-hover-color);
+    text-decoration: none;
+  }
+
+  &:active,
+  &.active {
+    color: var(--bs-btn-active-color);
+  }
+}

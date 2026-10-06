@@ -44,6 +44,14 @@ export default defineConfig({
       cwd: workspaceRoot,
       timeout: 180_000,
     },
+    // The demo space's site (its address in supabase/seed.sql), framed by the visual editor (@editor).
+    {
+      command: 'npx nx run starter-site:serve',
+      url: 'http://localhost:4300/health',
+      reuseExistingServer: true,
+      cwd: workspaceRoot,
+      timeout: 180_000,
+    },
   ],
   // Browsers run one after another, and tests one at a time: several sign the seeded agency user in with
   // MFA, and Supabase Auth ends that user's other password-only sessions when a second factor is verified.

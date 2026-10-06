@@ -1,6 +1,8 @@
 // Novan design system: tokens, Bootstrap 5, Bootstrap Icons and component styles.
 @use '@black-isle-beef/novan-design-system/styles/styles';
+@use 'styles/buttons';
 @use 'styles/drag-drop';
+@use 'styles/editor';
 @use 'styles/media';
 @use 'styles/rich-text';
 @use 'styles/shell';

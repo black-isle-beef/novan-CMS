@@ -55,7 +55,7 @@
             </td>
             @if (context.canManageCurrent()) {
               <td class="text-end">
-                <button type="button" class="btn btn-sm btn-outline-danger" (click)="confirmRemove(member)">
+                <button type="button" class="btn btn-sm btn-danger" (click)="confirmRemove(member)">
                   Remove<span class="visually-hidden"> {{ nameOf(member) }}</span>
                 </button>
               </td>

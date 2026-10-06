@@ -1,5 +1,23 @@
-// Signed-in layout (libs/admin/shell): the screen beside the space menu may shrink below its content's
-// widest line, so wide tables scroll inside it instead of pushing the page sideways.
+// Signed-in layout (libs/admin/shell): the header and the space menu stay put and fill the window exactly;
+// only the screen beside the menu scrolls. `dvh` follows mobile browsers' collapsing toolbars; `vh` is the
+// fallback for browsers without it.
+.nv-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+// The row under the header: as tall as what is left of the window, so the space menu is too.
+.nv-shell__body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+// The screen may shrink below its content's widest line, so wide tables scroll inside it instead of pushing
+// the page sideways; long screens scroll here rather than in the window.
 .nv-shell__main {
   min-width: 0;
+  overflow-y: auto;
 }

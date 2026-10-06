@@ -27,6 +27,7 @@ import {
   entryTitle,
   type Folder,
   sameJson,
+  sitePath,
 } from '@novan/shared-schemas';
 import { firstValueFrom } from 'rxjs';
 import { ContentApi } from '../content-api';
@@ -120,8 +121,10 @@ export class EntryEditorPage implements HasUnsavedChanges {
     const origin = this.context.currentSpace()?.previewUrl;
     const path = this.entry()?.publishedPath;
     if (!this.published() || !path || !origin || !/^https?:\/\//i.test(origin)) return null;
-    return `${origin.replace(/\/+$/, '')}${path}`;
+    return `${origin.replace(/\/+$/, '')}${sitePath(path)}`;
   });
+  /** Pages can be edited on the site itself, in the visual editor. */
+  protected readonly isPage = computed(() => this.entry()?.kind === 'page');
   /** The live page only matches the form once every change is saved and published. */
   protected readonly liveIsCurrent = computed(() => !this.dirty() && !this.entry()?.hasUnpublishedChanges);
   /** Moving a published page changes its address straight away, so it needs an editor. */

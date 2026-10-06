@@ -10,11 +10,12 @@
   </ng-container>
 </ds-header>
 
-<div class="d-flex flex-grow-1">
+<!-- Only <main> scrolls; the header and the space menu stay in view (apps/admin/src/styles/_shell.scss). -->
+<div class="nv-shell__body">
   @if (spaceNav().length && !narrow()) {
     <ds-sidebar [items]="spaceNav()" ariaLabel="Space" />
   }
-  <main id="ds-main-content" class="nv-shell__main flex-grow-1">
+  <main #main id="ds-main-content" class="nv-shell__main flex-grow-1">
     <div class="container py-6">
       @if (context.viewingAs(); as role) {
         <nv-view-as-banner [role]="role" />

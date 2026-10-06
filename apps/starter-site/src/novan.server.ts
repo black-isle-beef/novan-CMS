@@ -1,4 +1,5 @@
 import type { NovanServerOptions } from '@black-isle-beef/cms-angular';
+import { createNovanPreviewVerifier } from '@black-isle-beef/cms-angular/server';
 import { existsSync } from 'node:fs';
 
 // Local development reads .env.local (never committed) from the workspace root; deployed servers get real
@@ -10,10 +11,15 @@ if (existsSync('.env.local')) process.loadEnvFile('.env.local');
  * only by server code (`server.ts`, `app.config.server.ts`), so the tokens never reach the browser bundle
  * (`tools/browser-bundle.test.mjs` checks).
  */
+const apiUrl = process.env['NOVAN_API_URL'] || 'http://localhost:3000';
+const previewToken = process.env['NOVAN_PREVIEW_TOKEN'] || undefined;
+
 export const novanServerOptions: NovanServerOptions = {
-  apiUrl: process.env['NOVAN_API_URL'] || 'http://localhost:3000',
+  apiUrl,
   deliveryToken: process.env['NOVAN_DELIVERY_TOKEN'] ?? '',
-  previewToken: process.env['NOVAN_PREVIEW_TOKEN'] || undefined,
+  previewToken,
+  // Previews from the admin's visual editor: the Preview API checks each signed link.
+  verifyPreview: createNovanPreviewVerifier({ apiUrl, previewToken }),
 };
 
 /** The site's public address (`SITE_URL`), for sitemap.xml and robots.txt; the request's own origin when unset. */

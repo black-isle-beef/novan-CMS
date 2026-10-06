@@ -1,0 +1,37 @@
+// The visual editor (libs/admin/editor): the client site in a frame at the chosen screen width.
+
+// Grey surround, so the page's own edges are visible; a frame wider than the screen scrolls inside it.
+.nv-editor-stage {
+  overflow: auto;
+  border: var(--bs-border-width) solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  background-color: var(--ds-color-surface-muted);
+}
+
+.nv-editor-frame {
+  display: block;
+  height: calc(100vh - 16rem);
+  min-height: 30rem;
+  margin-inline: auto;
+  border: 0;
+  background-color: var(--bs-body-bg);
+}
+
+// Device widths in CSS pixels, as the site sees them (docs/build/12-visual-editor.md).
+.nv-editor-frame-mobile {
+  width: 375px;
+}
+
+.nv-editor-frame-tablet {
+  width: 768px;
+}
+
+.nv-editor-frame-desktop {
+  width: 1280px;
+}
+
+@media (forced-colors: active) {
+  .nv-editor-stage {
+    border-color: CanvasText;
+  }
+}

@@ -15,6 +15,7 @@ export const appRoutes: Route[] = [
       { path: '', loadChildren: () => import('@novan/admin-spaces').then((m) => m.spacesRoutes) },
       { path: '', loadChildren: () => import('@novan/admin-dashboard').then((m) => m.dashboardRoutes) },
       { path: '', loadChildren: () => import('@novan/admin-content').then((m) => m.contentRoutes) },
+      { path: '', loadChildren: () => import('@novan/admin-editor').then((m) => m.editorRoutes) },
       { path: '', loadChildren: () => import('@novan/admin-media').then((m) => m.mediaRoutes) },
       { path: '', loadChildren: () => import('@novan/admin-schema').then((m) => m.schemaRoutes) },
       { path: '', loadChildren: () => import('@novan/admin-settings').then((m) => m.settingsRoutes) },

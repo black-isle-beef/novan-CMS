@@ -31,6 +31,7 @@
       "@novan/admin-auth": ["./libs/admin/auth/src/index.ts"],
       "@novan/admin-content": ["./libs/admin/content/src/index.ts"],
       "@novan/admin-dashboard": ["./libs/admin/dashboard/src/index.ts"],
+      "@novan/admin-editor": ["./libs/admin/editor/src/index.ts"],
       "@novan/admin-fields": ["./libs/admin/fields/src/index.ts"],
       "@novan/admin-media": ["./libs/admin/media/src/index.ts"],
       "@novan/admin-schema": ["./libs/admin/schema/src/index.ts"],

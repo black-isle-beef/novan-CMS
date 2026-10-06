@@ -356,7 +356,7 @@ export class CmsStylePanelComponent {
       }
     }
 
-    <button type="button" class="btn btn-outline-secondary cms-style-panel__reset" (click)="reset()">Reset to defaults</button>
+    <button type="button" class="btn btn-secondary cms-style-panel__reset" (click)="reset()">Reset to defaults</button>
   </form>
 
   @if (showPreview()) {

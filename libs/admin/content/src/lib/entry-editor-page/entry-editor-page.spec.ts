@@ -207,6 +207,12 @@ describe('EntryEditorPage', () => {
     expect(el.textContent).toContain('Unpublish');
   });
 
+  it('offers the visual editor for pages', async () => {
+    const { el } = await render('author');
+    const link = [...el.querySelectorAll('a')].find((a) => a.textContent?.trim() === 'Edit on the page');
+    expect(link?.getAttribute('href')).toBe(`/spaces/${spaceId}/pages/${entryId}/edit`);
+  });
+
   it('links to the live page once published, disabled until changes are saved and published', async () => {
     const draft = await render('editor');
     expect(draft.el.textContent).not.toContain('View live page');
@@ -219,7 +225,8 @@ describe('EntryEditorPage', () => {
     const live = () => [...el.querySelectorAll('a, button')].find((c) => c.textContent?.includes('View live page')) as HTMLElement;
 
     expect(live().tagName).toBe('A');
-    expect(live().getAttribute('href')).toBe('https://www.example.com/home');
+    // The home page is at the site's root.
+    expect(live().getAttribute('href')).toBe('https://www.example.com/');
     expect(live().getAttribute('target')).toBe('_blank');
     expect(live().textContent).toContain('opens in a new tab');
 
@@ -233,7 +240,8 @@ describe('EntryEditorPage', () => {
 
     await type('Summary', 'Hello');
     await click('Publish changes');
-    expect(live().getAttribute('href')).toBe('https://www.example.com/home');
+    // The home page is at the site's root.
+    expect(live().getAttribute('href')).toBe('https://www.example.com/');
     expect(el.querySelector('#entry-live-hint')).toBeNull();
   });
 

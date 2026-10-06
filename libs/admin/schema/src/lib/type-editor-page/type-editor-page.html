@@ -192,9 +192,9 @@
       <button type="submit" class="btn btn-primary" [disabled]="saving()" [attr.aria-busy]="saving()" [attr.aria-keyshortcuts]="shortcutKeys.save">
         {{ isNew() ? 'Create ' + noun() : 'Save changes' }}
       </button>
-      <a class="btn btn-outline-secondary" [routerLink]="['/spaces', spaceId(), 'schema']">Back to schema</a>
+      <a class="btn btn-secondary" [routerLink]="['/spaces', spaceId(), 'schema']">Back to schema</a>
       @if (!isNew()) {
-        <button type="button" class="btn btn-outline-danger ms-auto" (click)="confirmingDelete.set(true)">
+        <button type="button" class="btn btn-danger ms-auto" (click)="confirmingDelete.set(true)">
           Delete {{ noun() }}
         </button>
       }

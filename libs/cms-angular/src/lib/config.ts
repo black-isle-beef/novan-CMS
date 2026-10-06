@@ -1,4 +1,6 @@
 import { InjectionToken } from '@angular/core';
+// Types only: the bridge itself is loaded lazily, in preview, by NOVAN_BRIDGE_LOADER.
+import type { NovanBridgeHandle, NovanBridgeHost } from '@black-isle-beef/cms-angular/bridge';
 import type { NovanBlockRegistry } from './blocks';
 
 /** Settings shared by the server and the browser. They end up in the browser bundle: no secrets here. */
@@ -38,24 +40,38 @@ export interface NovanServerOptions {
   previewToken?: string;
   /**
    * Decides whether the signed token in `?novan_preview=` (issued by the admin) allows preview. Without
-   * it, preview mode is never on, so a site cannot show drafts to anyone who adds the parameter. The
-   * signed-token exchange of package 12 provides one.
+   * it, preview mode is never on, so a site cannot show drafts to anyone who adds the parameter. Use
+   * `createNovanPreviewVerifier` from `@black-isle-beef/cms-angular/server`, which asks the Preview API and
+   * answers with the session; the visual editor needs the session, a plain `true` only turns preview on.
    */
-  verifyPreview?: (signedToken: string) => boolean | Promise<boolean>;
+  verifyPreview?: (signedToken: string) => NovanPreviewVerdict | Promise<NovanPreviewVerdict>;
 }
+
+/** What the Preview API says about a valid signed token (`GET /v1/preview/session`). */
+export interface NovanPreviewSession {
+  /** The page open in the visual editor. */
+  entryId: string;
+  expiresAt: string;
+  /** The admin's origin: the only one the bridge takes messages from. */
+  adminOrigin: string;
+}
+
+export type NovanPreviewVerdict = boolean | NovanPreviewSession;
 
 export const NOVAN_CMS_CONFIG = new InjectionToken<NovanCmsConfig>('NOVAN_CMS_CONFIG');
 export const NOVAN_CMS_SERVER = new InjectionToken<NovanServerOptions>('NOVAN_CMS_SERVER');
 
-/** Loads the visual editor bridge (package 12); replaced in tests. */
+/** Loads the visual editor bridge; replaced in tests. */
 export const NOVAN_BRIDGE_LOADER = new InjectionToken<() => Promise<NovanBridgeModule>>('NOVAN_BRIDGE_LOADER', {
   providedIn: 'root',
   factory: () => () => import('@black-isle-beef/cms-angular/bridge'),
 });
 
+export type { NovanBridgeHandle, NovanBridgeHost };
+
 /** What the bridge entry point exports. */
 export interface NovanBridgeModule {
-  startNovanBridge(): () => void;
+  startNovanBridge(host: NovanBridgeHost): NovanBridgeHandle;
 }
 
 export const DEFAULT_PROXY_PATH = '/_novan';

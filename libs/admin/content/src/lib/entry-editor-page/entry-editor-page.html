@@ -34,7 +34,7 @@
         @if (canEdit()) {
           <button
             type="button"
-            class="btn btn-outline-primary"
+            class="btn btn-secondary"
             [disabled]="busy() !== null"
             [attr.aria-keyshortcuts]="shortcutKeys.save"
             (click)="save()"
@@ -53,19 +53,22 @@
             {{ published() ? copy.publishChanges : copy.publish }}
           </button>
           @if (published()) {
-            <button type="button" class="btn btn-outline-secondary" [disabled]="busy() !== null" (click)="unpublish()">
+            <button type="button" class="btn btn-secondary" [disabled]="busy() !== null" (click)="unpublish()">
               {{ copy.unpublish }}
             </button>
           }
         }
-        <button type="button" class="btn btn-outline-secondary" (click)="historyOpen.set(true)">{{ copy.versionHistory }}</button>
+        @if (isPage()) {
+          <a class="btn btn-secondary" [routerLink]="['/spaces', spaceId(), 'pages', e.id, 'edit']">Edit on the page</a>
+        }
+        <button type="button" class="btn btn-secondary" (click)="historyOpen.set(true)">{{ copy.versionHistory }}</button>
         @if (liveUrl(); as url) {
           @if (liveIsCurrent()) {
-            <a class="btn btn-outline-secondary" [href]="url" target="_blank" rel="noopener">
+            <a class="btn btn-secondary" [href]="url" target="_blank" rel="noopener">
               View live page<span class="visually-hidden"> (opens in a new tab)</span>
             </a>
           } @else {
-            <button type="button" class="btn btn-outline-secondary" disabled aria-describedby="entry-live-hint">View live page</button>
+            <button type="button" class="btn btn-secondary" disabled aria-describedby="entry-live-hint">View live page</button>
           }
         }
       </div>
@@ -134,7 +137,7 @@
           </select>
         </div>
         @if (canMove()) {
-          <button type="button" class="btn btn-outline-primary" [disabled]="moveTo() === e.folderId || busy() !== null" (click)="move()">
+          <button type="button" class="btn btn-secondary" [disabled]="moveTo() === e.folderId || busy() !== null" (click)="move()">
             Move
           </button>
         }
@@ -143,7 +146,7 @@
         <p id="entry-folder-hint" class="form-text mt-0">Moving a published page changes its address on the site straight away.</p>
       }
       @if (canPublish()) {
-        <button type="button" class="btn btn-outline-danger" (click)="confirmingDelete.set(true)">Delete</button>
+        <button type="button" class="btn btn-danger" (click)="confirmingDelete.set(true)">Delete</button>
       }
     </section>
 

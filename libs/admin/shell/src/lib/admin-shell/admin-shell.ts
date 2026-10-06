@@ -1,5 +1,15 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, type OnInit, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  type ElementRef,
+  inject,
+  type OnInit,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import {
@@ -44,7 +54,7 @@ const spaceInUrl = /^\/spaces\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-
   templateUrl: './admin-shell.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    class: 'd-flex flex-column min-vh-100',
+    class: 'nv-shell',
     '(document:keydown)': 'onKeydown($event)',
   },
 })
@@ -93,11 +103,23 @@ export class AdminShell implements OnInit {
     this.auth.agencyStaff() && this.context.currentSpace() && this.context.currentSpaceId() === this.spaceId() ? this.spaceId() : null,
   );
 
+  private readonly main = viewChild<ElementRef<HTMLElement>>('main');
+  /** The address without its query or fragment: a new screen, rather than the same one filtered. */
+  private readonly path = computed(() => this.url().split(/[?#]/)[0]);
+
   constructor() {
     // Screens inside a space read it from the context; the address decides which space that is.
     effect(() => {
       const spaceId = this.spaceId();
       if (spaceId) untracked(() => this.context.currentSpaceId.set(spaceId));
+    });
+    // The screen scrolls inside <main>, not the window, so a new screen starts at its top.
+    effect(() => {
+      this.path();
+      const main = this.main()?.nativeElement;
+      untracked(() => {
+        if (main) main.scrollTop = 0;
+      });
     });
   }
 

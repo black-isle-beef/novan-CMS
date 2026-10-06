@@ -72,7 +72,7 @@
     }
   }
   <div dsModalFooter class="d-flex justify-content-end gap-2">
-    <button type="button" class="btn btn-outline-secondary" (click)="cancel()">Cancel</button>
+    <button type="button" class="btn btn-secondary" (click)="cancel()">Cancel</button>
     <button type="button" class="btn btn-primary" [disabled]="!selected().length" (click)="choose()">
       {{ request()?.multiple && selected().length > 1 ? 'Choose ' + selected().length + ' files' : 'Choose' }}
     </button>

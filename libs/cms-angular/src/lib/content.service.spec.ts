@@ -32,7 +32,7 @@ interface Setup {
 }
 
 function setup({ platform, url = 'http://site.test/about', config = {}, server = {}, response }: Setup) {
-  const bridge = vi.fn(() => Promise.resolve({ startNovanBridge: () => () => undefined }));
+  const bridge = vi.fn(() => Promise.resolve({ startNovanBridge: () => ({ navigated: () => undefined, stop: () => undefined }) }));
   const providers: (Provider | EnvironmentProviders)[] = [
     provideHttpClient(),
     provideHttpClientTesting(),
@@ -269,13 +269,14 @@ describe('preview mode', () => {
     expect(headers.get('Cache-Control')).toBe('private, no-store');
     expect(headers.get('X-Other')).toBe('kept');
     // The browser learns the verdict from the page, not by trusting the address.
-    expect(TestBed.inject(TransferState).toJson()).toContain('"novan:preview":true');
+    expect(TestBed.inject(TransferState).toJson()).toContain('"novan:preview":{"active":true,"session":null}');
   });
 
-  it('in the browser, sends the signed token to the proxy and loads the bridge', async () => {
+  it('in the browser, sends the signed token to the proxy', async () => {
     const { content, http, bridge } = setup({ platform: 'browser', url: previewUrl });
     await settle();
-    expect(bridge).toHaveBeenCalledTimes(1);
+    // Without an editor session from the server there is no admin to talk to.
+    expect(bridge).not.toHaveBeenCalled();
 
     const result = firstValueFrom(content.page('/about'));
     await settle();

@@ -18,15 +18,15 @@
             </fieldset>
             @if (!disabled()) {
               <div class="d-flex flex-wrap gap-1">
-                <button type="button" class="btn btn-sm btn-outline-secondary" [id]="id() + '-up-' + i" [disabled]="first" (click)="move(i, -1)">
+                <button type="button" class="btn btn-sm btn-secondary" [id]="id() + '-up-' + i" [disabled]="first" (click)="move(i, -1)">
                   <i class="bi bi-arrow-up" aria-hidden="true"></i>
                   <span class="visually-hidden">Move item {{ i + 1 }} up</span>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" [id]="id() + '-down-' + i" [disabled]="last" (click)="move(i, 1)">
+                <button type="button" class="btn btn-sm btn-secondary" [id]="id() + '-down-' + i" [disabled]="last" (click)="move(i, 1)">
                   <i class="bi bi-arrow-down" aria-hidden="true"></i>
                   <span class="visually-hidden">Move item {{ i + 1 }} down</span>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-danger" (click)="remove(i)">
+                <button type="button" class="btn btn-sm btn-danger" (click)="remove(i)">
                   Remove item {{ i + 1 }}<span class="visually-hidden"> from {{ field().label }}</span>
                 </button>
               </div>
@@ -39,7 +39,7 @@
     }
     <div class="visually-hidden" role="status">{{ announcement() }}</div>
     @if (!disabled()) {
-      <button type="button" class="btn btn-sm btn-outline-primary" [id]="id() + '-add'" (click)="add()">
+      <button type="button" class="btn btn-sm btn-secondary" [id]="id() + '-add'" (click)="add()">
         Add an item<span class="visually-hidden"> to {{ field().label }}</span>
       </button>
     }
