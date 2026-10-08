@@ -1,7 +1,17 @@
 import { DestroyRef, DOCUMENT, inject, Injectable, signal } from '@angular/core';
-import { type AdminMessage, bridgeEnvelope, type BridgeRect, parseSiteMessage } from '@novan/shared-types';
+import { type AdminMessage, bridgeEnvelope, type BridgeRect, type InsertPosition, parseSiteMessage } from '@novan/shared-types';
 
 /** What the site said when its bridge started, or after it navigated. */
+/** What the editor page does when the editor acts on the page. */
+export interface BridgeListener {
+  /** A block was clicked, even the one already selected. */
+  select(uid: string): void;
+  /** A "+" button next to a block was clicked. */
+  insert(uid: string, position: InsertPosition): void;
+  /** Text was typed on the page; `done` once the editor left it. */
+  text(change: { uid: string; field: string; value: string; done: boolean }): void;
+}
+
 export interface BridgeReady {
   path: string;
   sdkVersion: string;
@@ -22,6 +32,8 @@ export class PreviewBridge {
   /** The block the editor last clicked in the frame. */
   readonly selected = signal<string | null>(null);
   readonly rects = signal<Readonly<Record<string, BridgeRect>>>({});
+  /** Told about clicks, inserts and typing on the page; set by the editor page. */
+  listener: BridgeListener | null = null;
 
   constructor() {
     const window = inject(DOCUMENT).defaultView;
@@ -61,12 +73,19 @@ export class PreviewBridge {
         break;
       case 'select':
         this.selected.set(message.payload.uid);
+        this.listener?.select(message.payload.uid);
         break;
       case 'hover':
         this.hovered.set(message.payload.uid);
         break;
       case 'rects':
         this.rects.set(message.payload);
+        break;
+      case 'insert':
+        this.listener?.insert(message.payload.uid, message.payload.position);
+        break;
+      case 'text':
+        this.listener?.text(message.payload);
         break;
     }
   }

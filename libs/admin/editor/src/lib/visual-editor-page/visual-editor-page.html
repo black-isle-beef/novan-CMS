@@ -18,7 +18,7 @@
     <div>
       <h1 class="mb-1">{{ title() }}</h1>
       <p class="text-body-secondary mb-0">
-        Click a block on the page to select it.
+        Click a block on the page, or in the list of blocks, to edit it.
         <a [routerLink]="['/spaces', spaceId(), 'content', e.id]">Edit in the form instead</a>
       </p>
     </div>
@@ -72,12 +72,62 @@
     </div>
   </div>
 
+  @if (canEdit()) {
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2" role="group" aria-label="Page actions">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        [disabled]="!store.canUndo()"
+        aria-keyshortcuts="Control+Z Meta+Z"
+        (click)="undo()"
+      >
+        <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Undo
+      </button>
+      <button
+        type="button"
+        class="btn btn-secondary"
+        [disabled]="!store.canRedo()"
+        aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
+        (click)="redo()"
+      >
+        <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Redo
+      </button>
+      <button
+        type="button"
+        class="btn btn-secondary"
+        [disabled]="busy() !== null"
+        [attr.aria-keyshortcuts]="shortcutKeys.save"
+        (click)="save()"
+      >
+        {{ copy.saveDraft }}
+      </button>
+      @if (canPublish()) {
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="busy() !== null"
+          [attr.aria-keyshortcuts]="shortcutKeys.publish"
+          (click)="publish()"
+        >
+          {{ published() ? copy.publishChanges : copy.publish }}
+        </button>
+      }
+      <p class="small text-body-secondary mb-0 ms-2" role="status">{{ saveState() }}</p>
+    </div>
+  } @else {
+    <ds-alert variant="info" class="mb-3">You can look at this page, but your role cannot change it.</ds-alert>
+  }
+
   @if (!published()) {
     <p id="nv-editor-live-hint" class="small text-body-secondary">This page is not live yet, so only the draft can be shown.</p>
+  }
+  @if (status(); as message) {
+    <ds-alert variant="success" class="mb-3">{{ message }}</ds-alert>
   }
   @if (problem(); as message) {
     <ds-alert variant="warning" class="mb-3">{{ message }}</ds-alert>
   }
+  <div class="visually-hidden" role="status">{{ announcement() }}</div>
 
   @if (!siteUrl()) {
     <ds-alert variant="info" title="This site has no address yet">
@@ -86,7 +136,7 @@
     </ds-alert>
   } @else {
     <div class="row g-3">
-      <div class="col-lg-9">
+      <div class="col-xl-8">
         <p class="small text-body-secondary mb-2" role="status">
           @if (view() === 'live') {
             Showing the live page. Switch to the draft to select blocks.
@@ -109,18 +159,53 @@
         </div>
       </div>
 
-      <aside class="col-lg-3" aria-labelledby="nv-editor-panel-heading">
-        <h2 id="nv-editor-panel-heading" class="h5">Block</h2>
-        <!-- Selection happens inside the frame; announce it here. -->
-        <div id="nv-editor-selection" role="status">
-          @if (selection(); as s) {
-            <p class="mb-1 fw-semibold">{{ s.name }}</p>
-            <p class="small text-body-secondary">Selected on the page.</p>
-          } @else {
-            <p class="text-body-secondary">Nothing selected. Click a block on the page to select it.</p>
+      <div class="col-xl-4">
+        <aside class="nv-editor-panel mb-4" id="nv-editor-panel" aria-labelledby="nv-editor-panel-heading">
+          <h2 id="nv-editor-panel-heading" class="h5">Block</h2>
+          <!-- Selection can happen inside the frame; announce it here. -->
+          <div id="nv-editor-selection" role="status">
+            @if (selectionName(); as name) {
+              <p class="visually-hidden">{{ name }} selected.</p>
+            } @else {
+              <p class="text-body-secondary">Nothing selected. Click a block on the page, or in the list below, to select it.</p>
+            }
+          </div>
+          @if (selection(); as place) {
+            <nv-block-panel
+              [place]="place"
+              [type]="selectionType()"
+              [path]="selectionPath()"
+              [readonly]="!canEdit()"
+              [intoName]="intoName()"
+              [outOfName]="outOfName()"
+              (blockChange)="changeBlock($event)"
+              (moveInto)="moveInto()"
+              (moveOut)="moveOut()"
+              (duplicate)="duplicate()"
+              (toggleHidden)="toggleHidden()"
+              (remove)="remove()"
+            />
           }
-        </div>
-      </aside>
+        </aside>
+
+        <section aria-labelledby="nv-outline-heading">
+          <h2 id="nv-outline-heading" class="h5" tabindex="-1">Blocks on this page</h2>
+          <nv-block-outline
+            [lists]="outline()"
+            [blockTypes]="blockTypes()"
+            [selected]="store.selected()"
+            [readonly]="!canEdit()"
+            (selectBlock)="select($event)"
+            (move)="moveTo($event)"
+            (add)="openPicker($event)"
+          />
+        </section>
+      </div>
     </div>
   }
+
+  <nv-block-picker [request]="picker()" [siteUrl]="siteUrl()" (picked)="addBlock($event)" (cancelled)="closePicker()" />
 }
+
+<!-- Opened by media fields to choose files from the library. -->
+<nv-media-picker />

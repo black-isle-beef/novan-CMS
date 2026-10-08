@@ -19,7 +19,8 @@ interface RenderedBlock {
  * block's fields are set on the component's inputs of the same name, and its style options (`_style`) on a
  * `settings` input, which therefore wins over a field called `settings`. A component with a `children` input
  * gets the child blocks to place itself (with its own `<novan-blocks>`); otherwise they follow it. Blocks
- * with no registered component are skipped, with a warning box in preview mode.
+ * with no registered component are skipped, with a warning box in preview mode. Hidden blocks (`_hidden`)
+ * are never shown.
  *
  * In preview mode each block is wrapped in a `<div data-novan-uid data-novan-block>`, which the visual
  * editor's bridge outlines and measures. Other visitors get the blocks without wrappers.
@@ -67,7 +68,7 @@ export class NovanBlocks {
     const seen = new Set<string>();
     const rendered: RenderedBlock[] = [];
     for (const node of nodes) {
-      if (!isBlockNode(node) || seen.has(node._uid)) continue;
+      if (!isBlockNode(node) || node._hidden === true || seen.has(node._uid)) continue;
       seen.add(node._uid);
       rendered.push(this.render(node));
     }

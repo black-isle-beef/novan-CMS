@@ -1,0 +1,26 @@
+<ds-modal [open]="request() !== null" (openChange)="!$event && cancelled.emit()" [heading]="'Add a block ' + (request()?.where ?? '')" size="lg">
+  @if (choices().length) {
+    <ul class="row row-cols-2 row-cols-md-3 g-3 list-unstyled mb-0">
+      @for (choice of choices(); track choice.type.apiId) {
+        <li class="col">
+          <button type="button" class="nv-block-choice btn btn-secondary w-100 h-100" (click)="picked.emit(choice.type)">
+            @if (choice.image; as src) {
+              <img class="nv-block-choice-image mb-2" [src]="src" alt="" loading="lazy" />
+            }
+            <span class="d-block fw-semibold">
+              @if (choice.type.icon; as icon) {
+                <i [class]="'bi bi-' + icon + ' me-2'" aria-hidden="true"></i>
+              }
+              {{ choice.type.name }}
+            </span>
+          </button>
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="mb-0">No blocks can be added here.</p>
+  }
+  <div dsModalFooter class="d-flex justify-content-end">
+    <button type="button" class="btn btn-secondary" (click)="cancelled.emit()">Cancel</button>
+  </div>
+</ds-modal>

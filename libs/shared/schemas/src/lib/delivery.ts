@@ -73,6 +73,17 @@ export const previewSessionSchema = z.object({
 });
 export type PreviewSession = z.infer<typeof previewSessionSchema>;
 
+/**
+ * `POST .../entries/:id/preview-data`: the visual editor's unsaved data for the page, to be returned as the
+ * Preview API would deliver it (the bridge's `update` needs that shape). The data is checked as a draft.
+ */
+export const previewDataRequestSchema = z.strictObject({
+  data: z.record(z.string(), z.unknown()),
+  /** How deep to expand references, as the site's own requests do (0 to 3). */
+  include: z.int().min(0).max(3).default(1),
+});
+export type PreviewDataRequest = z.input<typeof previewDataRequestSchema>;
+
 // --- Delivery and Preview: responses ------------------------------------------------------------
 
 /**

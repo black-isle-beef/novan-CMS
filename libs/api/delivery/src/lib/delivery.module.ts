@@ -13,7 +13,7 @@ import { CLOUDFLARE_CONFIG, CloudflareClient, cloudflareConfigFromEnv } from './
 import { DeliveryController, PreviewController } from './content-api.controllers';
 import { ContentReader, DELIVERY_CONFIG, deliveryConfigFromEnv } from './content-reader.service';
 import { PREVIEW_SIGNER_CONFIG, PreviewSigner, previewSignerConfigFromEnv } from './preview-signer';
-import { PreviewSessionController, PreviewSessions, PreviewTokensController } from './preview-sessions';
+import { PreviewDataController, PreviewSessionController, PreviewSessions, PreviewTokensController } from './preview-sessions';
 import { ApiTokenThrottlerGuard, rateLimitsFromEnv, throttlerOptions } from './rate-limit';
 
 @Module({
@@ -24,7 +24,7 @@ import { ApiTokenThrottlerGuard, rateLimitsFromEnv, throttlerOptions } from './r
     MediaModule,
     ThrottlerModule.forRootAsync({ useFactory: () => throttlerOptions(rateLimitsFromEnv()) }),
   ],
-  controllers: [DeliveryController, PreviewController, PreviewSessionController, ApiTokensController, PreviewTokensController],
+  controllers: [DeliveryController, PreviewController, PreviewSessionController, ApiTokensController, PreviewTokensController, PreviewDataController],
   providers: [
     { provide: DELIVERY_CONFIG, useFactory: () => deliveryConfigFromEnv() },
     { provide: CLOUDFLARE_CONFIG, useFactory: () => cloudflareConfigFromEnv() },

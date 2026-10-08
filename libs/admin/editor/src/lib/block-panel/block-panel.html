@@ -1,0 +1,44 @@
+<p class="mb-1 fw-semibold">
+  @if (type()?.icon; as icon) {
+    <i [class]="'bi bi-' + icon + ' me-2'" aria-hidden="true"></i>
+  }
+  {{ name() }}
+</p>
+@if (node()._hidden) {
+  <p class="small text-body-secondary">Hidden: it stays in the page but is not shown on the site.</p>
+}
+@if (textHint()) {
+  <p class="small text-body-secondary">Double-click its text on the page to change it there.</p>
+}
+
+@if (!readonly()) {
+  <div class="d-flex flex-wrap gap-2 mb-3" role="group" [attr.aria-label]="'Actions for ' + name()">
+    @if (intoName(); as into) {
+      <button type="button" class="btn btn-sm btn-secondary" (click)="moveInto.emit()">Move into {{ into }}</button>
+    }
+    @if (outOfName(); as outOf) {
+      <button type="button" class="btn btn-sm btn-secondary" (click)="moveOut.emit()">Move out of {{ outOf }}</button>
+    }
+    <button type="button" class="btn btn-sm btn-secondary" (click)="duplicate.emit()">Duplicate</button>
+    <button type="button" class="btn btn-sm btn-secondary" [attr.aria-pressed]="node()._hidden === true" (click)="toggleHidden.emit()">
+      {{ node()._hidden ? 'Show' : 'Hide' }}
+    </button>
+    <button type="button" class="btn btn-sm btn-danger" (click)="remove.emit()">Delete</button>
+  </div>
+}
+
+@if (type(); as t) {
+  <nv-field-form [fields]="t.fields" [path]="path()" [value]="node()" (valueChange)="setFields($event)" />
+  @if (hasStyles()) {
+    <h3 class="h6 mt-3">Style</h3>
+    <nv-style-picker
+      [options]="t.styleOptions"
+      [value]="node()._style"
+      [disabled]="readonly()"
+      [idPrefix]="'nv-style-' + node()._uid"
+      (valueChange)="setStyle($event)"
+    />
+  }
+} @else {
+  <ds-alert variant="warning">This block type no longer exists. Delete the block, or ask a developer to add the type back.</ds-alert>
+}

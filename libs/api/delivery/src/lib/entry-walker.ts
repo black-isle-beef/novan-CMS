@@ -12,6 +12,8 @@ export interface EntryVisitor {
   reference?(entryId: string): Mapped;
   /** A link field's value, `{ type: 'internal', entryId, ... }` or an external or email link. */
   link?(link: Record<string, unknown>): Mapped;
+  /** A block, before its fields and children are mapped; {@link DROP} leaves it (and its children) out. */
+  block?(node: BlockNode): BlockNode | typeof DROP;
 }
 
 /**
@@ -36,13 +38,14 @@ export function mapEntryData(
 
   const mapNodes = (nodes: unknown): unknown => {
     if (!Array.isArray(nodes)) return nodes;
-    return nodes.map((value) => {
-      if (!isObject(value) || typeof value['_block'] !== 'string') return value;
-      const node = value as BlockNode;
+    return nodes.flatMap((value) => {
+      if (!isObject(value) || typeof value['_block'] !== 'string') return [value];
+      const node = visitor.block ? visitor.block(value as BlockNode) : (value as BlockNode);
+      if (node === DROP) return [];
       const type = blockTypes.get(node._block);
       const mapped = (type ? mapFields(type.fields, node) : { ...node }) as BlockNode;
       if (Array.isArray(node.children)) mapped.children = mapNodes(node.children) as BlockNode[];
-      return mapped;
+      return [mapped];
     });
   };
 

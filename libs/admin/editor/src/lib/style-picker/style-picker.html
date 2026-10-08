@@ -1,0 +1,67 @@
+@for (control of controls(); track control.key) {
+  @switch (control.field.kind) {
+    @case ('radio') {
+      <fieldset class="mb-3" [attr.aria-describedby]="control.field.hint ? id(control.key, 'hint') : null">
+        <legend class="form-label fs-6 mb-1">{{ control.field.label }}</legend>
+        @if (control.field.hint) {
+          <p class="form-text mt-0" [id]="id(control.key, 'hint')">{{ control.field.hint }}</p>
+        }
+        @if (control.field.kind === 'radio') {
+          @for (option of control.field.options; track option.value) {
+            <div class="form-check form-check-inline">
+              <input
+                class="form-check-input"
+                type="radio"
+                [id]="id(control.key, option.value)"
+                [name]="id(control.key)"
+                [checked]="control.value === option.value"
+                [disabled]="disabled()"
+                (change)="choose(control.key, option.value)"
+              />
+              <label class="form-check-label" [for]="id(control.key, option.value)">{{ option.label }}</label>
+            </div>
+          }
+        }
+      </fieldset>
+    }
+    @case ('select') {
+      <div class="mb-3">
+        <label class="form-label" [for]="id(control.key)">{{ control.field.label }}</label>
+        @if (control.field.hint) {
+          <p class="form-text mt-0" [id]="id(control.key, 'hint')">{{ control.field.hint }}</p>
+        }
+        @if (control.field.kind === 'select') {
+          <select
+            class="form-select"
+            [id]="id(control.key)"
+            [disabled]="disabled()"
+            [attr.aria-describedby]="control.field.hint ? id(control.key, 'hint') : null"
+            (change)="onSelect(control.key, $event)"
+          >
+            @for (option of control.field.options; track option.value) {
+              <option [value]="option.value" [selected]="control.value === option.value">{{ option.label }}</option>
+            }
+          </select>
+        }
+      </div>
+    }
+    @case ('toggle') {
+      <div class="form-check form-switch mb-3">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          role="switch"
+          [id]="id(control.key)"
+          [checked]="control.value === true"
+          [disabled]="disabled()"
+          [attr.aria-describedby]="control.field.hint ? id(control.key, 'hint') : null"
+          (change)="onToggle(control.key, $event)"
+        />
+        <label class="form-check-label" [for]="id(control.key)">{{ control.field.label }}</label>
+        @if (control.field.hint) {
+          <p class="form-text mt-0" [id]="id(control.key, 'hint')">{{ control.field.hint }}</p>
+        }
+      </div>
+    }
+  }
+}

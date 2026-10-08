@@ -39,6 +39,58 @@ test.describe('@editor', () => {
     await expectNoAxeViolations(page);
   });
 
+  test('an editor changes a page on the site: edits, adds, reorders, undoes, autosaves and publishes', async ({ page }) => {
+    test.setTimeout(120_000);
+    const heading = `Talk to us ${Date.now()}`;
+    await signIn(page, client);
+    await expect(page.getByRole('link', { name: 'Demo site' })).toBeVisible();
+    // The seeded Contact page (supabase/seed.sql), so other journeys keep the home page as seeded.
+    await page.goto('/spaces/00000000-0000-4000-8000-000000000200/pages/00000000-0000-4000-8000-000000000703/edit');
+    await expect(page.getByText('Showing the draft of /contact.')).toBeVisible({ timeout: 30_000 });
+    const frame = page.frameLocator('iframe[title="Draft of Contact"]');
+    const panel = page.getByRole('complementary', { name: 'Block' });
+    const outline = page.getByRole('region', { name: 'Blocks on this page' });
+
+    // Click the hero on the page; change its heading in the panel; the page follows without reloading.
+    await frame.locator('[data-novan-block="hero"]').first().click();
+    await expect(panel).toContainText('Hero selected');
+    await panel.getByRole('textbox', { name: /^Heading/ }).fill(heading);
+    const heroHeading = frame.locator('[data-novan-block="hero"] h1, [data-novan-block="hero"] h2').first();
+    await expect(heroHeading).toHaveText(heading);
+
+    // Or change the text on the page itself: double-click, type, Enter.
+    await heroHeading.dblclick();
+    await heroHeading.press('End');
+    await heroHeading.pressSequentially('!');
+    await heroHeading.press('Enter');
+    await expect(panel.getByRole('textbox', { name: /^Heading/ })).toHaveValue(`${heading}!`);
+
+    // Add a call to action from the picker; it appears on the page and in the outline.
+    await outline.getByRole('button', { name: 'Add block to Content' }).click();
+    const picker = page.getByRole('dialog', { name: 'Add a block to Content' });
+    await picker.getByRole('button', { name: 'Call to action' }).click();
+    await expect(frame.locator('[data-novan-block="cta"]')).toHaveCount(2);
+
+    // Reorder with the keyboard-friendly arrows: the rich text moves above the hero.
+    await outline.getByRole('button', { name: 'Move Rich text up' }).click();
+    await expect(frame.locator('[data-novan-block]').first()).toHaveAttribute('data-novan-block', 'richText');
+
+    // Undo the move and the added block.
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(frame.locator('[data-novan-block]').first()).toHaveAttribute('data-novan-block', 'hero');
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(frame.locator('[data-novan-block="cta"]')).toHaveCount(1);
+    await expect(frame.locator('[data-novan-block="hero"]').first()).toContainText(heading);
+
+    // Autosave, then publish; the live site shows the change.
+    await expect(page.getByText(/All changes saved at/)).toBeVisible({ timeout: 15_000 });
+    await expectNoAxeViolations(page);
+    await page.getByRole('button', { name: 'Publish changes' }).click();
+    await expect(page.getByText('Published. It is live at /contact.')).toBeVisible();
+    await page.goto('http://localhost:4300/contact');
+    await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+  });
+
   test('a preview link with a made-up token shows no drafts', async ({ page }) => {
     const response = await page.goto('http://localhost:4300/?novan_preview=made.up');
     expect(response?.headers()['cache-control']).not.toBe('private, no-store');

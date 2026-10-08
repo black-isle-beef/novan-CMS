@@ -309,6 +309,8 @@ export interface BlockNode {
   _block: string;
   /** The block's style options, by settings key: named presets and switches (docs/build/10-blocks-starter-site.md). */
   _style?: BlockStyle;
+  /** Kept in the page but not shown on the site (docs/build/12-visual-editor.md). */
+  _hidden?: boolean;
   children?: BlockNode[];
   [field: string]: unknown;
 }
@@ -550,6 +552,7 @@ class EntrySchemaBuilder {
         _uid: uuid,
         _block: allowed.length ? z.enum(allowed as [string, ...string[]], 'This block is not allowed here.') : apiIdSchema,
         _style: blockStyleSchema.optional(),
+        _hidden: z.boolean().optional(),
         children: z.array(z.lazy(() => node)).optional(),
       }) as unknown as z.ZodType<BlockNode>;
       union = node;
@@ -584,6 +587,7 @@ class EntrySchemaBuilder {
       _uid: uuid,
       _block: z.literal(apiId),
       _style: blockStyleSchema.optional(),
+      _hidden: z.boolean().optional(),
       ...this.shape(type.fields),
       children,
     });

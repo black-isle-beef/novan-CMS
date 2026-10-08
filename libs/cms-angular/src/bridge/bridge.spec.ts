@@ -26,6 +26,7 @@ describe('the bridge', () => {
     window.dispatchEvent(new MessageEvent('message', { data, origin, source }));
   const admin = (type: string, payload: unknown) => ({ source: 'novan', v: 1, type, payload });
   const messages = (type: string) => sent.filter((m) => (m as { type: string }).type === type) as { payload: unknown }[];
+  const last = (type: string) => messages(type)[messages(type).length - 1];
 
   beforeEach(() => {
     page();
@@ -126,6 +127,73 @@ describe('the bridge', () => {
     expect(overlay?.getAttribute('aria-hidden')).toBe('true');
     expect(overlay?.parentElement).toBe(document.documentElement);
     expect(overlay?.lastElementChild?.textContent).toBe('Hero');
+  });
+
+  describe('once the admin says what can change', () => {
+    const editable = (uid: string | null, fields = [{ field: 'heading', value: 'Welcome', multiline: false }]) =>
+      fromAdmin(admin('editable', { uid, fields }));
+    const insertButton = (position: string) => document.querySelector<HTMLElement>(`[data-novan-insert="${position}"]`);
+    const dblclick = (el: Element | null | undefined) => el?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+    const heading = () => document.querySelector<HTMLElement>('[data-novan-uid="hero-1"] h1');
+
+    it('draws "+" buttons on the selected block that ask the admin to add a block there', async () => {
+      fromAdmin(admin('select', { uid: 'hero-1' }));
+      await frame();
+      expect(insertButton('before')?.style.display).toBe('none');
+
+      editable('hero-1');
+      await frame();
+      expect(insertButton('before')?.style.display).toBe('block');
+      // Taking a click must not select anything behind it.
+      insertButton('after')?.click();
+      insertButton('before')?.click();
+      expect(messages('insert').map((m) => m.payload)).toEqual([
+        { uid: 'hero-1', position: 'after' },
+        { uid: 'hero-1', position: 'before' },
+      ]);
+      expect(messages('select')).toHaveLength(0);
+    });
+
+    it('edits a text field of the selected block in place on double-click', () => {
+      editable('hero-1');
+      dblclick(heading());
+      expect(heading()?.getAttribute('contenteditable')).toMatch(/plaintext-only|true/);
+      expect(document.activeElement).toBe(heading());
+
+      (heading() as HTMLElement).textContent = 'Hello there';
+      heading()?.dispatchEvent(new Event('input'));
+      expect(last('text')?.payload).toEqual({ uid: 'hero-1', field: 'heading', value: 'Hello there', done: false });
+
+      // Enter ends a one-line field.
+      heading()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }));
+      expect(last('text')?.payload).toEqual({ uid: 'hero-1', field: 'heading', value: 'Hello there', done: true });
+      expect(heading()?.hasAttribute('contenteditable')).toBe(false);
+    });
+
+    it('puts the text back on Escape', () => {
+      editable('hero-1');
+      dblclick(heading());
+      (heading() as HTMLElement).textContent = 'Oops';
+      heading()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+      expect(heading()?.textContent).toBe('Welcome');
+      expect(last('text')?.payload).toMatchObject({ value: 'Welcome', done: true });
+    });
+
+    it('prefers the element a component marks with data-novan-field', () => {
+      document.body.innerHTML = `<div data-novan-uid="cta-1" data-novan-block="cta"><p data-novan-field="text"><span id="inner">Same</span></p><p>Same</p></div>`;
+      editable('cta-1', [{ field: 'text', value: 'Different', multiline: true }]);
+      dblclick(document.getElementById('inner'));
+      expect(document.querySelector('[data-novan-field]')?.getAttribute('contenteditable')).not.toBeNull();
+    });
+
+    it('leaves text alone in other blocks, for fields it was not given, and for read-only editors', () => {
+      editable('text-1');
+      dblclick(heading());
+      editable('hero-1', []);
+      dblclick(heading());
+      expect(heading()?.hasAttribute('contenteditable')).toBe(false);
+      expect(messages('text')).toHaveLength(0);
+    });
   });
 
   it('says it is ready again after the site navigates', () => {

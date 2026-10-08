@@ -1,4 +1,4 @@
-import { type BridgeRect, bridgeEnvelope, parseAdminMessage, type SiteMessage } from './protocol';
+import { type BridgeRect, bridgeEnvelope, type EditableText, type InsertPosition, parseAdminMessage, type SiteMessage } from './protocol';
 
 /** What the bridge needs from the app (`NovanPreview` provides it). */
 export interface NovanBridgeHost {
@@ -20,6 +20,8 @@ export interface NovanBridgeHandle {
 
 const UID = 'data-novan-uid';
 const BLOCK = 'data-novan-block';
+/** Set by a block component on the element that shows a text field, e.g. `data-novan-field="heading"`. */
+const FIELD = 'data-novan-field';
 /** The editor's outline colour: 4.6:1 against white, for the label's white text. */
 const ACCENT = '#0b5ed7';
 
@@ -30,11 +32,25 @@ export interface NovanBridgeEnvironment {
   parent: Pick<Window, 'postMessage'>;
 }
 
+/** A text field being changed on the page. */
+interface Editing {
+  uid: string;
+  field: EditableText;
+  element: HTMLElement;
+  /** The text before editing, put back on Escape. */
+  original: string;
+  stop(): void;
+}
+
 /**
  * Starts the visual editor bridge in a preview page inside the admin's frame. It outlines the block under
  * the pointer and the selected block (with the block's name) in an overlay above the page, tells the admin
  * which block was clicked or hovered and where every block is, and applies the admin's updates through the
  * host. It talks only to `host.adminOrigin`, and only to the frame's parent window.
+ *
+ * Once the admin says which text fields of the selected block may change (`editable`), the bridge also draws
+ * "+" buttons above and below the block under the pointer (or the selected one) to add a block there, and a
+ * double-click on one of those texts edits it in place.
  */
 export function startNovanBridge(
   host: NovanBridgeHost,
@@ -42,9 +58,11 @@ export function startNovanBridge(
 ): NovanBridgeHandle {
   const win = env.window;
   const doc = win.document;
-  const overlay = new Overlay(doc);
   let hovered: string | null = null;
   let selected: string | null = null;
+  /** What the admin lets the editor change; null until it says (read-only editors never get "+" buttons). */
+  let editable: { uid: string | null; fields: EditableText[] } | null = null;
+  let editing: Editing | null = null;
   let lastRects = '';
   let frame: number | null = null;
 
@@ -53,6 +71,11 @@ export function startNovanBridge(
     target instanceof Element ? target.closest<HTMLElement>(`[${UID}]`) : null;
   const element = (uid: string | null): HTMLElement | null =>
     uid === null ? null : (Array.from(doc.querySelectorAll<HTMLElement>(`[${UID}]`)).find((el) => el.getAttribute(UID) === uid) ?? null);
+
+  const overlay = new Overlay(doc, (position) => {
+    const uid = overlay.insertTarget;
+    if (uid) post({ type: 'insert', payload: { uid, position } });
+  });
 
   const measure = () => {
     frame = null;
@@ -69,6 +92,9 @@ export function startNovanBridge(
       hoverEl && hovered ? { rect: rects[hovered], label: labelOf(hoverEl) } : null,
       selectedEl && selected ? { rect: rects[selected], label: labelOf(selectedEl) } : null,
     );
+    // "+" buttons on the block under the pointer, else the selected one; none while text is being edited.
+    const target = editable && !editing ? ((hovered && rects[hovered] ? hovered : null) ?? (selected && rects[selected] ? selected : null)) : null;
+    overlay.drawInsert(target, target ? rects[target] : undefined);
     const json = JSON.stringify(rects);
     if (json !== lastRects) {
       lastRects = json;
@@ -77,6 +103,63 @@ export function startNovanBridge(
   };
   const schedule = () => {
     frame ??= (win.requestAnimationFrame ?? ((callback: () => void) => win.setTimeout(callback, 16)))(measure);
+  };
+
+  const finishEditing = (cancel: boolean) => {
+    const current = editing;
+    if (!current) return;
+    editing = null;
+    if (cancel) current.element.textContent = current.original;
+    current.stop();
+    post({ type: 'text', payload: { uid: current.uid, field: current.field.field, value: textOf(current), done: true } });
+    schedule();
+  };
+
+  /** Starts editing the text field shown at `target` in the selected block, if there is one. */
+  const startEditing = (target: EventTarget | null): boolean => {
+    const block = blockOf(target);
+    const uid = block?.getAttribute(UID);
+    if (!block || !uid || !editable || editable.uid !== uid || !(target instanceof Element)) return false;
+    const found = findTextField(block, target, editable.fields);
+    if (!found) return false;
+    finishEditing(false);
+    const { element: el, field } = found;
+    const before = el.getAttribute('contenteditable');
+    el.setAttribute('contenteditable', 'plaintext-only');
+    // Browsers without plaintext-only: typing still produces text, and only text is read back.
+    if (el.isContentEditable === false) el.setAttribute('contenteditable', 'true');
+    const onInput = () => {
+      if (editing?.element === el) post({ type: 'text', payload: { uid, field: field.field, value: textOf(editing), done: false } });
+    };
+    const onKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        finishEditing(true);
+      } else if (event.key === 'Enter' && !field.multiline) {
+        event.preventDefault();
+        finishEditing(false);
+      }
+    };
+    const onBlur = () => finishEditing(false);
+    el.addEventListener('input', onInput);
+    el.addEventListener('keydown', onKeydown);
+    el.addEventListener('blur', onBlur);
+    editing = {
+      uid,
+      field,
+      element: el,
+      original: el.textContent ?? '',
+      stop: () => {
+        el.removeEventListener('input', onInput);
+        el.removeEventListener('keydown', onKeydown);
+        el.removeEventListener('blur', onBlur);
+        if (before === null) el.removeAttribute('contenteditable');
+        else el.setAttribute('contenteditable', before);
+      },
+    };
+    el.focus();
+    schedule();
+    return true;
   };
 
   const onMessage = (event: MessageEvent) => {
@@ -101,6 +184,10 @@ export function startNovanBridge(
       case 'token':
         host.token(message.payload.token);
         break;
+      case 'editable':
+        editable = message.payload;
+        if (editing && editing.uid !== editable.uid) finishEditing(false);
+        break;
     }
     schedule();
   };
@@ -113,9 +200,15 @@ export function startNovanBridge(
     if (event.target instanceof Element && event.target.closest('a[href], button[type="submit"], input[type="submit"]')) {
       event.preventDefault();
     }
+    // Clicks inside the text being edited place the caret.
+    if (editing && event.target instanceof Node && editing.element.contains(event.target)) return;
     selected = uid;
     post({ type: 'select', payload: { uid } });
     schedule();
+  };
+
+  const onDoubleClick = (event: MouseEvent) => {
+    if (startEditing(event.target)) event.preventDefault();
   };
 
   const setHovered = (uid: string | null) => {
@@ -124,7 +217,11 @@ export function startNovanBridge(
     post({ type: 'hover', payload: { uid } });
     schedule();
   };
-  const onPointerOver = (event: PointerEvent) => setHovered(blockOf(event.target)?.getAttribute(UID) ?? null);
+  const onPointerOver = (event: PointerEvent) => {
+    // Moving onto a "+" button keeps the block it belongs to.
+    if (overlay.contains(event.target)) return;
+    setHovered(blockOf(event.target)?.getAttribute(UID) ?? null);
+  };
   const onPointerLeave = () => setHovered(null);
 
   const mutations = new MutationObserver(schedule);
@@ -135,6 +232,7 @@ export function startNovanBridge(
 
   win.addEventListener('message', onMessage);
   doc.addEventListener('click', onClick, true);
+  doc.addEventListener('dblclick', onDoubleClick, true);
   doc.addEventListener('pointerover', onPointerOver);
   doc.documentElement.addEventListener('pointerleave', onPointerLeave);
   win.addEventListener('scroll', schedule, { capture: true, passive: true });
@@ -146,14 +244,17 @@ export function startNovanBridge(
 
   return {
     navigated: () => {
+      finishEditing(false);
       hovered = null;
       lastRects = '';
       ready();
       schedule();
     },
     stop: () => {
+      finishEditing(false);
       win.removeEventListener('message', onMessage);
       doc.removeEventListener('click', onClick, true);
+      doc.removeEventListener('dblclick', onDoubleClick, true);
       doc.removeEventListener('pointerover', onPointerOver);
       doc.documentElement.removeEventListener('pointerleave', onPointerLeave);
       win.removeEventListener('scroll', schedule, { capture: true });
@@ -176,22 +277,63 @@ function labelOf(el: HTMLElement): string {
   return blockLabel(el.getAttribute(BLOCK) ?? 'Block');
 }
 
+const normalise = (text: string | null | undefined): string => (text ?? '').replace(/\s+/g, ' ').trim();
+
+/**
+ * The element showing one of `fields` at or above `target`, inside `block`: one the component marked with
+ * `data-novan-field`, or else the nearest element whose whole text is the field's value. Text that appears
+ * nowhere on its own (inside a sentence, or changed by the component) is edited in the admin's panel instead.
+ */
+function findTextField(
+  block: Element,
+  target: Element,
+  fields: readonly EditableText[],
+): { element: HTMLElement; field: EditableText } | null {
+  const marked = target.closest<HTMLElement>(`[${FIELD}]`);
+  if (marked && block.contains(marked) && blockOfElement(marked) === block) {
+    const field = fields.find((f) => f.field === marked.getAttribute(FIELD));
+    return field ? { element: marked, field } : null;
+  }
+  for (let el: Element | null = target; el && el !== block.parentElement; el = el.parentElement) {
+    if (!(el instanceof HTMLElement) || blockOfElement(el) !== block) continue;
+    const text = normalise(el.textContent);
+    const field = text ? fields.find((f) => normalise(f.value) === text) : undefined;
+    if (field) return { element: el, field };
+  }
+  return null;
+}
+
+function blockOfElement(el: Element): Element | null {
+  return el.closest(`[${UID}]`);
+}
+
+/** The edited text as the field stores it: one line unless the field is multiline. */
+function textOf(editing: Editing): string {
+  const text = editing.element.innerText ?? editing.element.textContent ?? '';
+  return editing.field.multiline ? text.replace(/\r\n?/g, '\n') : text.replace(/\s*[\r\n]+\s*/g, ' ');
+}
+
 interface Outline {
   rect: BridgeRect | undefined;
   label: string;
 }
 
 /**
- * The outlines, in a layer above the page that the pointer and assistive technology pass through. It sits
- * outside `<body>`, so drawing does not wake the bridge's own mutation observer.
+ * The outlines, in a layer above the page that the pointer and assistive technology pass through (except the
+ * "+" buttons, which take clicks). It sits outside `<body>`, so drawing does not wake the bridge's own mutation
+ * observer. The buttons are for pointers; keyboard users add blocks from the admin's outline.
  */
 class Overlay {
   private readonly layer: HTMLElement;
   private readonly hover: HTMLElement;
   private readonly selected: HTMLElement;
   private readonly label: HTMLElement;
+  private readonly before: HTMLElement;
+  private readonly after: HTMLElement;
+  /** The block the "+" buttons are drawn for. */
+  insertTarget: string | null = null;
 
-  constructor(doc: Document) {
+  constructor(doc: Document, onInsert: (position: InsertPosition) => void) {
     this.layer = doc.createElement('div');
     this.layer.setAttribute('aria-hidden', 'true');
     this.layer.setAttribute('data-novan-overlay', '');
@@ -212,8 +354,14 @@ class Overlay {
       whiteSpace: 'nowrap',
       borderRadius: '3px',
     });
-    this.layer.append(this.hover, this.selected, this.label);
+    this.before = insertButton(doc, 'before', onInsert);
+    this.after = insertButton(doc, 'after', onInsert);
+    this.layer.append(this.hover, this.selected, this.before, this.after, this.label);
     doc.documentElement.append(this.layer);
+  }
+
+  contains(target: EventTarget | null): boolean {
+    return target instanceof Node && this.layer.contains(target);
   }
 
   draw(hover: Outline | null, selected: Outline | null): void {
@@ -230,9 +378,53 @@ class Overlay {
     style(this.label, { display: 'block', left: `${Math.max(0, target.rect.x)}px`, top: `${top}px` });
   }
 
+  /** "+" buttons centred on the block's top and bottom edges. */
+  drawInsert(uid: string | null, rect: BridgeRect | undefined): void {
+    this.insertTarget = rect ? uid : null;
+    for (const [button, y] of [
+      [this.before, rect?.y],
+      [this.after, rect ? rect.y + rect.height : undefined],
+    ] as const) {
+      if (!rect || y === undefined) {
+        button.style.display = 'none';
+        continue;
+      }
+      style(button, { display: 'block', left: `${rect.x + rect.width / 2 - 12}px`, top: `${y - 12}px` });
+    }
+  }
+
   remove(): void {
     this.layer.remove();
   }
+}
+
+function insertButton(doc: Document, position: InsertPosition, onInsert: (position: InsertPosition) => void): HTMLElement {
+  const button = doc.createElement('button');
+  button.type = 'button';
+  button.tabIndex = -1;
+  button.textContent = '+';
+  button.title = position === 'before' ? 'Add a block above' : 'Add a block below';
+  button.setAttribute('data-novan-insert', position);
+  style(button, {
+    position: 'absolute',
+    display: 'none',
+    width: '24px',
+    height: '24px',
+    padding: '0',
+    border: '2px solid #fff',
+    borderRadius: '50%',
+    background: ACCENT,
+    color: '#fff',
+    font: '700 16px/18px system-ui, sans-serif',
+    cursor: 'pointer',
+    pointerEvents: 'auto',
+  });
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onInsert(position);
+  });
+  return button;
 }
 
 function place(el: HTMLElement, rect: BridgeRect | undefined): void {

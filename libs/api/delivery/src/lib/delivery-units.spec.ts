@@ -101,4 +101,15 @@ describe('mapEntryData', () => {
     const result = mapEntryData(fields, data, blockTypes, { reference: () => DROP });
     expect(result).toEqual(data);
   });
+
+  it('leaves out blocks the visitor drops, with their children', () => {
+    const data = {
+      body: [
+        { _uid: 'u1', _block: 'gallery', children: [{ _uid: 'u2', _block: 'card', _hidden: true }, { _uid: 'u3', _block: 'card' }] },
+        { _uid: 'u4', _block: 'gallery', _hidden: true, children: [{ _uid: 'u5', _block: 'card' }] },
+      ],
+    };
+    const result = mapEntryData(fields, data, blockTypes, { block: (node) => (node._hidden ? DROP : node) });
+    expect(result).toEqual({ body: [{ _uid: 'u1', _block: 'gallery', children: [{ _uid: 'u3', _block: 'card' }] }] });
+  });
 });

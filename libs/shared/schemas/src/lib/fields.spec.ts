@@ -572,6 +572,12 @@ describe('buildEntrySchema', () => {
       expect(issues(schema, { body: [{ ...styled, _style: ['brand'] }] })).toHaveLength(1);
     });
 
+    it('keeps hidden blocks hidden', () => {
+      const hidden = { _uid: uid(1), _block: 'hero', heading: 'Hi', _hidden: true };
+      expect(schema.parse({ body: [hidden] })).toEqual({ body: [hidden] });
+      expect(issues(schema, { body: [{ ...hidden, _hidden: 'yes' }] })).toHaveLength(1);
+    });
+
     it('rejects block types the field does not allow, or that do not exist', () => {
       expect(issues(schema, { body: [{ _uid: uid(1), _block: 'cta' }] })).toEqual([
         'body.0._block: Use one of these blocks: hero, columns, tabs.',

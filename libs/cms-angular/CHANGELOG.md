@@ -2,6 +2,17 @@
 
 All notable changes to `@black-isle-beef/cms-angular`. The package follows [semantic versioning](https://semver.org).
 
+## 0.4.0
+
+Editing on the page (docs/build/12-visual-editor.md, 12b).
+
+- The bridge draws "+" buttons above and below the block under the pointer, which ask the admin to add a block
+  there, and lets editors change a selected block's plain text fields in place with a double-click. A component
+  can mark the element showing a field with `data-novan-field="<field>"`; otherwise the bridge finds the element
+  whose text is the field's value. Both appear only once the admin says the editor may change the page.
+- `<novan-blocks>` leaves out blocks an editor hid (`_hidden: true`); `NovanBlockNode` has `_hidden`. The API
+  leaves them out of delivered content as well.
+
 ## 0.3.0
 
 The visual editor bridge (docs/build/12-visual-editor.md).

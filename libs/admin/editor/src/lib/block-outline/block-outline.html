@@ -1,0 +1,78 @@
+<div cdkDropListGroup>
+  @for (root of lists(); track root.list.path.join('.')) {
+    <h3 class="h6 mt-3 mb-2" [id]="'nv-outline-' + root.list.path.join('-')">{{ root.list.label }}</h3>
+    <ng-container *ngTemplateOutlet="listTemplate; context: { $implicit: root }" />
+  }
+</div>
+
+<ng-template #listTemplate let-outlineList>
+  <ol
+    class="nv-outline-list list-unstyled mb-2"
+    cdkDropList
+    [cdkDropListData]="outlineList.list"
+    [cdkDropListEnterPredicate]="accepts"
+    [cdkDropListDisabled]="readonly()"
+    [attr.aria-label]="outlineList.list.label"
+    (cdkDropListDropped)="dropped($event)"
+  >
+    @for (item of outlineList.items; track item.place.node._uid; let first = $first, last = $last) {
+      <li class="nv-outline-item" cdkDrag [cdkDragData]="item.place" [cdkDragDisabled]="readonly()">
+        <div class="nv-outline-row d-flex align-items-center gap-1" [class.nv-outline-row-selected]="selected() === item.place.node._uid">
+          @if (!readonly()) {
+            <span class="nv-drag-handle text-body-secondary" cdkDragHandle aria-hidden="true">
+              <i class="bi bi-grip-vertical"></i>
+            </span>
+          }
+          <button
+            type="button"
+            class="btn btn-link nv-outline-select flex-grow-1 text-start"
+            [id]="buttonId(item.place.node, 'select')"
+            [attr.aria-current]="selected() === item.place.node._uid ? 'true' : null"
+            (click)="selectBlock.emit(item.place.node._uid)"
+          >
+            @if (icon(item.place.node); as i) {
+              <i [class]="'bi bi-' + i + ' me-2'" aria-hidden="true"></i>
+            }
+            {{ name(item.place.node) }}
+            <span class="visually-hidden">, block {{ item.place.index + 1 }} of {{ outlineList.items.length }}</span>
+          </button>
+          @if (item.place.node._hidden) {
+            <ds-badge variant="secondary">Hidden</ds-badge>
+          }
+          @if (!readonly()) {
+            <button
+              type="button"
+              class="btn btn-sm btn-secondary"
+              [id]="buttonId(item.place.node, 'up')"
+              [disabled]="first"
+              (click)="moveBy(item.place, -1, outlineList.items.length)"
+            >
+              <i class="bi bi-arrow-up" aria-hidden="true"></i>
+              <span class="visually-hidden">Move {{ name(item.place.node) }} up</span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-secondary"
+              [id]="buttonId(item.place.node, 'down')"
+              [disabled]="last"
+              (click)="moveBy(item.place, 1, outlineList.items.length)"
+            >
+              <i class="bi bi-arrow-down" aria-hidden="true"></i>
+              <span class="visually-hidden">Move {{ name(item.place.node) }} down</span>
+            </button>
+          }
+        </div>
+        @if (item.children; as inner) {
+          <div class="nv-outline-children">
+            <ng-container *ngTemplateOutlet="listTemplate; context: { $implicit: inner }" />
+          </div>
+        }
+      </li>
+    }
+  </ol>
+  @if (!readonly()) {
+    <button type="button" class="btn btn-sm btn-secondary mb-2" (click)="add.emit({ list: outlineList.list, index: outlineList.items.length })">
+      <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add block<span class="visually-hidden"> to {{ outlineList.list.label }}</span>
+    </button>
+  }
+</ng-template>

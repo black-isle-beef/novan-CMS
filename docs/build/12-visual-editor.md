@@ -99,6 +99,39 @@ All messages are `{ source: 'novan', v: 1, type, payload }`. The bridge only acc
 - **Not yet:** the `update` data must be in the delivered shape (expanded assets and references). 12b adds the
   management endpoint that turns draft data into it.
 
+### 12b — Editing
+
+- **Preview data:** `POST .../entries/:id/preview-data` (`{ data, include? }`, any member who can read the page)
+  checks the unsaved data as a draft (400 `entry_invalid`) and returns it as the Preview API would deliver it
+  (`ContentReader.render`): files, references and link targets of the entry's own space only. Nothing is saved.
+  The admin sends changes 150 ms after the last one; only the latest request reaches the site, and malformed data
+  (half-typed) is skipped, so the site keeps the last good version. Locally a change reaches the frame in roughly
+  one request plus the debounce.
+- **Editor store** (`EditorStore`): page data, selected `_uid`, dirty flag, and undo/redo as patches (only the
+  changed paths; `patches.ts`), 100 steps. Changes to the same field within a second are one step, so typing a word
+  is one undo. Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y outside text fields (fields keep their own undo).
+- **Autosave** every 5 s through the autosave endpoint from 06, skipped while the draft has malformed values (shown
+  at once in the panel) or while text is being typed on the page. Leaving with unsaved changes asks first.
+- **Block lists** are the content type's top-level `blocks` fields and, inside them, `children` of block types with
+  `allowedChildren`. Blocks fields inside groups stay in the form view. The panel reuses `libs/admin/fields`, with the
+  block's dotted path, so validation messages match the form view; style options are radio buttons, selects and
+  switches (`StylePicker`). The panel sends only the keys that changed, applied to the block as it is now.
+- **Outline:** CDK drag and drop across connected lists (only lists that allow the block, never into itself), plus
+  arrow buttons; "Move into <previous block>" / "Move out of <parent>", duplicate (new `_uid`s for the block and
+  everything in it), hide and delete in the panel. Moves and deletes are announced; focus stays with the block.
+- **Hidden blocks** are `_hidden: true` in block data (`buildEntrySchema` keeps it). The Delivery and Preview APIs
+  leave them out (`EntryVisitor.block`), and `<novan-blocks>` skips them too.
+- **Picker:** a design-system dialog with the types allowed at the insertion point, their icons and preview images.
+  `previewImagePath` is a path on the space's site (`/blocks/hero.png`) or an https address; anything else shows no
+  image.
+- **Protocol additions** (SDK 0.4.0): site → admin `insert { uid, position: 'before' | 'after' }` and
+  `text { uid, field, value, done }`; admin → site `editable { uid, fields: [{ field, value, multiline }] }`. The
+  bridge draws "+" buttons and allows inline text editing only after an `editable` arrives, so viewers never get
+  them. Inline editing finds the element by `data-novan-field="<field>"`, else the element whose whole text is the
+  field's value; it uses `contenteditable="plaintext-only"`, Enter ends a one-line field, Escape puts the text back.
+  While typing, the admin updates its store but sends no `update` (that would reset the caret) until `done`.
+- **Publish** in the editor saves and publishes directly; package 13 replaces it with the publish dialog.
+
 ## Out of scope
 
 Free drag-on-canvas positioning, custom CSS, A/B variants (phase 4).
