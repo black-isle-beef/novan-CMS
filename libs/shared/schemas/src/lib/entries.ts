@@ -193,8 +193,11 @@ export type EntryWorkflow = z.infer<typeof entryWorkflowSchema>;
 export const pendingReviewSchema = reviewRequestSchema.extend({ entry: entrySummarySchema });
 export type PendingReview = z.infer<typeof pendingReviewSchema>;
 
-/** POST `.../submit` and `.../approve`, and the publish dialog: an optional note. Publishing saves it on the version. */
-export const workflowMessageRequestSchema = z.strictObject({ message: messageSchema });
+/**
+ * POST `.../publish`, `.../submit` and `.../approve`: an optional note. Publishing saves it on the version.
+ * The body itself is optional, so API clients can publish with a bare POST.
+ */
+export const workflowMessageRequestSchema = z.strictObject({ message: messageSchema }).default({});
 export type WorkflowMessageRequest = z.input<typeof workflowMessageRequestSchema>;
 
 /** POST `.../request-changes`: what to change, for the author. */
