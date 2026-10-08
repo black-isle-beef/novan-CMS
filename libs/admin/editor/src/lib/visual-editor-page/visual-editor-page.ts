@@ -17,7 +17,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { DsAlertComponent } from '@black-isle-beef/novan-design-system';
 import { ContentApi } from '@novan/admin-content';
-import { errorsFromIssues, FieldFormContext, newBlock } from '@novan/admin-fields';
+import { describePath, errorsFromIssues, FieldFormContext, newBlock } from '@novan/admin-fields';
 import { MediaPicker, MediaPickerDialog } from '@novan/admin-media';
 import { copy, type HasUnsavedChanges, Shortcuts, shortcutKeys, Skeleton, warnBeforeUnload } from '@novan/admin-shell';
 import { problemMessage, SpaceContext } from '@novan/admin-spaces';
@@ -29,6 +29,7 @@ import {
   type Entry,
   type EntryData,
   entryTitle,
+  mediaRefs,
   sameJson,
   type SignedPreviewToken,
   sitePath,
@@ -39,7 +40,9 @@ import { BlockPanel } from '../block-panel/block-panel';
 import { BlockPicker } from '../block-picker/block-picker';
 import {
   blocksAt,
+  type BlockPlace,
   canHold,
+  type OutlineList,
   childList,
   copyBlock,
   dottedPath,
@@ -54,9 +57,13 @@ import {
   textFields,
 } from '../block-tree';
 import { EditorApi } from '../editor-api';
+import { pageChecks } from '../checklist/checklist';
+import { PublishChecklist } from '../checklist/publish-checklist';
 import { EditorStore } from '../editor-store';
 import { getIn } from '../patches';
 import { PreviewBridge } from '../preview-bridge';
+import { EditorPresence } from '../presence/editor-presence';
+import { initials, LOCK_TTL_MS } from '../presence/presence';
 
 export type Device = 'mobile' | 'tablet' | 'desktop';
 export type View = 'draft' | 'live';
@@ -76,6 +83,8 @@ const RETRY_MS = 30_000;
 export const PREVIEW_DEBOUNCE_MS = 150;
 /** Unsaved changes are saved as a draft this often. */
 export const AUTOSAVE_EVERY_MS = 5000;
+/** How long the site has to say it is ready before the editor offers the form view. */
+export const READY_TIMEOUT_MS = 10_000;
 
 const clock = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
 
@@ -88,8 +97,8 @@ const clock = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
  */
 @Component({
   selector: 'nv-visual-editor-page',
-  imports: [BlockOutline, BlockPanel, BlockPicker, DsAlertComponent, MediaPickerDialog, RouterLink, Skeleton],
-  providers: [PreviewBridge, EditorStore, FieldFormContext, MediaPicker],
+  imports: [BlockOutline, BlockPanel, BlockPicker, DsAlertComponent, MediaPickerDialog, PublishChecklist, RouterLink, Skeleton],
+  providers: [PreviewBridge, EditorStore, EditorPresence, FieldFormContext, MediaPicker],
   templateUrl: './visual-editor-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -97,12 +106,13 @@ export class VisualEditorPage implements HasUnsavedChanges {
   private readonly content = inject(ContentApi);
   private readonly api = inject(EditorApi);
   private readonly form = inject(FieldFormContext);
-  private readonly media = inject(MediaPicker);
+  private readonly mediaPicker = inject(MediaPicker);
   private readonly injector = inject(Injector);
   private readonly document = inject(DOCUMENT);
   protected readonly context = inject(SpaceContext);
   protected readonly bridge = inject(PreviewBridge);
   protected readonly store = inject(EditorStore);
+  protected readonly presence = inject(EditorPresence);
   protected readonly copy = copy;
   protected readonly devices = DEVICES;
   protected readonly shortcutKeys = shortcutKeys;
@@ -144,8 +154,17 @@ export class VisualEditorPage implements HasUnsavedChanges {
   });
   protected readonly deviceWidth = computed(() => DEVICES.find((d) => d.id === this.device())?.width ?? 1280);
   protected readonly published = computed(() => Boolean(this.entry()?.publishedPath));
-  protected readonly canEdit = computed(() => this.context.canEditCurrent());
-  protected readonly canPublish = computed(() => this.context.canPublishCurrent());
+  /** Someone else changing the page: this tab looks but does not touch until they finish or leave. */
+  protected readonly lockedBy = computed(() => this.presence.lockedBy());
+  protected readonly roleCanEdit = computed(() => this.context.canEditCurrent());
+  protected readonly canEdit = computed(() => this.roleCanEdit() && !this.lockedBy());
+  protected readonly canPublish = computed(() => this.context.canPublishCurrent() && !this.lockedBy());
+  protected readonly initials = initials;
+  /** The site did not say it was ready in time. */
+  protected readonly siteSilent = signal(false);
+  protected readonly canManage = computed(() => this.context.canManageCurrent());
+  /** When this tab last changed the page: it keeps the page for a minute after, saved or not. */
+  private readonly lastChange = signal<number | null>(null);
 
   /** The space's site, when it has a usable address. */
   protected readonly siteUrl = computed(() => {
@@ -218,6 +237,45 @@ export class VisualEditorPage implements HasUnsavedChanges {
     const result = this.draftSchema()?.safeParse(this.store.data());
     return result && !result.success ? errorsFromIssues(result.error.issues) : {};
   });
+  /** What would stop publishing (required fields, alternative text, …): shown in the panel and the checklist. */
+  private readonly publishErrors = computed<Record<string, string[]>>(() => {
+    const type = this.contentType();
+    this.form.assets();
+    if (!type) return {};
+    const schema = buildEntrySchema(type.fields, { blockTypes: this.blockTypes(), assets: (id) => this.form.assetInfo(id) });
+    const result = schema.safeParse(this.store.data());
+    return result.success ? {} : errorsFromIssues(result.error.issues);
+  });
+  private readonly media = computed(() => mediaRefs(this.contentType()?.fields ?? [], this.store.data(), this.blockTypes()));
+  /** The pre-publish checklist: errors that stop publishing, and advice. */
+  protected readonly checks = computed(() => {
+    const type = this.contentType();
+    const data = this.store.data();
+    const flat = (list: OutlineList): BlockPlace[] => list.items.flatMap((item) => [item.place, ...(item.children ? flat(item.children) : [])]);
+    const places = this.outline().flatMap(flat);
+    const byPath = places.map((place) => ({ path: dottedPath(place), uid: place.node._uid })).sort((a, b) => b.path.length - a.path.length);
+    const byUid = new Map(places.map((place) => [place.node._uid, place.node]));
+    this.form.assets();
+    return pageChecks({
+      errors: this.publishErrors(),
+      describe: (path) => describePath(path, type?.fields ?? [], data, this.blockTypes()),
+      blockAt: (path) => byPath.find((place) => path === place.path || path.startsWith(`${place.path}.`))?.uid ?? null,
+      media: this.media(),
+      asset: (id) => this.form.assetInfo(id),
+      describeMedia: (ref) => {
+        const parts = ref.path.split('.');
+        const at = parts.map((part, i) => (byUid.has(part) ? i : -1)).reduce((last, i) => Math.max(last, i), -1);
+        const uid = at >= 0 ? parts[at] : null;
+        const node = uid ? byUid.get(uid) : undefined;
+        const key = parts[at + 1] ?? parts[0];
+        const fields = node ? (this.typeOf(node._block)?.fields ?? []) : (type?.fields ?? []);
+        const label = fields.find((field) => field.apiId === key)?.label ?? key;
+        return { label: node ? `${this.nameOf(node)} › ${label}` : label, uid };
+      },
+      headings: this.bridge.headings(),
+    });
+  });
+  protected readonly checkErrors = computed(() => this.checks().filter((item) => item.severity === 'error').length);
 
   protected readonly saveState = computed(() => {
     switch (this.busy()) {
@@ -246,7 +304,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
       const entryId = this.entryId();
       untracked(() => {
         this.context.currentSpaceId.set(spaceId);
-        this.media.connect(this.form, spaceId);
+        this.mediaPicker.connect(this.form, spaceId);
         void this.load(spaceId, entryId);
       });
     });
@@ -265,7 +323,21 @@ export class VisualEditorPage implements HasUnsavedChanges {
         else this.bridge.disconnect();
       });
     });
-    effect(() => this.form.errors.set(this.draftErrors()));
+    // A site that never answers (wrong address, no SDK, frames refused): offer the form view instead.
+    effect((onCleanup) => {
+      const waiting = this.view() === 'draft' && this.frameUrl() !== null && this.bridge.ready() === null;
+      this.siteSilent.set(false);
+      if (!waiting) return;
+      const timer = setTimeout(() => this.siteSilent.set(true), READY_TIMEOUT_MS);
+      onCleanup(() => clearTimeout(timer));
+    });
+    // Malformed values and what would stop publishing, next to the fields in the panel.
+    effect(() => this.form.errors.set({ ...this.publishErrors(), ...this.draftErrors() }));
+    // Files the page uses, for alternative text and kind checks.
+    effect(() => {
+      const ids = [...new Set(this.media().map((ref) => ref.assetId))];
+      untracked(() => this.mediaPicker.load(ids));
+    });
     effect(() => this.form.readonly.set(!this.canEdit()));
 
     // Changes go to the site, in the shape it reads, once the editor pauses.
@@ -283,14 +355,18 @@ export class VisualEditorPage implements HasUnsavedChanges {
       if (!this.shown || !sameJson(this.shown, data)) untracked(() => this.queuePreview(data));
     });
 
-    // What the editor may change on the page: the selected block's plain text fields.
+    // What the editor may change on the page: the selected block's plain text fields, and adding blocks.
     effect(() => {
       const ready = this.bridge.ready();
-      const place = this.selection();
+      const place = this.canEdit() ? this.selection() : null;
       const type = this.selectionType();
-      if (!ready || !this.canEdit()) return;
+      const insert = this.canEdit();
+      if (!ready) return;
       untracked(() =>
-        this.bridge.send({ type: 'editable', payload: { uid: place?.node._uid ?? null, fields: place ? textFields(place.node, type) : [] } }),
+        this.bridge.send({
+          type: 'editable',
+          payload: { uid: place?.node._uid ?? null, fields: place ? textFields(place.node, type) : [], insert },
+        }),
       );
     });
     // A block just added is scrolled to once the site has drawn it.
@@ -302,6 +378,20 @@ export class VisualEditorPage implements HasUnsavedChanges {
           this.bridge.send({ type: 'scrollTo', payload: { uid } });
         });
       }
+    });
+
+    // Soft locks: this tab is editing while it has unsaved changes and for a minute after its last change.
+    effect(() => {
+      const last = this.lastChange();
+      const editing = this.canEdit() && (this.store.dirty() || (last !== null && this.presence.now() - last < LOCK_TTL_MS));
+      untracked(() => this.presence.editing(editing));
+    });
+    // When someone else's lock ends, carry on from what they saved.
+    let lockedBefore = false;
+    effect(() => {
+      const locked = this.lockedBy() !== null;
+      if (lockedBefore && !locked) untracked(() => void this.reloadData());
+      lockedBefore = locked;
     });
 
     this.bridge.listener = {
@@ -363,7 +453,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
     const place = this.selection();
     if (!place) return;
     const node = { ...place.node, ...changes, _uid: place.node._uid, _block: place.node._block };
-    this.store.change(replaceBlock(this.store.data(), place, node), `${node._uid}.${Object.keys(changes).sort().join(',')}`);
+    this.commit(replaceBlock(this.store.data(), place, node), `${node._uid}.${Object.keys(changes).sort().join(',')}`);
   }
 
   protected openPicker(slot: BlockSlot): void {
@@ -379,7 +469,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
     this.slot.set(null);
     if (!slot) return;
     const node = newBlock(type);
-    this.store.change(insertBlock(this.store.data(), slot.list, slot.index, node));
+    this.commit(insertBlock(this.store.data(), slot.list, slot.index, node));
     this.select(node._uid);
     this.scrollPending.set(node._uid);
     this.announcement.set(`Added a ${type.name} block. Its fields are in the panel.`);
@@ -393,7 +483,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
       this.announcement.set(`A ${name} block cannot go there.`);
       return;
     }
-    this.store.change(moved);
+    this.commit(moved);
     const place = locate(moved, this.roots(), this.blockTypes(), move.from.node._uid);
     if (place) this.announcement.set(`${name} moved to position ${place.index + 1} of ${blocksAt(moved, place.list).length}.`);
   }
@@ -419,7 +509,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
     const place = this.selection();
     if (!place) return;
     const node = copyBlock(place.node);
-    this.store.change(insertBlock(this.store.data(), place.list, place.index + 1, node));
+    this.commit(insertBlock(this.store.data(), place.list, place.index + 1, node));
     this.select(node._uid);
     this.announcement.set(`Duplicated the ${this.nameOf(place.node)} block. The copy is selected.`);
   }
@@ -430,25 +520,49 @@ export class VisualEditorPage implements HasUnsavedChanges {
     const node = { ...place.node };
     if (node._hidden) delete node._hidden;
     else node._hidden = true;
-    this.store.change(replaceBlock(this.store.data(), place, node));
+    this.commit(replaceBlock(this.store.data(), place, node));
     this.announcement.set(node._hidden ? `${this.nameOf(node)} is hidden on the site.` : `${this.nameOf(node)} is shown on the site again.`);
   }
 
   protected remove(): void {
     const place = this.selection();
     if (!place) return;
-    this.store.change(removeBlock(this.store.data(), place));
+    this.commit(removeBlock(this.store.data(), place));
     this.store.selected.set(null);
     this.announcement.set(`Deleted the ${this.nameOf(place.node)} block. Undo brings it back.`);
     this.focus(`nv-outline-heading`);
   }
 
   protected undo(): void {
-    if (this.canEdit() && this.store.undo()) this.announcement.set('Undone.');
+    if (!this.canEdit() || !this.store.undo()) return;
+    this.lastChange.set(Date.now());
+    this.announcement.set('Undone.');
   }
 
   protected redo(): void {
-    if (this.canEdit() && this.store.redo()) this.announcement.set('Redone.');
+    if (!this.canEdit() || !this.store.redo()) return;
+    this.lastChange.set(Date.now());
+    this.announcement.set('Redone.');
+  }
+
+  /** One change by this editor: undoable, and it keeps the page theirs for a while (soft lock). */
+  private commit(next: EntryData, key: string | null = null): void {
+    this.store.change(next, key);
+    this.lastChange.set(Date.now());
+  }
+
+  /** The latest saved draft, after someone else finished changing the page. */
+  private async reloadData(): Promise<void> {
+    try {
+      const entry = await firstValueFrom(this.content.getEntry(this.spaceId(), this.entryId()));
+      this.entry.set(entry);
+      this.store.load(entry.data);
+      // The site may show an older draft: send this one.
+      this.shown = null;
+      this.announcement.set('The page is free to edit again, with the latest changes.');
+    } catch (error) {
+      this.problem.set(`The latest version could not be loaded: ${problemMessage(error)} Reload the page before editing.`);
+    }
   }
 
   /** Text typed on the page: one undo step per field while typing; the site already shows it. */
@@ -457,7 +571,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
     const editable = place && this.canEdit() && textFields(place.node, this.typeOf(place.node._block)).some((f) => f.field === field);
     if (!place || !editable) return;
     this.typingIn.set(done ? null : uid);
-    this.store.change(replaceBlock(this.store.data(), place, { ...place.node, [field]: value }), `${uid}.${field}`);
+    this.commit(replaceBlock(this.store.data(), place, { ...place.node, [field]: value }), `${uid}.${field}`);
   }
 
   /** Sends the data to the site once the editor pauses, in the shape it reads; a newer change wins. */
@@ -495,6 +609,13 @@ export class VisualEditorPage implements HasUnsavedChanges {
 
   protected async publish(): Promise<void> {
     if (!this.canPublish() || this.busy() || !this.entry()) return;
+    const errors = this.checkErrors();
+    if (errors) {
+      this.status.set(null);
+      this.problem.set(`Fix ${errors === 1 ? 'one thing' : `${errors} things`} in “Before publishing” first.`);
+      this.focus('nv-checklist-heading');
+      return;
+    }
     const data = this.store.data();
     await this.run('publishing', async () => {
       if (this.store.dirty()) this.afterSave(await firstValueFrom(this.content.saveEntry(this.spaceId(), this.entryId(), data)), data);
@@ -568,6 +689,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
       this.shown = entry.data;
       this.useToken(token);
       this.openedWith.set(token.token);
+      void this.presence.start(spaceId, entryId);
     } catch (error) {
       this.loadError.set(problemMessage(error));
     } finally {

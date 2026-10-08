@@ -1,4 +1,12 @@
-import { type BridgeRect, bridgeEnvelope, type EditableText, type InsertPosition, parseAdminMessage, type SiteMessage } from './protocol';
+import {
+  type BridgeRect,
+  bridgeEnvelope,
+  type EditableText,
+  type InsertPosition,
+  MAX_HEADING_TEXT,
+  parseAdminMessage,
+  type SiteMessage,
+} from './protocol';
 
 /** What the bridge needs from the app (`NovanPreview` provides it). */
 export interface NovanBridgeHost {
@@ -48,7 +56,7 @@ interface Editing {
  * which block was clicked or hovered and where every block is, and applies the admin's updates through the
  * host. It talks only to `host.adminOrigin`, and only to the frame's parent window.
  *
- * Once the admin says which text fields of the selected block may change (`editable`), the bridge also draws
+ * When the admin allows it (`editable`), the bridge also draws
  * "+" buttons above and below the block under the pointer (or the selected one) to add a block there, and a
  * double-click on one of those texts edits it in place.
  */
@@ -60,10 +68,11 @@ export function startNovanBridge(
   const doc = win.document;
   let hovered: string | null = null;
   let selected: string | null = null;
-  /** What the admin lets the editor change; null until it says (read-only editors never get "+" buttons). */
-  let editable: { uid: string | null; fields: EditableText[] } | null = null;
+  /** What the admin lets the editor change; null until it says. */
+  let editable: { uid: string | null; fields: EditableText[]; insert: boolean } | null = null;
   let editing: Editing | null = null;
   let lastRects = '';
+  let lastHeadings = '';
   let frame: number | null = null;
 
   const post = (message: SiteMessage) => env.parent.postMessage(bridgeEnvelope(message), host.adminOrigin);
@@ -93,12 +102,22 @@ export function startNovanBridge(
       selectedEl && selected ? { rect: rects[selected], label: labelOf(selectedEl) } : null,
     );
     // "+" buttons on the block under the pointer, else the selected one; none while text is being edited.
-    const target = editable && !editing ? ((hovered && rects[hovered] ? hovered : null) ?? (selected && rects[selected] ? selected : null)) : null;
+    const target = editable?.insert && !editing ? ((hovered && rects[hovered] ? hovered : null) ?? (selected && rects[selected] ? selected : null)) : null;
     overlay.drawInsert(target, target ? rects[target] : undefined);
     const json = JSON.stringify(rects);
     if (json !== lastRects) {
       lastRects = json;
       post({ type: 'rects', payload: rects });
+    }
+    const headings = Array.from(doc.body.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')).map((el) => ({
+      level: Number(el.tagName.slice(1)),
+      text: normalise(el.textContent).slice(0, MAX_HEADING_TEXT),
+      uid: el.closest(`[${UID}]`)?.getAttribute(UID) || null,
+    }));
+    const headingsJson = JSON.stringify(headings);
+    if (headingsJson !== lastHeadings) {
+      lastHeadings = headingsJson;
+      post({ type: 'headings', payload: { headings } });
     }
   };
   const schedule = () => {
@@ -225,7 +244,7 @@ export function startNovanBridge(
   const onPointerLeave = () => setHovered(null);
 
   const mutations = new MutationObserver(schedule);
-  mutations.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: [UID] });
+  mutations.observe(doc.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: [UID] });
   // Images loading and fonts arriving move blocks without changing the DOM.
   const resizes = typeof ResizeObserver === 'function' ? new ResizeObserver(schedule) : null;
   resizes?.observe(doc.body);
@@ -247,6 +266,7 @@ export function startNovanBridge(
       finishEditing(false);
       hovered = null;
       lastRects = '';
+      lastHeadings = '';
       ready();
       schedule();
     },

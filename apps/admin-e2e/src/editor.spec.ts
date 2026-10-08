@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { client, signIn } from './support/auth';
+import { client, developer, signIn } from './support/auth';
 import { expectNoAxeViolations } from './support/axe';
 
 // Needs local Supabase (`npm run db:start && npm run db:reset`); the API, admin and starter site start
@@ -89,6 +89,42 @@ test.describe('@editor', () => {
     await expect(page.getByText('Published. It is live at /contact.')).toBeVisible();
     await page.goto('http://localhost:4300/contact');
     await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+  });
+
+  test('two people on one page: each sees the other, and only one changes it at a time', async ({ browser }) => {
+    test.setTimeout(120_000);
+    const about = '/spaces/00000000-0000-4000-8000-000000000200/pages/00000000-0000-4000-8000-000000000702/edit';
+    const open = async (user: { email: string; password: string }) => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+      await signIn(page, user);
+      await expect(page.getByRole('link', { name: 'Demo site' })).toBeVisible();
+      await page.goto(about);
+      await expect(page.getByText('Showing the draft of /about.')).toBeVisible({ timeout: 30_000 });
+      return { context, page };
+    };
+    const first = await open(client);
+    const second = await open(developer);
+
+    // Each sees the other.
+    await expect(first.page.getByRole('list', { name: 'Also on this page:' })).toContainText('Developer User');
+    await expect(second.page.getByRole('list', { name: 'Also on this page:' })).toContainText('Client User');
+
+    // The first changes the page: the second can look but not change it.
+    await first.page.getByRole('region', { name: 'Blocks on this page' }).getByRole('button', { name: /^Hero/ }).click();
+    const heading = first.page.getByRole('complementary', { name: 'Block' }).getByRole('textbox', { name: /^Heading/ });
+    await heading.fill('About this site, edited together');
+    await expect(second.page.getByText('Client User is changing this page')).toBeVisible({ timeout: 15_000 });
+    await expect(second.page.getByRole('button', { name: 'Undo' })).toHaveCount(0);
+    await expectNoAxeViolations(second.page);
+
+    // Put the page back, wait for the save, and leave: the second can edit, with what the first saved.
+    await first.page.getByRole('button', { name: 'Undo' }).click();
+    await expect(first.page.getByText('Changes not saved yet.')).toHaveCount(0, { timeout: 15_000 });
+    await first.context.close();
+    await expect(second.page.getByText('Client User is changing this page')).toHaveCount(0, { timeout: 30_000 });
+    await expect(second.page.getByRole('button', { name: 'Undo' })).toBeVisible();
+    await second.context.close();
   });
 
   test('a preview link with a made-up token shows no drafts', async ({ page }) => {

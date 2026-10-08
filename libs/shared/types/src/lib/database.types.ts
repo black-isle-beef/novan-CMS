@@ -423,6 +423,9 @@ isOneToOne: false
 "dismiss_onboarding":
 { Args: { "p_space_id": string }; Returns: undefined
                            },
+"editor_topic_space":
+{ Args: { "topic": string }; Returns: string
+                           },
 "has_space_role":
 { Args: { "roles": (string)[],"space": string }; Returns: boolean
                            },

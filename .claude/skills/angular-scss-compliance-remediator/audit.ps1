@@ -71,8 +71,13 @@ function Test-Pattern {
         [string]$Details
     )
 
-    $patternMatches = Select-String -Path $File.FullName -Pattern $Pattern -AllMatches
+    $patternMatches = Select-String -Path $File.FullName -Pattern $Pattern -AllMatches -Context 1, 0
     foreach ($match in $patternMatches) {
+        # A confirmed false positive is marked on its line, or the line above, with the rule and a reason, e.g.
+        # `// audit-ignore Manual RxJS subscription: Supabase Realtime channel, not RxJS`. Nothing else is skipped.
+        $marker = "audit-ignore {0}: \S" -f [regex]::Escape($Rule)
+        $above = if ($match.Context -and $match.Context.PreContext) { $match.Context.PreContext[-1] } else { '' }
+        if ($match.Line -match $marker -or $above -match $marker) { continue }
         Add-Finding -File $File -Rule $Rule -Pattern $Pattern -Details ("line {0}: {1}" -f $match.LineNumber, $Details)
     }
 }

@@ -72,6 +72,22 @@
     </div>
   </div>
 
+  @if (presence.others(); as others) {
+    @if (others.length) {
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <span class="small text-body-secondary" id="nv-editor-others">Also on this page:</span>
+        <ul class="list-unstyled d-flex flex-wrap gap-1 mb-0" aria-labelledby="nv-editor-others">
+          @for (person of others; track person.userId) {
+            <li class="nv-avatar" [class.nv-avatar-editing]="person.editing" [title]="person.name">
+              <span aria-hidden="true">{{ initials(person.name) }}</span>
+              <span class="visually-hidden">{{ person.name }}{{ person.editing ? ', editing' : '' }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  }
+
   @if (canEdit()) {
     <div class="d-flex flex-wrap align-items-center gap-2 mb-2" role="group" aria-label="Page actions">
       <button
@@ -114,6 +130,13 @@
       }
       <p class="small text-body-secondary mb-0 ms-2" role="status">{{ saveState() }}</p>
     </div>
+  } @else if (roleCanEdit() && lockedBy(); as holder) {
+    <div role="status" class="mb-3">
+      <ds-alert variant="warning" [title]="holder.name + ' is changing this page'">
+        You can look around, but not change anything yet. You can edit once they leave, or a minute after their last
+        change, and you will then see what they changed.
+      </ds-alert>
+    </div>
   } @else {
     <ds-alert variant="info" class="mb-3">You can look at this page, but your role cannot change it.</ds-alert>
   }
@@ -146,6 +169,25 @@
             Connecting to your site…
           }
         </p>
+        @if (siteSilent()) {
+          <div role="alert" class="mb-3">
+            <ds-alert variant="warning" title="Your site is not answering">
+              <p>
+                The page did not open for editing on the site within 10 seconds. You can still change everything in the
+                form, and publish from there.
+              </p>
+              <p class="mb-0">
+                <a class="btn btn-primary me-2" [routerLink]="['/spaces', spaceId(), 'content', e.id]">Edit in the form</a>
+                @if (canManage()) {
+                  <a [routerLink]="['/spaces', spaceId(), 'settings', 'space']">Check the site's address</a>
+                  (it must use the Novan SDK with previews turned on).
+                } @else {
+                  If this keeps happening, ask your developer to check the site's address in Space settings.
+                }
+              </p>
+            </ds-alert>
+          </div>
+        }
         <!-- Focusable, so keyboard users can scroll a page wider than the screen. -->
         <div class="nv-editor-stage" tabindex="0" role="region" aria-label="Page preview">
           @if (frameUrl()) {
@@ -187,6 +229,13 @@
             />
           }
         </aside>
+
+        @if (canEdit()) {
+          <section class="mb-4" aria-labelledby="nv-checklist-heading">
+            <h2 id="nv-checklist-heading" class="h5" tabindex="-1">Before publishing</h2>
+            <nv-publish-checklist [items]="checks()" (goTo)="select($event)" />
+          </section>
+        }
 
         <section aria-labelledby="nv-outline-heading">
           <h2 id="nv-outline-heading" class="h5" tabindex="-1">Blocks on this page</h2>

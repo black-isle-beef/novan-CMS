@@ -688,6 +688,10 @@ export interface MediaRef {
   assetId: string;
   /** Dotted, with blocks named by `_uid`: `image`, `gallery.2`, `body.<uid>.image`, `seo.ogImage`. */
   path: string;
+  /** The page's own alternative text for the item, when it has one. */
+  alt?: string;
+  /** Whether the field needs alternative text to publish. */
+  requireAlt: boolean;
 }
 
 /**
@@ -724,8 +728,14 @@ export function mediaRefs(
       case 'media': {
         const items = field.multiple ? (Array.isArray(value) ? value : []) : [value];
         items.forEach((item: unknown, index) => {
-          const assetId = typeof item === 'object' && item !== null ? (item as { assetId?: unknown }).assetId : undefined;
-          if (typeof assetId === 'string') refs.push({ assetId, path: field.multiple ? `${path}.${index}` : path });
+          const { assetId, alt } = typeof item === 'object' && item !== null ? (item as { assetId?: unknown; alt?: unknown }) : {};
+          if (typeof assetId !== 'string') return;
+          refs.push({
+            assetId,
+            path: field.multiple ? `${path}.${index}` : path,
+            ...(typeof alt === 'string' && alt.trim() ? { alt } : {}),
+            requireAlt: field.requireAlt,
+          });
         });
         return;
       }

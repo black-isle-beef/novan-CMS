@@ -1,9 +1,10 @@
 import { signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { AuthService } from '@novan/admin-auth';
 import { ContentApi } from '@novan/admin-content';
 import { MediaApi, Thumbnails } from '@novan/admin-media';
-import { SpaceContext } from '@novan/admin-spaces';
+import { ManagementApi, SpaceContext } from '@novan/admin-spaces';
 import {
   type BlockNode,
   type BlockType,
@@ -17,7 +18,37 @@ import { of, throwError } from 'rxjs';
 import { EditorApi } from '../editor-api';
 import { EditorStore } from '../editor-store';
 import { PreviewBridge } from '../preview-bridge';
-import { AUTOSAVE_EVERY_MS, PREVIEW_DEBOUNCE_MS, REFRESH_BEFORE_MS, VisualEditorPage } from './visual-editor-page';
+import type { PresenceState } from '../presence/presence';
+import { PRESENCE_TRANSPORT, type PresenceTransport } from '../presence/presence-transport';
+import { AUTOSAVE_EVERY_MS, PREVIEW_DEBOUNCE_MS, READY_TIMEOUT_MS, REFRESH_BEFORE_MS, VisualEditorPage } from './visual-editor-page';
+
+/** Presence that the tests drive: who else is on the page, and what this tab last said. */
+function fakePresence() {
+  let sync: ((states: PresenceState[]) => void) | null = null;
+  const tracked: PresenceState[] = [];
+  const transport: PresenceTransport = {
+    join: (_topic, _key, onSync) => {
+      sync = onSync;
+      return { track: (state) => tracked.push(state), leave: () => (sync = null) };
+    },
+  };
+  const someone = (extra: Partial<PresenceState> = {}): PresenceState => ({
+    session: 'their-tab',
+    userId: 'them',
+    name: 'Ada Lovelace',
+    editing: false,
+    since: null,
+    at: new Date().toISOString(),
+    ...extra,
+  });
+  return {
+    transport,
+    tracked,
+    someone,
+    /** Everyone on the page now, besides this tab. */
+    others: (...states: PresenceState[]) => sync?.([...states, ...tracked.slice(-1)]),
+  };
+}
 
 const spaceId = '00000000-0000-4000-8000-000000000200';
 const entryId = '00000000-0000-4000-8000-000000000301';
@@ -125,6 +156,7 @@ beforeAll(() => {
 });
 
 async function render({ page = entry(), previewUrl = `${SITE}/`, role = 'editor', tokens = [() => token('first')] }: Options = {}) {
+  const presence = fakePresence();
   const previewToken = vi.fn(() => {
     const next = tokens.shift();
     return next ? of(next()) : throwError(() => new Error('down'));
@@ -147,6 +179,9 @@ async function render({ page = entry(), previewUrl = `${SITE}/`, role = 'editor'
       { provide: EditorApi, useValue: { previewToken, previewData } },
       { provide: MediaApi, useValue: { list: () => of([]) } },
       { provide: Thumbnails, useValue: { urls: () => Promise.resolve(new Map()) } },
+      { provide: PRESENCE_TRANSPORT, useValue: presence.transport },
+      { provide: AuthService, useValue: { claims: signal({ sub: 'me' }), email: signal('me@novan.test') } },
+      { provide: ManagementApi, useValue: { me: () => of({ displayName: 'Me Myself', email: 'me@novan.test' }) } },
       {
         provide: SpaceContext,
         useValue: {
@@ -154,6 +189,7 @@ async function render({ page = entry(), previewUrl = `${SITE}/`, role = 'editor'
           currentSpace: signal({ previewUrl }),
           canEditCurrent: signal(role !== 'viewer'),
           canPublishCurrent: signal(role === 'editor'),
+          canManageCurrent: signal(role === 'editor'),
         },
       },
     ],
@@ -176,7 +212,7 @@ async function render({ page = entry(), previewUrl = `${SITE}/`, role = 'editor'
     [...el.querySelectorAll<HTMLButtonElement>('button')].find((b) => (typeof name === 'string' ? b.textContent?.trim() === name : name.test(b.textContent ?? '')));
   const sent = (type: string) => send.mock.calls.map(([message]) => message).filter((message) => message.type === type);
   const body = () => store.data()['body'] as BlockNode[];
-  return { fixture, el, bridge, store, send, sent, ready, button, body, content, previewToken, previewData, frame: () => el.querySelector('iframe') };
+  return { fixture, el, bridge, store, send, sent, ready, button, body, content, previewToken, previewData, presence, frame: () => el.querySelector('iframe') };
 }
 
 async function settle(fixture: ComponentFixture<unknown>): Promise<void> {
@@ -302,7 +338,7 @@ describe('VisualEditorPage', () => {
       expect(sent('scrollTo')).toEqual([{ type: 'scrollTo', payload: { uid: CTA } }]);
       expect(el.querySelector(`#nv-outline-select-${CTA}`)?.getAttribute('aria-current')).toBe('true');
       // The site may let the editor change its text in place.
-      expect(sent('editable').slice(-1)[0]).toEqual({ type: 'editable', payload: { uid: CTA, fields: [{ field: 'heading', value: 'Call us', multiline: false }] } });
+      expect(sent('editable').slice(-1)[0]).toEqual({ type: 'editable', payload: { uid: CTA, fields: [{ field: 'heading', value: 'Call us', multiline: false }], insert: true } });
     });
 
     it('changes fields and style options from the panel, and undoes them', async () => {
@@ -472,6 +508,110 @@ describe('VisualEditorPage', () => {
     });
   });
 
+  describe('working together', () => {
+    it('shows who else has the page open', async () => {
+      const { fixture, el, presence } = await render();
+      expect(presence.tracked[presence.tracked.length - 1]).toMatchObject({ userId: 'me', name: 'Me Myself', editing: false });
+      presence.others(presence.someone(), presence.someone({ session: 'second-tab' }), presence.someone({ session: 'x', userId: 'bo', name: 'Bo Diddley' }));
+      await settle(fixture);
+      const people = [...el.querySelectorAll('.nv-avatar')].map((li) => li.textContent?.replace(/\s+/g, ' ').trim());
+      expect(people).toEqual(['ALAda Lovelace', 'BDBo Diddley']);
+    });
+
+    it('says it is editing while there are changes', async () => {
+      const { fixture, store, presence } = await render();
+      store.change({ ...startData(), title: 'Mine' });
+      await settle(fixture);
+      expect(presence.tracked[presence.tracked.length - 1]).toMatchObject({ editing: true, since: expect.any(String) });
+    });
+
+    it('goes read-only while someone else is editing, and carries on from their changes once they leave', async () => {
+      const { fixture, el, presence, ready, sent, button, content } = await render();
+      await ready();
+      presence.others(presence.someone({ editing: true, since: new Date().toISOString() }));
+      await settle(fixture);
+      expect(el.textContent).toContain('Ada Lovelace is changing this page');
+      expect(button(/Undo/)).toBeUndefined();
+      expect(el.querySelector<HTMLInputElement>(`#nv-outline-up-${CTA}`)).toBeNull();
+      expect(sent('editable').slice(-1)[0]).toEqual({ type: 'editable', payload: { uid: null, fields: [], insert: false } });
+
+      content.getEntry.mockReturnValue(of(entry({ data: { ...startData(), title: 'Theirs' } })));
+      presence.others();
+      await settle(fixture);
+      expect(el.textContent).not.toContain('is changing this page');
+      expect(button(/Undo/)).toBeDefined();
+      expect(fixture.debugElement.injector.get(EditorStore).data()['title']).toBe('Theirs');
+    });
+
+    it('ignores a lock that has not been renewed for a minute', async () => {
+      const { fixture, el, presence } = await render();
+      presence.others(presence.someone({ editing: true, at: new Date(Date.now() - 61_000).toISOString() }));
+      await settle(fixture);
+      expect(el.textContent).not.toContain('is changing this page');
+    });
+  });
+
+  describe('before publishing', () => {
+    it('lists what stops publishing, with a way to the block, and refuses to publish', async () => {
+      const { fixture, el, store, button, content } = await render();
+      store.change({ ...startData(), body: [{ _uid: HERO, _block: 'hero', heading: '' }, (startData()['body'] as BlockNode[])[1]] });
+      await settle(fixture);
+      const checklist = el.querySelector('nv-publish-checklist') as HTMLElement;
+      expect(checklist.textContent).toContain('Fix before publishing (1)');
+      expect(checklist.textContent).toContain('Content › Hero banner block 1 › Heading: This field is required.');
+
+      button('Publish')?.click();
+      await settle(fixture);
+      expect(content.publish).not.toHaveBeenCalled();
+      expect(el.textContent).toContain('Fix one thing in “Before publishing” first.');
+      expect(document.activeElement?.id).toBe('nv-checklist-heading');
+
+      checklist.querySelector<HTMLButtonElement>('button')?.click();
+      await settle(fixture);
+      expect(fixture.debugElement.injector.get(EditorStore).selected()).toBe(HERO);
+      // The panel shows the same message by the field.
+      expect(el.querySelector('aside')?.textContent).toContain('This field is required.');
+    });
+
+    it('warns about heading order on the page as the site draws it', async () => {
+      const { fixture, el, bridge } = await render();
+      expect(el.querySelector('nv-publish-checklist')?.textContent).toContain('Nothing to fix');
+      bridge.headings.set([
+        { level: 2, text: 'Hi', uid: HERO },
+        { level: 4, text: 'Call us', uid: CTA },
+      ]);
+      await settle(fixture);
+      const text = el.querySelector('nv-publish-checklist')?.textContent ?? '';
+      expect(text).toContain('Worth checking (2)');
+      expect(text).toContain('no main heading');
+      expect(text).toContain('“Call us” is an H4 after an H2');
+    });
+  });
+
+  describe('when the site does not answer', () => {
+    it('offers the form view after 10 seconds, and a way to check the address', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+      const { fixture, el } = await render();
+      await vi.advanceTimersByTimeAsync(READY_TIMEOUT_MS - 100);
+      fixture.detectChanges();
+      expect(el.textContent).not.toContain('Your site is not answering');
+      await vi.advanceTimersByTimeAsync(200);
+      fixture.detectChanges();
+      expect(el.querySelector('[role="alert"]')?.textContent).toContain('Your site is not answering');
+      expect(el.querySelector(`[role="alert"] a[href="/spaces/${spaceId}/content/${entryId}"]`)?.textContent).toContain('Edit in the form');
+      expect(el.querySelector(`[role="alert"] a[href="/spaces/${spaceId}/settings/space"]`)).not.toBeNull();
+    });
+
+    it('says nothing when the site answers in time', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+      const { fixture, el, ready } = await render();
+      await ready();
+      await vi.advanceTimersByTimeAsync(READY_TIMEOUT_MS + 100);
+      fixture.detectChanges();
+      expect(el.textContent).not.toContain('Your site is not answering');
+    });
+  });
+
   describe('for a viewer', () => {
     it('shows the page and blocks but offers no changes', async () => {
       const { fixture, el, bridge, ready, sent, button } = await render({ role: 'viewer' });
@@ -483,7 +623,7 @@ describe('VisualEditorPage', () => {
       expect(button('Delete')).toBeUndefined();
       expect(button(/Add block/)).toBeUndefined();
       expect(el.querySelector<HTMLInputElement>('aside input')?.disabled).toBe(true);
-      expect(sent('editable')).toEqual([]);
+      expect(sent('editable').slice(-1)[0]).toEqual({ type: 'editable', payload: { uid: null, fields: [], insert: false } });
     });
   });
 });

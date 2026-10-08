@@ -1,5 +1,5 @@
 import { DestroyRef, DOCUMENT, inject, Injectable, signal } from '@angular/core';
-import { type AdminMessage, bridgeEnvelope, type BridgeRect, type InsertPosition, parseSiteMessage } from '@novan/shared-types';
+import { type AdminMessage, bridgeEnvelope, type BridgeRect, type InsertPosition, type PageHeading, parseSiteMessage } from '@novan/shared-types';
 
 /** What the site said when its bridge started, or after it navigated. */
 /** What the editor page does when the editor acts on the page. */
@@ -32,6 +32,8 @@ export class PreviewBridge {
   /** The block the editor last clicked in the frame. */
   readonly selected = signal<string | null>(null);
   readonly rects = signal<Readonly<Record<string, BridgeRect>>>({});
+  /** The page's headings as the site last drew them; null until it says. */
+  readonly headings = signal<readonly PageHeading[] | null>(null);
   /** Told about clicks, inserts and typing on the page; set by the editor page. */
   listener: BridgeListener | null = null;
 
@@ -53,6 +55,7 @@ export class PreviewBridge {
     this.ready.set(null);
     this.hovered.set(null);
     this.rects.set({});
+    this.headings.set(null);
   }
 
   /** Sends a message to the site, once it is ready; false when there is nobody to send it to. */
@@ -86,6 +89,9 @@ export class PreviewBridge {
         break;
       case 'text':
         this.listener?.text(message.payload);
+        break;
+      case 'headings':
+        this.headings.set(message.payload.headings);
         break;
     }
   }

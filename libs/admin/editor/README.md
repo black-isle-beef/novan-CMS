@@ -14,6 +14,9 @@ The visual editor, `/spaces/:spaceId/pages/:entryId/edit` (docs/build/12-visual-
 - `block-tree.ts` finds, inserts, moves, copies and removes blocks in the page data (pure functions).
 - `BlockPanel` edits the selected block (fields from `@novan/admin-fields`, style options in `StylePicker`),
   `BlockOutline` lists, selects and reorders blocks, `BlockPicker` adds them.
+- `EditorPresence` shows who else has the page open and holds a soft lock while someone edits (Supabase Realtime
+  presence on private channels; see `supabase/migrations/0010_editor_presence.sql`).
+- `pageChecks` and `PublishChecklist`: what stops publishing and what is worth checking (exported).
 - Changes reach the site through `POST .../entries/:id/preview-data` (the delivered shape) 150 ms after the last
   one; drafts autosave every 5 s.
 

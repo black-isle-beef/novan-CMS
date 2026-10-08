@@ -45,6 +45,25 @@
   padding-inline-start: 1.5rem;
 }
 
+// Other people on the page: initials in a circle; a solid ring marks someone editing (named for screen readers).
+.nv-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0.125rem dashed var(--bs-border-color);
+  border-radius: 50%;
+  background-color: var(--ds-color-surface-muted);
+  font-size: var(--bs-body-font-size);
+  font-weight: 600;
+}
+
+.nv-avatar-editing {
+  border-style: solid;
+  border-color: var(--ds-color-brand-primary);
+}
+
 // A block type's preview image in the block picker.
 .nv-block-choice-image {
   display: block;

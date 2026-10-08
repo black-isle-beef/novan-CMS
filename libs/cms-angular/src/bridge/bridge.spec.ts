@@ -69,6 +69,20 @@ describe('the bridge', () => {
     expect(Object.keys(messages('rects')[1].payload as object)).toEqual(['hero-1', 'text-1', 'cta-1']);
   });
 
+  it('reports the page’s headings and the blocks they are in, when they change', async () => {
+    await frame();
+    expect(messages('headings').map((m) => m.payload)).toEqual([{ headings: [{ level: 1, text: 'Welcome', uid: 'hero-1' }] }]);
+    const footer = document.getElementById('outside') as HTMLElement;
+    footer.innerHTML = '<h4>  Site   map </h4>';
+    await frame();
+    expect(messages('headings')[1].payload).toEqual({
+      headings: [
+        { level: 1, text: 'Welcome', uid: 'hero-1' },
+        { level: 4, text: 'Site map', uid: null },
+      ],
+    });
+  });
+
   it('selects the block clicked, without following its links', async () => {
     const click = new MouseEvent('click', { bubbles: true, cancelable: true });
     document.getElementById('link')?.dispatchEvent(click);
@@ -130,8 +144,8 @@ describe('the bridge', () => {
   });
 
   describe('once the admin says what can change', () => {
-    const editable = (uid: string | null, fields = [{ field: 'heading', value: 'Welcome', multiline: false }]) =>
-      fromAdmin(admin('editable', { uid, fields }));
+    const editable = (uid: string | null, fields = [{ field: 'heading', value: 'Welcome', multiline: false }], insert = true) =>
+      fromAdmin(admin('editable', { uid, fields, insert }));
     const insertButton = (position: string) => document.querySelector<HTMLElement>(`[data-novan-insert="${position}"]`);
     const dblclick = (el: Element | null | undefined) => el?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
     const heading = () => document.querySelector<HTMLElement>('[data-novan-uid="hero-1"] h1');
@@ -141,6 +155,9 @@ describe('the bridge', () => {
       await frame();
       expect(insertButton('before')?.style.display).toBe('none');
 
+      editable('hero-1', [], false);
+      await frame();
+      expect(insertButton('before')?.style.display).toBe('none');
       editable('hero-1');
       await frame();
       expect(insertButton('before')?.style.display).toBe('block');

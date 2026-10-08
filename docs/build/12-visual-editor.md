@@ -132,6 +132,35 @@ All messages are `{ source: 'novan', v: 1, type, payload }`. The bridge only acc
   While typing, the admin updates its store but sends no `update` (that would reset the caret) until `done`.
 - **Publish** in the editor saves and publishes directly; package 13 replaces it with the publish dialog.
 
+### 12c — Collaboration and polish
+
+- **Presence** uses Supabase Realtime presence on private channels `editor:<space id>:<entry id>`
+  (`supabase/migrations/0010_editor_presence.sql`): RLS on `realtime.messages` lets only members of that space (and
+  agency staff with a second factor) join, read or track, and only presence goes over them; pgTAP in
+  `supabase/tests/editor_presence.test.sql`. The admin loads `@supabase/realtime-js` (now a direct dependency, as
+  the locked decision on separate Supabase packages says) only in the visual editor, and calls `setAuth()` before
+  joining so the join carries the person's token, not the anon key.
+- **Soft locks:** each tab tracks `{ session, userId, name, editing, since, at }` with a 20 s heartbeat. A tab is
+  *editing* while it has unsaved changes and for 60 s after its last change. Another tab that is editing and was
+  heard from in the last 60 s holds the page; when two start together, the earlier `since` wins (then the lower
+  session id). Others see "<name> is changing this page" and a read-only editor (no panel edits, no "+" buttons, no
+  inline text). When the lock ends, the page reloads the latest draft before anyone else can edit, so nobody saves
+  over a stale copy. A tab that loses a tie keeps its unsaved changes only until that reload (soft lock, not a merge).
+- **Avatars:** initials of the other people (one per person, however many tabs), with a solid ring for someone editing;
+  names are in the list for screen readers. Display names come from `/me` (else the email address).
+- **Validation** in the panel: malformed values and everything that would stop publishing (`buildEntrySchema`
+  without `draft`) show by their fields. **Before publishing** lists those errors (with "Go to block"), images with no
+  alternative text on the page or in the library (warnings; required alt text is an error), and heading order from the
+  site's DOM: the bridge sends `headings { headings: [{ level, text, uid }] }` after each render, and the admin warns
+  about no H1, several H1s and skipped levels. Publish refuses while there are errors and focuses the list.
+  `PublishChecklist` and `pageChecks` are for package 13's publish dialog too.
+- **Protocol** (still SDK 0.4.0): `editable` has `insert: boolean`, so a tab that becomes read-only withdraws the
+  "+" buttons; site → admin `headings`.
+- **Fallback:** when the frame has not said `ready` 10 s after its address was set, an alert offers **Edit in the
+  form**, and space admins a link to the site's address in Space settings.
+- **Audit:** `audit.ps1` takes `// audit-ignore <rule>: <reason>` on a finding's line or the line above, for confirmed
+  false positives only. The one use is Realtime's `channel.subscribe(...)`, which is not RxJS.
+
 ## Out of scope
 
 Free drag-on-canvas positioning, custom CSS, A/B variants (phase 4).
@@ -148,7 +177,8 @@ Manual check: two browsers on the same page show presence and lock correctly.
 
 ## Definition of done
 
-- [ ] Messages from unexpected origins are ignored (tested)
-- [ ] An editor can build a page from blocks without touching the form view
-- [ ] Edits appear in the preview in under 300 ms on a mid-range laptop
-- [ ] Keyboard accessible: blocks selectable and reorderable without a mouse
+- [x] Messages from unexpected origins are ignored (tested)
+- [x] An editor can build a page from blocks without touching the form view
+- [ ] Edits appear in the preview in under 300 ms on a mid-range laptop (150 ms debounce plus one local API request;
+      not yet timed on a reference laptop)
+- [x] Keyboard accessible: blocks selectable and reorderable without a mouse
