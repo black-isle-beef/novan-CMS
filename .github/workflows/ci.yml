@@ -94,9 +94,10 @@ jobs:
       - uses: supabase/setup-cli@v3
         with:
           version: ${{ steps.supabase-version.outputs.version }}
-      # The admin needs Auth behind the gateway (kong), Mailpit for invite emails, and REST/Storage for the API.
+      # The admin needs Auth behind the gateway (kong), Mailpit for invite emails, REST/Storage for the API, and
+      # Realtime for the visual editor's presence and soft locks.
       - name: Start Supabase
-        run: supabase start -x realtime,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+        run: supabase start -x imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
       # The API reads .env.local (apps/api/src/main.ts); fill it from the local stack, as a developer would.
       - name: Write .env.local
         run: |
