@@ -33,6 +33,49 @@ export function describeChange(change: EntryChange, fields: readonly FieldDef[],
   }
 }
 
+/** One row of a side-by-side comparison: what changed, as it is live and as it is in the draft. */
+export interface SideBySideRow {
+  what: string;
+  live: string;
+  draft: string;
+}
+
+/** A change from the live version to the draft, as a row with both sides (`—` where there is nothing). */
+export function sideBySide(change: EntryChange, fields: readonly FieldDef[], blockTypes: readonly BlockType[]): SideBySideRow {
+  const isBlock = change.block !== undefined && uuid.test(change.path[change.path.length - 1] ?? '');
+  if (isBlock && change.kind !== 'changed') {
+    const name = `${blockTypes.find((type) => type.apiId === change.block)?.name ?? change.block ?? 'A'} block`;
+    const what = label(change.path.slice(0, -1), fields, blockTypes, change.block);
+    switch (change.kind) {
+      case 'added':
+        return { what, live: NOTHING, draft: `${name} added` };
+      case 'removed':
+        return { what, live: name, draft: 'Removed' };
+      case 'moved':
+        return { what, live: `${name} at position ${(change.from ?? 0) + 1}`, draft: `Position ${(change.to ?? 0) + 1}` };
+    }
+  }
+  const shown = (raw: unknown, present: boolean): string => (!present ? NOTHING : plain(raw) || 'Changed');
+  return {
+    what: label(change.path, fields, blockTypes, change.block),
+    live: shown(change.before, change.kind !== 'added'),
+    draft: shown(change.after, change.kind !== 'removed'),
+  };
+}
+
+const NOTHING = '—';
+
+/** A value as short plain text, or '' for anything bigger than text, numbers and yes/no. */
+function plain(raw: unknown): string {
+  if (typeof raw === 'string') {
+    const text = raw.replace(/\s+/g, ' ').trim();
+    return text.length > 120 ? `${text.slice(0, 119)}…` : text || '(empty)';
+  }
+  if (typeof raw === 'number') return String(raw);
+  if (typeof raw === 'boolean') return raw ? 'Yes' : 'No';
+  return '';
+}
+
 /** `Content › Hero block › Heading`. Blocks are named by type where the change says which. */
 function label(path: readonly string[], fields: readonly FieldDef[], blockTypes: readonly BlockType[], block?: string): string {
   const lastUid = path.reduce((last, key, i) => (uuid.test(key) ? i : last), -1);

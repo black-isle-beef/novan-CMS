@@ -35,6 +35,7 @@ const summaryColumns = {
   slug: spaces.slug,
   organisationId: spaces.organisationId,
   previewUrl: spaces.previewUrl,
+  requireApproval: spaces.requireApproval,
   createdAt: spaces.createdAt,
 };
 
@@ -92,7 +93,7 @@ export class SpacesService {
     }
   }
 
-  /** Renames the space or changes its site address. RLS lets only its admins and agency staff (0004). */
+  /** Renames the space, changes its site address or turns approval on or off. RLS lets only its admins and agency staff (0004). */
   async update(user: AuthUser, spaceId: string, body: UpdateSpaceBody): Promise<SpaceSummary> {
     try {
       return await this.db.userDb(user.claims, async (tx) => {
@@ -101,6 +102,7 @@ export class SpacesService {
         const changes = {
           ...(body.name !== undefined ? { name: body.name } : {}),
           ...(body.previewUrl !== undefined ? { previewUrl: body.previewUrl } : {}),
+          ...(body.requireApproval !== undefined ? { requireApproval: body.requireApproval } : {}),
         };
         const [space] = await tx.update(spaces).set(changes).where(eq(spaces.id, spaceId)).returning(summaryColumns);
         if (!space) throw forbidden('insufficient_role', 'Only space admins can change the space settings.');

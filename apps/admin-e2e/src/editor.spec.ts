@@ -86,6 +86,10 @@ test.describe('@editor', () => {
     await expect(page.getByText(/All changes saved at/)).toBeVisible({ timeout: 15_000 });
     await expectNoAxeViolations(page);
     await page.getByRole('button', { name: 'Publish changes' }).click();
+    // The publish dialog: what changes, the checklist and a message (docs/build/13-workflow-publishing.md).
+    const publish = page.getByRole('dialog', { name: 'Publish Contact?' });
+    await expect(publish.getByRole('table')).toContainText(heading);
+    await publish.getByRole('button', { name: 'Publish changes' }).click();
     await expect(page.getByText('Published. It is live at /contact.')).toBeVisible();
     await page.goto('http://localhost:4300/contact');
     await expect(page.getByRole('heading', { name: heading })).toBeVisible();

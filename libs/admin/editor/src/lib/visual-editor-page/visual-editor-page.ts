@@ -16,7 +16,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DsAlertComponent } from '@black-isle-beef/novan-design-system';
-import { ContentApi } from '@novan/admin-content';
+import { ContentApi, pageChecks, PageWorkflow, PublishChecklist, type WorkflowDialog } from '@novan/admin-content';
 import { describePath, errorsFromIssues, FieldFormContext, newBlock } from '@novan/admin-fields';
 import { MediaPicker, MediaPickerDialog } from '@novan/admin-media';
 import { copy, type HasUnsavedChanges, Shortcuts, shortcutKeys, Skeleton, warnBeforeUnload } from '@novan/admin-shell';
@@ -57,8 +57,6 @@ import {
   textFields,
 } from '../block-tree';
 import { EditorApi } from '../editor-api';
-import { pageChecks } from '../checklist/checklist';
-import { PublishChecklist } from '../checklist/publish-checklist';
 import { EditorStore } from '../editor-store';
 import { getIn } from '../patches';
 import { PreviewBridge } from '../preview-bridge';
@@ -97,7 +95,7 @@ const clock = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
  */
 @Component({
   selector: 'nv-visual-editor-page',
-  imports: [BlockOutline, BlockPanel, BlockPicker, DsAlertComponent, MediaPickerDialog, PublishChecklist, RouterLink, Skeleton],
+  imports: [BlockOutline, BlockPanel, BlockPicker, DsAlertComponent, MediaPickerDialog, PageWorkflow, PublishChecklist, RouterLink, Skeleton],
   providers: [PreviewBridge, EditorStore, EditorPresence, FieldFormContext, MediaPicker],
   templateUrl: './visual-editor-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -147,6 +145,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
   private readonly scrollPending = signal<string | null>(null);
 
   private readonly frame = viewChild<ElementRef<HTMLIFrameElement>>('frame');
+  protected readonly contentTypeOf = computed(() => this.contentType());
 
   protected readonly title = computed(() => {
     const entry = this.entry();
@@ -156,7 +155,11 @@ export class VisualEditorPage implements HasUnsavedChanges {
   protected readonly published = computed(() => Boolean(this.entry()?.publishedPath));
   /** Someone else changing the page: this tab looks but does not touch until they finish or leave. */
   protected readonly lockedBy = computed(() => this.presence.lockedBy());
-  protected readonly roleCanEdit = computed(() => this.context.canEditCurrent());
+  /** Archived pages are kept as they are until restored. */
+  protected readonly roleCanEdit = computed(() => this.context.canEditCurrent() && this.entry()?.status !== 'archived');
+  /** Members who may change pages see the workflow, archived pages included; not while someone else has the page. */
+  protected readonly showWorkflow = computed(() => this.context.canEditCurrent() && !this.lockedBy());
+  private readonly workflowControls = viewChild<PageWorkflow>('workflow');
   protected readonly canEdit = computed(() => this.roleCanEdit() && !this.lockedBy());
   protected readonly canPublish = computed(() => this.context.canPublishCurrent() && !this.lockedBy());
   protected readonly initials = initials;
@@ -418,7 +421,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
     });
     const shortcuts = inject(Shortcuts);
     shortcuts.register('save', () => void this.save());
-    shortcuts.register('publish', () => void this.publish());
+    shortcuts.register('publish', () => void this.workflowControls()?.openPublish());
     this.listenForUndo(destroyRef);
     warnBeforeUnload(() => this.hasUnsavedChanges());
   }
@@ -607,22 +610,36 @@ export class VisualEditorPage implements HasUnsavedChanges {
     });
   }
 
-  protected async publish(): Promise<void> {
-    if (!this.canPublish() || this.busy() || !this.entry()) return;
+  /**
+   * Readies the page for a workflow action (docs/build/13-workflow-publishing.md): publishing and sending for review
+   * need the checklist's errors fixed (it is focused) and unsaved changes saved first.
+   */
+  protected readonly prepare = async (action: WorkflowDialog): Promise<boolean> => {
+    if (action === 'requestChanges') return true;
     const errors = this.checkErrors();
     if (errors) {
       this.status.set(null);
       this.problem.set(`Fix ${errors === 1 ? 'one thing' : `${errors} things`} in “Before publishing” first.`);
       this.focus('nv-checklist-heading');
-      return;
+      return false;
     }
+    if (!this.store.dirty() || !this.canEdit()) return true;
+    let saved = false;
     const data = this.store.data();
-    await this.run('publishing', async () => {
-      if (this.store.dirty()) this.afterSave(await firstValueFrom(this.content.saveEntry(this.spaceId(), this.entryId(), data)), data);
-      const entry = await firstValueFrom(this.content.publish(this.spaceId(), this.entryId()));
-      this.entry.set(entry);
-      this.status.set(`Published. It is live at ${sitePath(entry.publishedPath ?? entry.path)}.`);
+    await this.run('saving', async () => {
+      this.afterSave(await firstValueFrom(this.content.saveEntry(this.spaceId(), this.entryId(), data)), data);
+      saved = true;
     });
+    return saved;
+  };
+
+  protected workflowChanged(entry: Entry): void {
+    this.entry.set(entry);
+  }
+
+  protected workflowDone(message: string): void {
+    this.problem.set(null);
+    this.status.set(message);
   }
 
   /** Saves quietly every few seconds; a draft with malformed values waits until they are fixed. */

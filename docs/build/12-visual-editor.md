@@ -153,7 +153,7 @@ All messages are `{ source: 'novan', v: 1, type, payload }`. The bridge only acc
   alternative text on the page or in the library (warnings; required alt text is an error), and heading order from the
   site's DOM: the bridge sends `headings { headings: [{ level, text, uid }] }` after each render, and the admin warns
   about no H1, several H1s and skipped levels. Publish refuses while there are errors and focuses the list.
-  `PublishChecklist` and `pageChecks` are for package 13's publish dialog too.
+  `PublishChecklist` and `pageChecks` live in `@novan/admin-content` (since 13), shared with the publish dialog.
 - **Protocol** (still SDK 0.4.0): `editable` has `insert: boolean`, so a tab that becomes read-only withdraws the
   "+" buttons; site → admin `headings`.
 - **Fallback:** when the frame has not said `ready` 10 s after its address was set, an alert offers **Edit in the

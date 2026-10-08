@@ -53,6 +53,7 @@ test.describe('@content', () => {
 
     // Publish.
     await page.getByRole('button', { name: 'Publish', exact: true }).click();
+    await page.getByRole('dialog', { name: /^Publish / }).getByRole('button', { name: /^Publish/ }).click();
     await expect(page.getByText(/^Published\. It is live at \//)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Unpublish' })).toBeVisible();
     await expectNoAxeViolations(page);
@@ -65,6 +66,7 @@ test.describe('@content', () => {
       .fill('Welcome back');
     await expect(page.getByText('Unsaved changes')).toBeVisible();
     await page.getByRole('button', { name: 'Publish changes' }).click();
+    await page.getByRole('dialog', { name: /^Publish / }).getByRole('button', { name: /^Publish/ }).click();
     await expect(page.getByText(/^Published\./)).toBeVisible();
 
     // Version history: compare the first version with the current one, then restore it.

@@ -117,27 +117,33 @@
       >
         {{ copy.saveDraft }}
       </button>
-      @if (canPublish()) {
-        <button
-          type="button"
-          class="btn btn-primary"
-          [disabled]="busy() !== null"
-          [attr.aria-keyshortcuts]="shortcutKeys.publish"
-          (click)="publish()"
-        >
-          {{ published() ? copy.publishChanges : copy.publish }}
-        </button>
-      }
       <p class="small text-body-secondary mb-0 ms-2" role="status">{{ saveState() }}</p>
     </div>
-  } @else if (roleCanEdit() && lockedBy(); as holder) {
+  }
+  @if (showWorkflow() && contentTypeOf(); as type) {
+    <nv-page-workflow
+      #workflow
+      class="d-block mb-3"
+      [spaceId]="spaceId()"
+      [entry]="e"
+      [contentType]="type"
+      [blockTypes]="blockTypes()"
+      [checks]="checks()"
+      [prepare]="prepare"
+      [disabled]="busy() !== null"
+      (changed)="workflowChanged($event)"
+      (done)="workflowDone($event)"
+      (goTo)="select($event)"
+    />
+  }
+  @if (roleCanEdit() && lockedBy(); as holder) {
     <div role="status" class="mb-3">
       <ds-alert variant="warning" [title]="holder.name + ' is changing this page'">
         You can look around, but not change anything yet. You can edit once they leave, or a minute after their last
         change, and you will then see what they changed.
       </ds-alert>
     </div>
-  } @else {
+  } @else if (!context.canEditCurrent()) {
     <ds-alert variant="info" class="mb-3">You can look at this page, but your role cannot change it.</ds-alert>
   }
 

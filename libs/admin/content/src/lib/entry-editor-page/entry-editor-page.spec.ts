@@ -5,7 +5,16 @@ import { provideRouter } from '@angular/router';
 import { MediaApi, Thumbnails } from '@novan/admin-media';
 import { Confirm, Shortcuts } from '@novan/admin-shell';
 import { SpaceContext } from '@novan/admin-spaces';
-import { type ContentType, type Entry, type EntryVersion, fieldListSchema } from '@novan/shared-schemas';
+import {
+  type ContentType,
+  type Entry,
+  type EntrySummary,
+  type EntryVersion,
+  type EntryWorkflow,
+  fieldListSchema,
+  type ReviewRequest,
+  type WorkflowAction,
+} from '@novan/shared-schemas';
 import { of, throwError } from 'rxjs';
 import { ContentApi } from '../content-api';
 import { EntryEditorPage } from './entry-editor-page';
@@ -71,8 +80,43 @@ const mediaStubs = [
   { provide: Thumbnails, useValue: { urls: () => Promise.resolve(new Map()) } },
 ];
 
-function fakeApi(initial: Entry = entry()) {
+/** The actions the API would allow, for the fake's role and the page as it now is. */
+function actionsFor(role: string, current: Entry, requireApproval: boolean): WorkflowAction[] {
+  if (role === 'viewer') return [];
+  if (current.status === 'archived') return role === 'editor' || role === 'admin' ? ['restore'] : [];
+  if (current.status === 'in_review') return role === 'admin' ? ['edit', 'approve', 'requestChanges', 'archive'] : ['edit'];
+  const editor = role === 'editor' || role === 'admin';
+  const live = current.publishedVersionId !== null;
+  const actions: WorkflowAction[] = ['edit'];
+  if (requireApproval) actions.push('submit');
+  if (editor && (!requireApproval || role === 'admin')) actions.push('publish');
+  if (editor && live) actions.push('unpublish');
+  if (editor) actions.push('archive');
+  return actions;
+}
+
+function fakeApi(initial: Entry = entry(), options: { requireApproval?: boolean; review?: ReviewRequest | null } = {}) {
+  const state = { role: 'editor', current: initial };
+  const keep = (next: Entry) => {
+    state.current = next;
+    return of(next);
+  };
+  const flow = (): EntryWorkflow => ({
+    state: state.current.status === 'published' ? 'published' : (state.current.status as EntryWorkflow['state']),
+    requireApproval: options.requireApproval ?? false,
+    live: state.current.publishedVersionId !== null,
+    actions: actionsFor(state.role, state.current, options.requireApproval ?? false),
+    review: options.review ?? null,
+  });
   return {
+    state,
+    workflow: vi.fn(() => of(flow())),
+    references: vi.fn(() => of([] as EntrySummary[])),
+    submit: vi.fn(() => keep(entry({ status: 'in_review' }))),
+    approve: vi.fn(() => keep(entry({ status: 'published', publishedPath: '/home', publishedVersionId: 'v' }))),
+    requestChanges: vi.fn(() => keep(entry())),
+    archive: vi.fn(() => keep(entry({ status: 'archived' }))),
+    unarchive: vi.fn(() => keep(entry())),
     getEntry: vi.fn(() => of(initial)),
     listContentTypes: vi.fn(() => of([type])),
     listBlockTypes: vi.fn(() => of([])),
@@ -80,8 +124,8 @@ function fakeApi(initial: Entry = entry()) {
     listFolders: vi.fn(() => of([])),
     saveEntry: vi.fn((_s: string, _id: string, data: Record<string, unknown>) => of(entry({ data, title: String(data['title']) }))),
     autosaveEntry: vi.fn((_s: string, _id: string, data: Record<string, unknown>) => of(entry({ data }))),
-    publish: vi.fn(() => of(entry({ status: 'published', publishedPath: '/home', publishedVersionId: 'v' }))),
-    unpublish: vi.fn(() => of(entry())),
+    publish: vi.fn(() => keep(entry({ status: 'published', publishedPath: '/home', publishedVersionId: 'v' }))),
+    unpublish: vi.fn(() => keep(entry())),
     listVersions: vi.fn(() =>
       of([version('00000000-0000-4000-8000-000000000402', { current: true }), version('00000000-0000-4000-8000-000000000401')]),
     ),
@@ -101,7 +145,8 @@ beforeAll(() => {
   };
 });
 
-async function render(role: 'editor' | 'author' | 'viewer', api = fakeApi()) {
+async function render(role: 'editor' | 'author' | 'viewer' | 'admin', api = fakeApi()) {
+  api.state.role = role;
   TestBed.configureTestingModule({
     imports: [EntryEditorPage],
     providers: [
@@ -114,7 +159,7 @@ async function render(role: 'editor' | 'author' | 'viewer', api = fakeApi()) {
           currentSpaceId: signal(null),
           currentSpace: signal({ previewUrl: 'https://www.example.com/' }),
           canEditCurrent: signal(role !== 'viewer'),
-          canPublishCurrent: signal(role === 'editor'),
+          canPublishCurrent: signal(role === 'editor' || role === 'admin'),
         },
       },
     ],
@@ -142,7 +187,15 @@ async function render(role: 'editor' | 'author' | 'viewer', api = fakeApi()) {
     input.dispatchEvent(new Event('input'));
     await fixture.whenStable();
   };
-  return { fixture, el, api, buttons, click, type };
+  /** A button in the open dialog. */
+  const confirm = async (name: string) => {
+    const dialog = [...el.querySelectorAll('ds-modal')].find((modal) => modal.querySelector('dialog[open]'));
+    ([...(dialog?.querySelectorAll('button') ?? [])].find((b) => b.textContent?.trim() === name) as HTMLButtonElement).click();
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve));
+    await fixture.whenStable();
+  };
+  return { fixture, el, api, buttons, click, type, confirm };
 }
 
 describe('EntryEditorPage', () => {
@@ -192,8 +245,8 @@ describe('EntryEditorPage', () => {
     expect(document.activeElement?.id).toBe('entry-errors');
   });
 
-  it('checks required fields before publishing, then saves and publishes', async () => {
-    const { click, type, api, el } = await render('editor');
+  it('checks required fields before publishing, then saves and publishes from the dialog', async () => {
+    const { click, type, api, el, confirm } = await render('editor');
     await click('Publish');
     expect(api.publish).not.toHaveBeenCalled();
     expect(el.querySelector('#entry-errors')?.textContent).toContain('Fix these before publishing');
@@ -202,8 +255,16 @@ describe('EntryEditorPage', () => {
     await type('Summary', 'Hello');
     await click('Publish');
     expect(api.saveEntry).toHaveBeenCalledWith(spaceId, entryId, { title: 'Home', summary: 'Hello' });
-    expect(api.publish).toHaveBeenCalled();
-    expect(el.querySelector('#entry-status')?.textContent).toContain('Published. It is live at /home.');
+    // The dialog: what changes, the checklist, and a message for the version.
+    const dialog = el.querySelector('ds-modal dialog[open]') as HTMLElement;
+    expect(dialog.textContent).toContain('This page is not live yet');
+    expect(dialog.textContent).toContain('Nothing to fix');
+    const message = dialog.querySelector<HTMLTextAreaElement>('#nv-workflow-message') as HTMLTextAreaElement;
+    message.value = 'First version';
+    message.dispatchEvent(new Event('input'));
+    await confirm('Publish');
+    expect(api.publish).toHaveBeenCalledWith(spaceId, entryId, 'First version');
+    expect(el.querySelector('#entry-status')?.textContent).toContain('Published. It is live at /.');
     expect(el.textContent).toContain('Unpublish');
   });
 
@@ -221,7 +282,7 @@ describe('EntryEditorPage', () => {
     const published = entry({ status: 'published', publishedPath: '/home', publishedVersionId: 'v' });
     const api = fakeApi(published);
     api.saveEntry.mockImplementation((_s, _id, data) => of({ ...published, data, hasUnpublishedChanges: true }));
-    const { click, type, el } = await render('editor', api);
+    const { click, type, el, confirm } = await render('editor', api);
     const live = () => [...el.querySelectorAll('a, button')].find((c) => c.textContent?.includes('View live page')) as HTMLElement;
 
     expect(live().tagName).toBe('A');
@@ -240,13 +301,14 @@ describe('EntryEditorPage', () => {
 
     await type('Summary', 'Hello');
     await click('Publish changes');
+    await confirm('Publish changes');
     // The home page is at the site's root.
     expect(live().getAttribute('href')).toBe('https://www.example.com/');
     expect(el.querySelector('#entry-live-hint')).toBeNull();
   });
 
   it("saves with Ctrl+S and publishes with Ctrl+Shift+P, through the shell's shortcuts", async () => {
-    const { type, api, fixture } = await render('editor');
+    const { type, api, fixture, confirm } = await render('editor');
     const shortcuts = TestBed.inject(Shortcuts);
     const press = async (init: KeyboardEventInit) => {
       const event = new KeyboardEvent('keydown', { cancelable: true, ...init });
@@ -262,6 +324,7 @@ describe('EntryEditorPage', () => {
 
     await type('Summary', 'Hello');
     await press({ key: 'P', metaKey: true, shiftKey: true });
+    await confirm('Publish');
     expect(api.publish).toHaveBeenCalled();
   });
 
@@ -269,9 +332,12 @@ describe('EntryEditorPage', () => {
     const { click, api } = await render('editor', fakeApi(entry({ status: 'published', publishedPath: '/home', publishedVersionId: 'v' })));
     const confirm = TestBed.inject(Confirm);
 
+    api.references.mockReturnValue(of([{ title: 'Contact', path: '/contact' } as EntrySummary]));
     void click('Unpublish');
     await new Promise((resolve) => setTimeout(resolve));
     expect(confirm.request()?.heading).toBe('Unpublish Home?');
+    // It names the pages whose links would lead nowhere.
+    expect(confirm.request()?.body).toContain('Contact (/contact)');
     confirm.request()?.answer(false);
     await new Promise((resolve) => setTimeout(resolve));
     expect(api.unpublish).not.toHaveBeenCalled();
@@ -281,6 +347,82 @@ describe('EntryEditorPage', () => {
     confirm.request()?.answer(true);
     await new Promise((resolve) => setTimeout(resolve));
     expect(api.unpublish).toHaveBeenCalled();
+  });
+
+  describe('with approval', () => {
+    const review = (extra: Partial<ReviewRequest> = {}): ReviewRequest => ({
+      id: '00000000-0000-4000-8000-000000000501',
+      entryId,
+      versionId: '00000000-0000-4000-8000-000000000402',
+      message: 'Ready for a look',
+      requestedBy: 'u1',
+      requestedByName: 'Client User',
+      requestedAt: '2026-10-08T09:00:00Z',
+      decision: null,
+      comment: null,
+      decidedBy: null,
+      decidedByName: null,
+      decidedAt: null,
+      ...extra,
+    });
+    const complete = { title: 'Home', summary: 'Hello' };
+
+    it('an author submits a complete page for review, with a note', async () => {
+      const api = fakeApi(entry({ data: complete }), { requireApproval: true });
+      const { click, el, confirm } = await render('author', api);
+      expect(el.textContent).not.toContain('Approve');
+      await click('Submit for review');
+      const note = el.querySelector<HTMLTextAreaElement>('ds-modal dialog[open] #nv-workflow-message') as HTMLTextAreaElement;
+      note.value = 'Ready for a look';
+      note.dispatchEvent(new Event('input'));
+      await confirm('Submit for review');
+      expect(api.submit).toHaveBeenCalledWith(spaceId, entryId, 'Ready for a look');
+      expect(el.querySelector('#entry-status')?.textContent).toContain('Sent for review');
+    });
+
+    it('says who is waiting, and lets a space admin approve or send it back with a comment', async () => {
+      const api = fakeApi(entry({ status: 'in_review', data: complete }), { requireApproval: true, review: review() });
+      const { click, el, confirm } = await render('admin', api);
+      expect(el.textContent).toContain('Waiting for review');
+      expect(el.textContent).toContain('Sent by Client User');
+      expect(el.textContent).toContain('Their note: Ready for a look');
+
+      await click('Request changes');
+      await confirm('Send back');
+      expect(api.requestChanges).not.toHaveBeenCalled();
+      expect(el.querySelector('#nv-workflow-comment-error')?.textContent).toContain('Say what should change.');
+      const comment = el.querySelector<HTMLTextAreaElement>('#nv-workflow-comment') as HTMLTextAreaElement;
+      expect(comment.getAttribute('aria-invalid')).toBe('true');
+      comment.value = 'Add our opening hours.';
+      comment.dispatchEvent(new Event('input'));
+      await confirm('Send back');
+      expect(api.requestChanges).toHaveBeenCalledWith(spaceId, entryId, 'Add our opening hours.');
+    });
+
+    it('shows the comment when changes were asked for', async () => {
+      const sentBack = review({ decision: 'changes_requested', comment: 'Add our opening hours.', decidedByName: 'Novan Admin', decidedAt: '2026-10-08T10:00:00Z' });
+      const { el } = await render('author', fakeApi(entry({ data: complete }), { requireApproval: true, review: sentBack }));
+      expect(el.textContent).toContain('Changes requested by Novan Admin');
+      expect(el.textContent).toContain('Add our opening hours.');
+    });
+
+    it('approves from the publish dialog', async () => {
+      const api = fakeApi(entry({ status: 'in_review', data: complete }), { requireApproval: true, review: review() });
+      const { click, confirm } = await render('admin', api);
+      await click('Approve and publish');
+      await confirm('Approve and publish');
+      expect(api.approve).toHaveBeenCalledWith(spaceId, entryId, null);
+    });
+  });
+
+  it('keeps an archived page as it is until restored', async () => {
+    const api = fakeApi(entry({ status: 'archived' }));
+    const { el, click } = await render('editor', api);
+    expect(el.textContent).toContain('This page is archived');
+    expect(el.querySelector<HTMLInputElement>('form input')?.disabled).toBe(true);
+    await click('Restore');
+    expect(api.unarchive).toHaveBeenCalled();
+    expect(el.querySelector<HTMLInputElement>('form input')?.disabled).toBe(false);
   });
 
   it('reports unsaved changes, so leaving asks first; never for someone who cannot edit', async () => {
@@ -353,7 +495,7 @@ describe('EntryEditorPage', () => {
     await new Promise((resolve) => setTimeout(resolve));
     await fixture.whenStable();
 
-    const dialog = el.querySelector('dialog') as HTMLElement;
+    const dialog = el.querySelector('nv-version-history dialog') as HTMLElement;
     expect(dialog.textContent).toContain('Current');
     expect(dialog.textContent).toContain('by Client User');
 

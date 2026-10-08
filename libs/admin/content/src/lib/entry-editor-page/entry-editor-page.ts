@@ -11,28 +11,34 @@ import {
   input,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { DsAlertComponent, DsBadgeComponent, DsButtonComponent, DsModalComponent } from '@black-isle-beef/novan-design-system';
 import { describePath, errorsFromIssues, FieldForm, FieldFormContext, fieldId } from '@novan/admin-fields';
 import { MediaPicker, MediaPickerDialog } from '@novan/admin-media';
-import { Confirm, copy, type HasUnsavedChanges, Shortcuts, shortcutKeys, Skeleton, warnBeforeUnload } from '@novan/admin-shell';
+import { copy, type HasUnsavedChanges, Shortcuts, shortcutKeys, Skeleton, warnBeforeUnload } from '@novan/admin-shell';
 import { problemCode, problemFieldErrors, problemMessage, SpaceContext } from '@novan/admin-spaces';
 import {
+  type BlockNode,
   type BlockType,
   buildEntrySchema,
   type ContentType,
   type Entry,
   type EntryData,
   entryTitle,
+  type FieldDef,
   type Folder,
+  mediaRefs,
   sameJson,
   sitePath,
 } from '@novan/shared-schemas';
 import { firstValueFrom } from 'rxjs';
 import { ContentApi } from '../content-api';
 import { statusBadges } from '../content-tree';
+import { type CheckItem, pageChecks } from '../checklist/checklist';
 import { VersionHistory } from '../version-history/version-history';
+import { PageWorkflow, type WorkflowDialog } from '../workflow/page-workflow';
 
 /** How long after the last change autosave waits. */
 const AUTOSAVE_DELAY_MS = 3000;
@@ -61,6 +67,7 @@ const clock = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
     DsModalComponent,
     FieldForm,
     MediaPickerDialog,
+    PageWorkflow,
     RouterLink,
     Skeleton,
     VersionHistory,
@@ -76,7 +83,6 @@ export class EntryEditorPage implements HasUnsavedChanges {
   private readonly injector = inject(Injector);
   private readonly form = inject(FieldFormContext);
   private readonly media = inject(MediaPicker);
-  private readonly confirm = inject(Confirm);
   protected readonly context = inject(SpaceContext);
   protected readonly copy = copy;
   protected readonly shortcutKeys = shortcutKeys;
@@ -113,8 +119,29 @@ export class EntryEditorPage implements HasUnsavedChanges {
     const entry = this.entry();
     return entry ? statusBadges(entry) : [];
   });
-  protected readonly canEdit = computed(() => this.context.canEditCurrent());
+  /** Archived pages are kept as they are until restored. */
+  protected readonly canEdit = computed(() => this.context.canEditCurrent() && this.entry()?.status !== 'archived');
   protected readonly canPublish = computed(() => this.context.canPublishCurrent());
+  private readonly workflowControls = viewChild<PageWorkflow>('workflow');
+
+  /** The pre-publish checklist for the publish dialog: what stops publishing, and images without alternative text. */
+  protected readonly checks = computed<CheckItem[]>(() => {
+    const type = this.contentType();
+    const schemas = this.schemas();
+    if (!type || !schemas) return [];
+    const data = this.data();
+    const result = schemas.publish.safeParse(data);
+    this.form.assets();
+    return pageChecks({
+      errors: result.success ? {} : errorsFromIssues(result.error.issues),
+      describe: (path) => describePath(path, type.fields, data, this.blockTypes()),
+      blockAt: (path) => blockUidAt(data, path),
+      media: mediaRefs(type.fields, data, this.blockTypes()),
+      asset: (id) => this.form.assetInfo(id),
+      describeMedia: (ref) => describeMediaPath(ref.path, type.fields, data, this.blockTypes()),
+      headings: null,
+    });
+  });
   protected readonly published = computed(() => this.entry()?.status === 'published');
   /** The published page on the space's site, or null when it is not published or the site is unknown. */
   protected readonly liveUrl = computed(() => {
@@ -208,7 +235,7 @@ export class EntryEditorPage implements HasUnsavedChanges {
     inject(DestroyRef).onDestroy(() => this.cancelAutosave());
     const shortcuts = inject(Shortcuts);
     shortcuts.register('save', () => void this.save());
-    shortcuts.register('publish', () => void this.publish());
+    shortcuts.register('publish', () => void this.workflowControls()?.openPublish());
     warnBeforeUnload(() => this.hasUnsavedChanges());
   }
 
@@ -240,34 +267,37 @@ export class EntryEditorPage implements HasUnsavedChanges {
     });
   }
 
-  protected async publish(): Promise<void> {
-    if (!this.canPublish() || this.busy()) return;
-    if (!this.checkFor('publish')) return;
+  /**
+   * Readies the page for a workflow action: publishing and sending for review need every required field (the error
+   * summary says what is missing) and unsaved changes saved first. Other actions take the page as it is saved.
+   */
+  protected readonly prepare = async (action: WorkflowDialog): Promise<boolean> => {
+    if (action === 'requestChanges') return true;
+    if (!this.checkFor('publish')) return false;
+    if (!this.dirty() || !this.canEdit()) return true;
     this.cancelAutosave();
     const data = this.data();
-    await this.run('publishing', async () => {
-      if (this.dirty()) this.afterSave(await firstValueFrom(this.api.saveEntry(this.spaceId(), this.entryId(), data)), data);
-      const entry = await firstValueFrom(this.api.publish(this.spaceId(), this.entryId()));
-      this.entry.set(entry);
-      this.status.set(`Published. It is live at ${entry.publishedPath}.`);
-      this.focus('entry-status');
+    let saved = false;
+    await this.run('saving', async () => {
+      this.afterSave(await firstValueFrom(this.api.saveEntry(this.spaceId(), this.entryId(), data)), data);
+      saved = true;
     });
+    return saved;
+  };
+
+  protected workflowChanged(entry: Entry): void {
+    this.entry.set(entry);
   }
 
-  protected async unpublish(): Promise<void> {
-    if (!this.canPublish() || this.busy()) return;
-    const confirmed = await this.confirm.ask({
-      heading: `Unpublish ${this.title()}?`,
-      body: 'It comes off the live site straight away. The draft is kept, and you can publish it again later.',
-      confirmLabel: copy.unpublish,
-      destructive: true,
-    });
-    if (!confirmed) return;
-    await this.run('saving', async () => {
-      this.entry.set(await firstValueFrom(this.api.unpublish(this.spaceId(), this.entryId())));
-      this.status.set('Unpublished. It is no longer on the site; the draft is kept.');
-      this.focus('entry-status');
-    });
+  protected workflowDone(message: string): void {
+    this.problem.set(null);
+    this.status.set(message);
+    this.focus('entry-status');
+  }
+
+  /** From the checklist: the block's controls in the form. */
+  protected goToBlock(uid: string): void {
+    this.host.nativeElement.querySelector<HTMLElement>(`[id$="-edit-${uid}"]`)?.focus();
   }
 
   protected async move(): Promise<void> {
@@ -410,4 +440,45 @@ export class EntryEditorPage implements HasUnsavedChanges {
       injector: this.injector,
     });
   }
+}
+
+/** The `_uid` of the innermost block on a dotted data path (`body.0.children.1.heading`), or null. */
+function blockUidAt(data: EntryData, path: string): string | null {
+  let value: unknown = data;
+  let uid: string | null = null;
+  for (const part of path.split('.')) {
+    value = Array.isArray(value) ? value[Number(part)] : typeof value === 'object' && value !== null ? (value as Record<string, unknown>)[part] : undefined;
+    const found = typeof value === 'object' && value !== null ? (value as { _uid?: unknown })._uid : undefined;
+    if (typeof found === 'string') uid = found;
+  }
+  return uid;
+}
+
+/** A media item's place in words (`Content › Hero block › Background image`), and its block. */
+function describeMediaPath(path: string, fields: readonly FieldDef[], data: EntryData, blockTypes: readonly BlockType[]): { label: string; uid: string | null } {
+  const blocks = new Map<string, BlockNode>();
+  const walk = (value: unknown): void => {
+    if (Array.isArray(value)) value.forEach(walk);
+    else if (typeof value === 'object' && value !== null) {
+      const node = value as Partial<BlockNode>;
+      if (typeof node._uid === 'string' && typeof node._block === 'string') blocks.set(node._uid, node as BlockNode);
+      Object.values(value).forEach(walk);
+    }
+  };
+  walk(data);
+  let available: readonly FieldDef[] | undefined = fields;
+  let uid: string | null = null;
+  const labels = path.split('.').map((part) => {
+    const node = blocks.get(part);
+    if (node) {
+      uid = part;
+      const type = blockTypes.find((t) => t.apiId === node._block);
+      available = type?.fields;
+      return `${type?.name ?? node._block} block`;
+    }
+    const field = available?.find((f) => f.apiId === part);
+    available = field?.type === 'group' ? field.fields : undefined;
+    return field?.label ?? (/^\d+$/.test(part) ? `Item ${Number(part) + 1}` : part);
+  });
+  return { label: labels.join(' › '), uid };
 }

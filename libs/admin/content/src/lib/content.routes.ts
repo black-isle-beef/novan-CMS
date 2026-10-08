@@ -8,6 +8,12 @@ export const contentRoutes: Route[] = [
     title: 'Pages | Novan CMS',
     loadComponent: () => import('./content-page/content-page').then((m) => m.ContentPage),
   },
+  // Before :entryId, which would take "bin" for an id.
+  {
+    path: 'spaces/:spaceId/content/bin',
+    title: 'Recycle bin | Novan CMS',
+    loadComponent: () => import('./bin-page/bin-page').then((m) => m.BinPage),
+  },
   {
     path: 'spaces/:spaceId/content/:entryId',
     title: 'Edit | Novan CMS',

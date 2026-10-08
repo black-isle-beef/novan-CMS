@@ -149,6 +149,60 @@ export type AutosaveEntryRequest = z.input<typeof autosaveEntryRequestSchema>;
 export const moveEntryRequestSchema = z.strictObject({ folderId: z.uuid().nullable() });
 export type MoveEntryRequest = z.input<typeof moveEntryRequestSchema>;
 
+// --- Workflow (docs/build/13-workflow-publishing.md) --------------------------------------------
+
+/** Where a page is in the workflow. A published page with newer, unpublished changes is a `draft` again. */
+export const workflowStates = ['draft', 'in_review', 'published', 'archived'] as const;
+export type WorkflowState = (typeof workflowStates)[number];
+
+export const workflowActions = ['edit', 'submit', 'approve', 'requestChanges', 'publish', 'unpublish', 'archive', 'restore'] as const;
+export type WorkflowAction = (typeof workflowActions)[number];
+
+export const reviewDecisions = ['approved', 'changes_requested', 'withdrawn'] as const;
+export type ReviewDecision = (typeof reviewDecisions)[number];
+
+/** A request to review a page, and its outcome. */
+export const reviewRequestSchema = z.object({
+  id: z.uuid(),
+  entryId: z.uuid(),
+  versionId: z.uuid(),
+  message: z.string().nullable(),
+  requestedBy: z.uuid().nullable(),
+  requestedByName: z.string().nullable(),
+  requestedAt: z.string(),
+  decision: z.enum(reviewDecisions).nullable(),
+  comment: z.string().nullable(),
+  decidedBy: z.uuid().nullable(),
+  decidedByName: z.string().nullable(),
+  decidedAt: z.string().nullable(),
+});
+export type ReviewRequest = z.infer<typeof reviewRequestSchema>;
+
+/** GET `.../entries/:id/workflow`: the page's state, what the caller may do, and its latest review. */
+export const entryWorkflowSchema = z.object({
+  state: z.enum(workflowStates),
+  requireApproval: z.boolean(),
+  live: z.boolean(),
+  actions: z.array(z.enum(workflowActions)),
+  /** The open review request, else the last decided one. */
+  review: reviewRequestSchema.nullable(),
+});
+export type EntryWorkflow = z.infer<typeof entryWorkflowSchema>;
+
+/** A page waiting for review, for the reviewer inbox (GET `.../reviews`). */
+export const pendingReviewSchema = reviewRequestSchema.extend({ entry: entrySummarySchema });
+export type PendingReview = z.infer<typeof pendingReviewSchema>;
+
+/** POST `.../submit` and `.../approve`, and the publish dialog: an optional note. Publishing saves it on the version. */
+export const workflowMessageRequestSchema = z.strictObject({ message: messageSchema });
+export type WorkflowMessageRequest = z.input<typeof workflowMessageRequestSchema>;
+
+/** POST `.../request-changes`: what to change, for the author. */
+export const requestChangesRequestSchema = z.strictObject({
+  comment: z.string().trim().min(1, 'Say what should change.').max(2000),
+});
+export type RequestChangesRequest = z.input<typeof requestChangesRequestSchema>;
+
 // --- Versions -----------------------------------------------------------------------------------
 
 export const entryVersionSchema = z.object({

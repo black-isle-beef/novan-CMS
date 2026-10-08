@@ -16,7 +16,8 @@ The visual editor, `/spaces/:spaceId/pages/:entryId/edit` (docs/build/12-visual-
   `BlockOutline` lists, selects and reorders blocks, `BlockPicker` adds them.
 - `EditorPresence` shows who else has the page open and holds a soft lock while someone edits (Supabase Realtime
   presence on private channels; see `supabase/migrations/0010_editor_presence.sql`).
-- `pageChecks` and `PublishChecklist`: what stops publishing and what is worth checking (exported).
+- The pre-publish checklist (`pageChecks`, `PublishChecklist`) comes from `@novan/admin-content`, shared with the
+  form view's publish dialog.
 - Changes reach the site through `POST .../entries/:id/preview-data` (the delivered shape) 150 ms after the last
   one; drafts autosave every 5 s.
 

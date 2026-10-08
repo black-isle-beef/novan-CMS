@@ -1,0 +1,83 @@
+<nav aria-label="Breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a [routerLink]="['/spaces', spaceId(), 'content']">{{ copy.pages }}</a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">Recycle bin</li>
+  </ol>
+</nav>
+
+<h1 class="mb-1">Recycle bin</h1>
+<p class="lead text-muted mb-4">Deleted pages stay here for 30 days, then they are gone for good.</p>
+
+@if (restored(); as entry) {
+  <div id="bin-status" tabindex="-1" class="mb-3">
+    <ds-alert variant="success">
+      {{ entry.title }} is restored as a draft.
+      <a [routerLink]="['/spaces', spaceId(), 'content', entry.id]">Open it</a>
+    </ds-alert>
+  </div>
+}
+@if (problem(); as message) {
+  <div id="bin-problem" tabindex="-1" class="mb-3">
+    <ds-alert variant="danger">{{ message }}</ds-alert>
+  </div>
+}
+
+@if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (loading()) {
+  <nv-skeleton label="Loading the recycle bin" [lines]="4" />
+} @else if (sorted().length) {
+  @if (!canRestore()) {
+    <p class="text-body-secondary">Ask an editor to restore a page you need.</p>
+  }
+  <!-- Focusable, so keyboard users can scroll a table wider than the screen. -->
+  <div class="table-responsive" tabindex="0" role="region" aria-label="Deleted pages">
+    <table class="table align-middle">
+      <caption class="visually-hidden">
+        Deleted pages, most recently deleted first
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Page</th>
+          <th scope="col">Address</th>
+          <th scope="col">Deleted</th>
+          <th scope="col">Gone for good in</th>
+          @if (canRestore()) {
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (entry of sorted(); track entry.id) {
+          <tr>
+            <th scope="row" class="fw-normal">
+              {{ entry.title }}
+              <span class="d-block small text-body-secondary">{{ entry.contentTypeName }}</span>
+            </th>
+            <td>
+              <code>{{ address(entry) }}</code>
+            </td>
+            <td>{{ deleted(entry) }}</td>
+            <td>{{ daysLeft(entry) === 1 ? '1 day' : daysLeft(entry) + ' days' }}</td>
+            @if (canRestore()) {
+              <td class="text-end">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-secondary"
+                  [disabled]="busy() !== null"
+                  (click)="restore(entry)"
+                >
+                  Restore<span class="visually-hidden"> {{ entry.title }}</span>
+                </button>
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else {
+  <p>The recycle bin is empty.</p>
+}

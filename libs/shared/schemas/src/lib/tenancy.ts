@@ -45,6 +45,8 @@ export const spaceSummarySchema = z.object({
   organisationId: z.uuid(),
   /** Origin of the space's site, e.g. `https://www.example.com`, used to open pages from the admin. */
   previewUrl: z.string().nullable(),
+  /** Publishing needs a space admin's approval (docs/build/13-workflow-publishing.md). */
+  requireApproval: z.boolean(),
   /** The caller's role, or null when they see the space as agency staff without being a member. */
   role: spaceRoleSchema.nullable(),
   createdAt: z.string(),
@@ -62,8 +64,13 @@ export const updateSpaceRequestSchema = z
       .transform((url) => url.replace(/\/+$/, ''))
       .nullable()
       .optional(),
+    /** Authors, editors and developers send pages for review; space admins approve. */
+    requireApproval: z.boolean().optional(),
   })
-  .refine((body) => body.name !== undefined || body.previewUrl !== undefined, 'Change the name or the site address.');
+  .refine(
+    (body) => body.name !== undefined || body.previewUrl !== undefined || body.requireApproval !== undefined,
+    'Change the name, the site address or approval.',
+  );
 export type UpdateSpaceRequest = z.input<typeof updateSpaceRequestSchema>;
 
 // --- onboarding checklist (supabase/migrations/0009_onboarding.sql) -------------

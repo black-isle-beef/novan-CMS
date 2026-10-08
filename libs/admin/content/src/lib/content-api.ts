@@ -11,8 +11,10 @@ import type {
   EntryDiff,
   EntrySummary,
   EntryVersion,
+  EntryWorkflow,
   Folder,
   ListEntriesQuery,
+  PendingReview,
   UpdateFolderRequest,
 } from '@novan/shared-schemas';
 import type { Observable } from 'rxjs';
@@ -81,8 +83,46 @@ export class ContentApi {
     return this.http.post<Entry>(this.url(spaceId, 'entries', id, 'autosave'), { data });
   }
 
-  publish(spaceId: string, id: string): Observable<Entry> {
-    return this.http.post<Entry>(this.url(spaceId, 'entries', id, 'publish'), {});
+  /** Publishes the current version, with an optional message saved on it. */
+  publish(spaceId: string, id: string, message?: string | null): Observable<Entry> {
+    return this.http.post<Entry>(this.url(spaceId, 'entries', id, 'publish'), message ? { message } : {});
+  }
+
+  // --- Workflow (docs/build/13-workflow-publishing.md) ---
+
+  /** Where the page is in the workflow and what the signed-in person may do with it. */
+  workflow(spaceId: string, id: string): Observable<EntryWorkflow> {
+    return this.http.get<EntryWorkflow>(this.url(spaceId, 'entries', id, 'workflow'));
+  }
+
+  submit(spaceId: string, id: string, message?: string | null): Observable<Entry> {
+    return this.http.post<Entry>(this.url(spaceId, 'entries', id, 'submit'), message ? { message } : {});
+  }
+
+  approve(spaceId: string, id: string, message?: string | null): Observable<Entry> {
+    return this.http.post<Entry>(this.url(spaceId, 'entries', id, 'approve'), message ? { message } : {});
+  }
+
+  requestChanges(spaceId: string, id: string, comment: string): Observable<Entry> {
+    return this.http.post<Entry>(this.url(spaceId, 'entries', id, 'request-changes'), { comment });
+  }
+
+  archive(spaceId: string, id: string): Observable<Entry> {
+    return this.http.post<Entry>(this.url(spaceId, 'entries', id, 'archive'), {});
+  }
+
+  unarchive(spaceId: string, id: string): Observable<Entry> {
+    return this.http.post<Entry>(this.url(spaceId, 'entries', id, 'unarchive'), {});
+  }
+
+  /** Pages and entries that point at this one. */
+  references(spaceId: string, id: string): Observable<EntrySummary[]> {
+    return this.http.get<EntrySummary[]>(this.url(spaceId, 'entries', id, 'references'));
+  }
+
+  /** Pages waiting for review, oldest first. */
+  reviews(spaceId: string): Observable<PendingReview[]> {
+    return this.http.get<PendingReview[]>(this.url(spaceId, 'reviews'));
   }
 
   unpublish(spaceId: string, id: string): Observable<Entry> {

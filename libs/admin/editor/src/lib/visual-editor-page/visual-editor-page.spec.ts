@@ -170,6 +170,11 @@ async function render({ page = entry(), previewUrl = `${SITE}/`, role = 'editor'
     saveEntry: vi.fn((_s: string, _id: string, data: EntryData) => of(entry({ data }))),
     autosaveEntry: vi.fn((_s: string, _id: string, data: EntryData) => of(entry({ data }))),
     publish: vi.fn(() => of(entry({ status: 'published', publishedPath: '/home', publishedVersionId: 'v' }))),
+    workflow: vi.fn(() =>
+      of({ state: 'draft', requireApproval: false, live: false, actions: role === 'editor' ? ['edit', 'publish', 'archive'] : ['edit'], review: null }),
+    ),
+    references: vi.fn(() => of([])),
+    diff: vi.fn(() => of({ from: 'a', to: 'b', changes: [] })),
   };
   TestBed.configureTestingModule({
     imports: [VisualEditorPage],
@@ -496,7 +501,11 @@ describe('VisualEditorPage', () => {
       button('Publish')?.click();
       await settle(fixture);
       expect(content.saveEntry).toHaveBeenCalledWith(spaceId, entryId, { ...startData(), title: 'Published' });
-      expect(content.publish).toHaveBeenCalled();
+      // The publish dialog (docs/build/13-workflow-publishing.md).
+      const dialog = el.querySelector('nv-page-workflow dialog') as HTMLElement;
+      [...dialog.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Publish')?.click();
+      await settle(fixture);
+      expect(content.publish).toHaveBeenCalledWith(spaceId, entryId, null);
       expect(el.textContent).toContain('Published. It is live at /.');
     });
 

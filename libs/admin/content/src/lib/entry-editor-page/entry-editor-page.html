@@ -42,22 +42,6 @@
             {{ copy.saveDraft }}
           </button>
         }
-        @if (canPublish()) {
-          <button
-            type="button"
-            class="btn btn-primary"
-            [disabled]="busy() !== null"
-            [attr.aria-keyshortcuts]="shortcutKeys.publish"
-            (click)="publish()"
-          >
-            {{ published() ? copy.publishChanges : copy.publish }}
-          </button>
-          @if (published()) {
-            <button type="button" class="btn btn-secondary" [disabled]="busy() !== null" (click)="unpublish()">
-              {{ copy.unpublish }}
-            </button>
-          }
-        }
         @if (isPage()) {
           <a class="btn btn-secondary" [routerLink]="['/spaces', spaceId(), 'pages', e.id, 'edit']">Edit on the page</a>
         }
@@ -73,6 +57,21 @@
         }
       </div>
     </div>
+
+    <nv-page-workflow
+      #workflow
+      class="d-block mb-3"
+      [spaceId]="spaceId()"
+      [entry]="e"
+      [contentType]="type"
+      [blockTypes]="blockTypes()"
+      [checks]="checks()"
+      [prepare]="prepare"
+      [disabled]="busy() !== null"
+      (changed)="workflowChanged($event)"
+      (done)="workflowDone($event)"
+      (goTo)="goToBlock($event)"
+    />
 
     <p class="small text-body-secondary mb-3" role="status">{{ saveState() }}</p>
     @if (canEdit()) {

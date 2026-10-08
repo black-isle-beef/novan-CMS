@@ -367,6 +367,37 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"review_requests": {
+                  Row: {
+                    "comment": string | null,"decided_at": string | null,"decided_by": string | null,"decision": string | null,"entry_id": string,"id": string,"message": string | null,"requested_at": string,"requested_by": string | null,"space_id": string,"version_id": string
+                  }
+                  Insert: {
+                    "comment"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"decision"?: string | null,"entry_id": string,"id"?: string,"message"?: string | null,"requested_at"?: string,"requested_by"?: string | null,"space_id": string,"version_id": string
+                  }
+                  Update: {
+                    "comment"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"decision"?: string | null,"entry_id"?: string,"id"?: string,"message"?: string | null,"requested_at"?: string,"requested_by"?: string | null,"space_id"?: string,"version_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "review_requests_entry_id_space_id_fkey"
+      columns: ["entry_id","space_id"]
+isOneToOne: false
+      referencedRelation: "entries"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "review_requests_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "review_requests_version_id_entry_id_fkey"
+      columns: ["version_id","entry_id"]
+isOneToOne: false
+      referencedRelation: "entry_versions"
+      referencedColumns: ["id","entry_id"]
+    }
+                  ]
                 },"roles": {
                   Row: {
                     "id": string,"key": string,"name": string,"permissions": NonNullable<Json>,"space_id": string
@@ -388,13 +419,13 @@ isOneToOne: false
                   ]
                 },"spaces": {
                   Row: {
-                    "created_at": string,"default_locale": string,"id": string,"name": string,"organisation_id": string,"preview_url": string | null,"settings": NonNullable<Json>,"slug": string
+                    "created_at": string,"default_locale": string,"id": string,"name": string,"organisation_id": string,"preview_url": string | null,"require_approval": boolean,"settings": NonNullable<Json>,"slug": string
                   }
                   Insert: {
-                    "created_at"?: string,"default_locale"?: string,"id"?: string,"name": string,"organisation_id": string,"preview_url"?: string | null,"settings"?: NonNullable<Json>,"slug": string
+                    "created_at"?: string,"default_locale"?: string,"id"?: string,"name": string,"organisation_id": string,"preview_url"?: string | null,"require_approval"?: boolean,"settings"?: NonNullable<Json>,"slug": string
                   }
                   Update: {
-                    "created_at"?: string,"default_locale"?: string,"id"?: string,"name"?: string,"organisation_id"?: string,"preview_url"?: string | null,"settings"?: NonNullable<Json>,"slug"?: string
+                    "created_at"?: string,"default_locale"?: string,"id"?: string,"name"?: string,"organisation_id"?: string,"preview_url"?: string | null,"require_approval"?: boolean,"settings"?: NonNullable<Json>,"slug"?: string
                   }
                   Relationships: [
                     {
@@ -434,6 +465,9 @@ isOneToOne: false
                            },
 "onboarding_steps":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
+                           },
+"space_requires_approval":
+{ Args: { "space": string }; Returns: boolean
                            }
           }
           Enums: {
