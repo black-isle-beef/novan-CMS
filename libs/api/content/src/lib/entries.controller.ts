@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ZodValidationPipe } from '@novan/api-common';
+import { ApiResponse, ZodValidationPipe } from '@novan/api-common';
 import {
   AuthGuard,
   type AuthUser,
@@ -15,9 +15,14 @@ import {
   type Entry,
   type EntrySummary,
   type EntryVersion,
+  type EntryWorkflow,
+  entryWorkflowSchema,
   listEntriesQuerySchema,
   moveEntryRequestSchema,
+  type PendingReview,
+  requestChangesRequestSchema,
   updateEntryRequestSchema,
+  workflowMessageRequestSchema,
 } from '@novan/shared-schemas';
 import { z } from 'zod';
 import { AUTHORS, EDITORS } from './content-access';
@@ -93,7 +98,10 @@ export class EntriesController {
     return this.entries.autosave(user, space.id, env, id, body);
   }
 
-  /** Publishes the current version (answers 400 `entry_invalid` when it is incomplete). */
+  /**
+   * Publishes the current version, with an optional message saved on it (400 `entry_invalid` when it is incomplete;
+   * 403 `approval_required` when the space needs a review first). The workflow decides who may (workflow.ts).
+   */
   @Post(':id/publish')
   @HttpCode(200)
   @RequireRole(...EDITORS)
@@ -102,8 +110,98 @@ export class EntriesController {
     @CurrentSpace() space: SpaceAccess,
     @Param('env') env: string,
     @Param('id', idPipe) id: string,
+    @Body(new ZodValidationPipe(workflowMessageRequestSchema)) body: z.output<typeof workflowMessageRequestSchema>,
   ): Promise<Entry> {
-    return this.entries.publish(user, space.id, env, id);
+    return this.entries.publish(user, space.id, env, id, body.message ?? null);
+  }
+
+  /** The page's place in the workflow and the actions the caller may take. */
+  @Get(':id/workflow')
+  @ApiResponse(entryWorkflowSchema)
+  workflow(
+    @CurrentUser() user: AuthUser,
+    @CurrentSpace() space: SpaceAccess,
+    @Param('env') env: string,
+    @Param('id', idPipe) id: string,
+  ): Promise<EntryWorkflow> {
+    return this.entries.workflow(user, space.id, env, id);
+  }
+
+  /** Sends the page for review (spaces that need approval). */
+  @Post(':id/submit')
+  @HttpCode(200)
+  @RequireRole(...AUTHORS)
+  submit(
+    @CurrentUser() user: AuthUser,
+    @CurrentSpace() space: SpaceAccess,
+    @Param('env') env: string,
+    @Param('id', idPipe) id: string,
+    @Body(new ZodValidationPipe(workflowMessageRequestSchema)) body: z.output<typeof workflowMessageRequestSchema>,
+  ): Promise<Entry> {
+    return this.entries.submit(user, space.id, env, id, body.message ?? null);
+  }
+
+  /** Approves and publishes a page waiting for review (space admins and agency staff). */
+  @Post(':id/approve')
+  @HttpCode(200)
+  @RequireRole(...EDITORS)
+  approve(
+    @CurrentUser() user: AuthUser,
+    @CurrentSpace() space: SpaceAccess,
+    @Param('env') env: string,
+    @Param('id', idPipe) id: string,
+    @Body(new ZodValidationPipe(workflowMessageRequestSchema)) body: z.output<typeof workflowMessageRequestSchema>,
+  ): Promise<Entry> {
+    return this.entries.approve(user, space.id, env, id, body.message ?? null);
+  }
+
+  /** Sends a page in review back with a comment (space admins and agency staff). */
+  @Post(':id/request-changes')
+  @HttpCode(200)
+  @RequireRole(...EDITORS)
+  requestChanges(
+    @CurrentUser() user: AuthUser,
+    @CurrentSpace() space: SpaceAccess,
+    @Param('env') env: string,
+    @Param('id', idPipe) id: string,
+    @Body(new ZodValidationPipe(requestChangesRequestSchema)) body: z.output<typeof requestChangesRequestSchema>,
+  ): Promise<Entry> {
+    return this.entries.requestChanges(user, space.id, env, id, body.comment);
+  }
+
+  @Post(':id/archive')
+  @HttpCode(200)
+  @RequireRole(...EDITORS)
+  archive(
+    @CurrentUser() user: AuthUser,
+    @CurrentSpace() space: SpaceAccess,
+    @Param('env') env: string,
+    @Param('id', idPipe) id: string,
+  ): Promise<Entry> {
+    return this.entries.archive(user, space.id, env, id);
+  }
+
+  @Post(':id/unarchive')
+  @HttpCode(200)
+  @RequireRole(...EDITORS)
+  unarchive(
+    @CurrentUser() user: AuthUser,
+    @CurrentSpace() space: SpaceAccess,
+    @Param('env') env: string,
+    @Param('id', idPipe) id: string,
+  ): Promise<Entry> {
+    return this.entries.unarchive(user, space.id, env, id);
+  }
+
+  /** Pages and entries that point at this one, for the unpublish dialog. */
+  @Get(':id/references')
+  references(
+    @CurrentUser() user: AuthUser,
+    @CurrentSpace() space: SpaceAccess,
+    @Param('env') env: string,
+    @Param('id', idPipe) id: string,
+  ): Promise<EntrySummary[]> {
+    return this.entries.references(user, space.id, env, id);
   }
 
   @Post(':id/unpublish')
@@ -179,5 +277,17 @@ export class EntriesController {
     @Param('id', idPipe) id: string,
   ): Promise<EntryVersion[]> {
     return this.entries.versions(user, space.id, env, id);
+  }
+}
+
+/** Pages waiting for review in an environment: the reviewer inbox on the dashboard. Every member may look. */
+@Controller('v1/management/spaces/:spaceId/environments/:env/reviews')
+@UseGuards(AuthGuard, SpaceGuard)
+export class ReviewsController {
+  constructor(private readonly entries: EntriesService) {}
+
+  @Get()
+  list(@CurrentUser() user: AuthUser, @CurrentSpace() space: SpaceAccess, @Param('env') env: string): Promise<PendingReview[]> {
+    return this.entries.reviews(user, space.id, env);
   }
 }

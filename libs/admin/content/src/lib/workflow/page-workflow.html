@@ -1,0 +1,234 @@
+@if (waiting() && review(); as r) {
+  <ds-alert variant="info" title="Waiting for review" class="mb-3">
+    Sent by {{ r.requestedByName ?? 'someone' }} on {{ time(r.requestedAt) }}.
+    @if (r.message) {
+      <span class="d-block mt-1">Their note: {{ r.message }}</span>
+    }
+    @if (!can('approve')) {
+      <span class="d-block mt-1"
+        >A space admin publishes it or asks for changes. Changing the page takes it out of review.</span
+      >
+    }
+  </ds-alert>
+}
+@if (sentBack(); as r) {
+  <ds-alert variant="warning" [title]="'Changes requested by ' + (r.decidedByName ?? 'a reviewer')" class="mb-3">
+    <span class="nv-preserve-lines">{{ r.comment }}</span>
+  </ds-alert>
+}
+@if (workflow()?.state === 'archived') {
+  <ds-alert variant="info" class="mb-3">This page is archived. Restore it to change or publish it.</ds-alert>
+}
+@if (problem(); as message) {
+  <div role="alert" class="mb-3">
+    <ds-alert variant="danger">{{ message }}</ds-alert>
+  </div>
+}
+
+<div class="d-flex flex-wrap gap-2" role="group" aria-label="Publishing">
+  @if (can('submit')) {
+    <button type="button" class="btn btn-primary" [disabled]="busy() || disabled()" (click)="open('submit')">
+      Submit for review
+    </button>
+  }
+  @if (can('approve')) {
+    <button
+      type="button"
+      class="btn btn-primary"
+      [disabled]="busy() || disabled()"
+      [attr.aria-keyshortcuts]="shortcutKeys.publish"
+      (click)="open('approve')"
+    >
+      Approve and publish
+    </button>
+  }
+  @if (can('requestChanges')) {
+    <button type="button" class="btn btn-secondary" [disabled]="busy() || disabled()" (click)="open('requestChanges')">
+      Request changes
+    </button>
+  }
+  @if (can('publish') && !can('approve')) {
+    <button
+      type="button"
+      class="btn btn-primary"
+      [disabled]="busy() || disabled()"
+      [attr.aria-keyshortcuts]="shortcutKeys.publish"
+      (click)="open('publish')"
+    >
+      {{ publishLabel() }}
+    </button>
+  }
+  @if (comparable()) {
+    <button
+      type="button"
+      class="btn btn-secondary"
+      [attr.aria-expanded]="comparing()"
+      aria-controls="nv-workflow-compare"
+      (click)="toggleCompare()"
+    >
+      Compare with live
+    </button>
+  }
+  @if (!compact()) {
+    @if (can('unpublish')) {
+      <button type="button" class="btn btn-secondary" [disabled]="busy() || disabled()" (click)="unpublish()">
+        {{ copy.unpublish }}
+      </button>
+    }
+    @if (can('archive')) {
+      <button type="button" class="btn btn-secondary" [disabled]="busy() || disabled()" (click)="archive()">
+        Archive
+      </button>
+    }
+  }
+  @if (can('restore')) {
+    <button type="button" class="btn btn-primary" [disabled]="busy() || disabled()" (click)="unarchive()">
+      Restore
+    </button>
+  }
+</div>
+
+<div id="nv-workflow-compare">
+  @if (comparing()) {
+    <section class="mt-3" aria-labelledby="nv-workflow-compare-heading">
+      <h2 id="nv-workflow-compare-heading" class="h5">Live page and this draft</h2>
+      <ng-container *ngTemplateOutlet="changeTable" />
+    </section>
+  }
+</div>
+
+<ng-template #changeTable>
+  @if (changesError(); as message) {
+    <ds-alert variant="danger">{{ message }}</ds-alert>
+  } @else if (changes(); as rows) {
+    @if (!entry().publishedVersionId) {
+      <p class="mb-0">This page is not live yet: all of it is new.</p>
+    } @else if (!rows.length) {
+      <p class="mb-0">The draft is the same as the live page.</p>
+    } @else {
+      <!-- Focusable, so keyboard users can scroll a table wider than the screen. -->
+      <div class="table-responsive" tabindex="0" role="region" aria-label="Changes since the live page">
+        <table class="table table-sm align-top mb-0">
+          <caption class="visually-hidden">
+            What changed, on the live page and in this draft
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">What</th>
+              <th scope="col">Live</th>
+              <th scope="col">This draft</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows; track $index) {
+              <tr>
+                <th scope="row" class="fw-normal">{{ row.what }}</th>
+                <td>{{ row.live }}</td>
+                <td>{{ row.draft }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  } @else {
+    <ds-spinner label="Loading the changes" />
+  }
+</ng-template>
+
+<ds-modal
+  [open]="dialog() !== null"
+  (openChange)="!$event && close()"
+  [heading]="
+    dialog() === 'submit'
+      ? 'Submit ' + entry().title + ' for review?'
+      : dialog() === 'requestChanges'
+        ? 'Request changes to ' + entry().title
+        : dialog() === 'approve'
+          ? 'Approve and publish ' + entry().title + '?'
+          : 'Publish ' + entry().title + '?'
+  "
+  size="lg"
+>
+  @if (dialog()) {
+    @switch (dialog()) {
+      @case ('submit') {
+        <p>A space admin is emailed. They publish it or send it back with a comment.</p>
+        <label class="form-label" for="nv-workflow-message">Note for the reviewer (optional)</label>
+        <textarea
+          id="nv-workflow-message"
+          class="form-control"
+          rows="3"
+          maxlength="500"
+          [value]="message()"
+          (input)="setMessage($event)"
+        ></textarea>
+      }
+      @case ('requestChanges') {
+        <p>The page goes back to whoever sent it, with your comment by email.</p>
+        <label class="form-label" for="nv-workflow-comment">What should change? (required)</label>
+        <textarea
+          id="nv-workflow-comment"
+          class="form-control"
+          rows="4"
+          maxlength="2000"
+          [class.is-invalid]="commentError()"
+          [attr.aria-invalid]="commentError()"
+          [attr.aria-describedby]="commentError() ? 'nv-workflow-comment-error' : null"
+          [value]="comment()"
+          (input)="setComment($event)"
+        ></textarea>
+        @if (commentError()) {
+          <p id="nv-workflow-comment-error" class="invalid-feedback d-block">Say what should change.</p>
+        }
+      }
+      @default {
+        <h3 class="h6">What changes on the site</h3>
+        <ng-container *ngTemplateOutlet="changeTable" />
+        <h3 class="h6 mt-4">Before publishing</h3>
+        <nv-publish-checklist idPrefix="nv-workflow-checklist" [items]="checks()" (goTo)="close(); goTo.emit($event)" />
+        <label class="form-label mt-4" for="nv-workflow-message">Message for the version history (optional)</label>
+        <textarea
+          id="nv-workflow-message"
+          class="form-control"
+          rows="2"
+          maxlength="500"
+          [value]="message()"
+          (input)="setMessage($event)"
+        ></textarea>
+      }
+    }
+  }
+  @if (dialog() && problem(); as message) {
+    <div role="alert" class="mt-3">
+      <ds-alert variant="danger">{{ message }}</ds-alert>
+    </div>
+  }
+  <div dsModalFooter class="d-flex justify-content-end gap-2">
+    <button type="button" class="btn btn-secondary" (click)="close()">Cancel</button>
+    <button
+      type="button"
+      class="btn btn-primary"
+      [disabled]="busy() || ((dialog() === 'publish' || dialog() === 'approve') && errors() > 0)"
+      [attr.aria-describedby]="
+        (dialog() === 'publish' || dialog() === 'approve') && errors() ? 'nv-workflow-checklist-errors' : null
+      "
+      (click)="confirmDialog()"
+    >
+      @switch (dialog()) {
+        @case ('submit') {
+          Submit for review
+        }
+        @case ('requestChanges') {
+          Send back
+        }
+        @case ('approve') {
+          Approve and publish
+        }
+        @default {
+          {{ publishLabel() }}
+        }
+      }
+    </button>
+  </div>
+</ds-modal>

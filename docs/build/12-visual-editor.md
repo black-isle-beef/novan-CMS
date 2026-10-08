@@ -99,6 +99,68 @@ All messages are `{ source: 'novan', v: 1, type, payload }`. The bridge only acc
 - **Not yet:** the `update` data must be in the delivered shape (expanded assets and references). 12b adds the
   management endpoint that turns draft data into it.
 
+### 12b — Editing
+
+- **Preview data:** `POST .../entries/:id/preview-data` (`{ data, include? }`, any member who can read the page)
+  checks the unsaved data as a draft (400 `entry_invalid`) and returns it as the Preview API would deliver it
+  (`ContentReader.render`): files, references and link targets of the entry's own space only. Nothing is saved.
+  The admin sends changes 150 ms after the last one; only the latest request reaches the site, and malformed data
+  (half-typed) is skipped, so the site keeps the last good version. Locally a change reaches the frame in roughly
+  one request plus the debounce.
+- **Editor store** (`EditorStore`): page data, selected `_uid`, dirty flag, and undo/redo as patches (only the
+  changed paths; `patches.ts`), 100 steps. Changes to the same field within a second are one step, so typing a word
+  is one undo. Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y outside text fields (fields keep their own undo).
+- **Autosave** every 5 s through the autosave endpoint from 06, skipped while the draft has malformed values (shown
+  at once in the panel) or while text is being typed on the page. Leaving with unsaved changes asks first.
+- **Block lists** are the content type's top-level `blocks` fields and, inside them, `children` of block types with
+  `allowedChildren`. Blocks fields inside groups stay in the form view. The panel reuses `libs/admin/fields`, with the
+  block's dotted path, so validation messages match the form view; style options are radio buttons, selects and
+  switches (`StylePicker`). The panel sends only the keys that changed, applied to the block as it is now.
+- **Outline:** CDK drag and drop across connected lists (only lists that allow the block, never into itself), plus
+  arrow buttons; "Move into <previous block>" / "Move out of <parent>", duplicate (new `_uid`s for the block and
+  everything in it), hide and delete in the panel. Moves and deletes are announced; focus stays with the block.
+- **Hidden blocks** are `_hidden: true` in block data (`buildEntrySchema` keeps it). The Delivery and Preview APIs
+  leave them out (`EntryVisitor.block`), and `<novan-blocks>` skips them too.
+- **Picker:** a design-system dialog with the types allowed at the insertion point, their icons and preview images.
+  `previewImagePath` is a path on the space's site (`/blocks/hero.png`) or an https address; anything else shows no
+  image.
+- **Protocol additions** (SDK 0.4.0): site → admin `insert { uid, position: 'before' | 'after' }` and
+  `text { uid, field, value, done }`; admin → site `editable { uid, fields: [{ field, value, multiline }] }`. The
+  bridge draws "+" buttons and allows inline text editing only after an `editable` arrives, so viewers never get
+  them. Inline editing finds the element by `data-novan-field="<field>"`, else the element whose whole text is the
+  field's value; it uses `contenteditable="plaintext-only"`, Enter ends a one-line field, Escape puts the text back.
+  While typing, the admin updates its store but sends no `update` (that would reset the caret) until `done`.
+- **Publish** in the editor saves and publishes directly; package 13 replaces it with the publish dialog.
+
+### 12c — Collaboration and polish
+
+- **Presence** uses Supabase Realtime presence on private channels `editor:<space id>:<entry id>`
+  (`supabase/migrations/0010_editor_presence.sql`): RLS on `realtime.messages` lets only members of that space (and
+  agency staff with a second factor) join, read or track, and only presence goes over them; pgTAP in
+  `supabase/tests/editor_presence.test.sql`. The admin loads `@supabase/realtime-js` (now a direct dependency, as
+  the locked decision on separate Supabase packages says) only in the visual editor, and calls `setAuth()` before
+  joining so the join carries the person's token, not the anon key.
+- **Soft locks:** each tab tracks `{ session, userId, name, editing, since, at }` with a 20 s heartbeat. A tab is
+  *editing* while it has unsaved changes and for 60 s after its last change. Another tab that is editing and was
+  heard from in the last 60 s holds the page; when two start together, the earlier `since` wins (then the lower
+  session id). Others see "<name> is changing this page" and a read-only editor (no panel edits, no "+" buttons, no
+  inline text). When the lock ends, the page reloads the latest draft before anyone else can edit, so nobody saves
+  over a stale copy. A tab that loses a tie keeps its unsaved changes only until that reload (soft lock, not a merge).
+- **Avatars:** initials of the other people (one per person, however many tabs), with a solid ring for someone editing;
+  names are in the list for screen readers. Display names come from `/me` (else the email address).
+- **Validation** in the panel: malformed values and everything that would stop publishing (`buildEntrySchema`
+  without `draft`) show by their fields. **Before publishing** lists those errors (with "Go to block"), images with no
+  alternative text on the page or in the library (warnings; required alt text is an error), and heading order from the
+  site's DOM: the bridge sends `headings { headings: [{ level, text, uid }] }` after each render, and the admin warns
+  about no H1, several H1s and skipped levels. Publish refuses while there are errors and focuses the list.
+  `PublishChecklist` and `pageChecks` live in `@novan/admin-content` (since 13), shared with the publish dialog.
+- **Protocol** (still SDK 0.4.0): `editable` has `insert: boolean`, so a tab that becomes read-only withdraws the
+  "+" buttons; site → admin `headings`.
+- **Fallback:** when the frame has not said `ready` 10 s after its address was set, an alert offers **Edit in the
+  form**, and space admins a link to the site's address in Space settings.
+- **Audit:** `audit.ps1` takes `// audit-ignore <rule>: <reason>` on a finding's line or the line above, for confirmed
+  false positives only. The one use is Realtime's `channel.subscribe(...)`, which is not RxJS.
+
 ## Out of scope
 
 Free drag-on-canvas positioning, custom CSS, A/B variants (phase 4).
@@ -115,7 +177,8 @@ Manual check: two browsers on the same page show presence and lock correctly.
 
 ## Definition of done
 
-- [ ] Messages from unexpected origins are ignored (tested)
-- [ ] An editor can build a page from blocks without touching the form view
-- [ ] Edits appear in the preview in under 300 ms on a mid-range laptop
-- [ ] Keyboard accessible: blocks selectable and reorderable without a mouse
+- [x] Messages from unexpected origins are ignored (tested)
+- [x] An editor can build a page from blocks without touching the form view
+- [ ] Edits appear in the preview in under 300 ms on a mid-range laptop (150 ms debounce plus one local API request;
+      not yet timed on a reference laptop)
+- [x] Keyboard accessible: blocks selectable and reorderable without a mouse

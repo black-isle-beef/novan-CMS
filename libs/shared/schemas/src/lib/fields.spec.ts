@@ -316,7 +316,7 @@ describe('buildEntrySchema', () => {
   describe('media', () => {
     const mediaFields = defs(
       { id: 'a', apiId: 'image', label: 'Image', type: 'media', requireAlt: true, required: true },
-      { id: 'b', apiId: 'gallery', label: 'Gallery', type: 'media', multiple: true },
+      { id: 'b', apiId: 'gallery', label: 'Gallery', type: 'media', multiple: true, requireAlt: true },
     );
     const schema = buildEntrySchema(mediaFields);
 
@@ -374,7 +374,7 @@ describe('buildEntrySchema', () => {
     ];
     const fields = defs(
       { id: 'a', apiId: 'image', label: 'Image', type: 'media' },
-      { id: 'b', apiId: 'gallery', label: 'Gallery', type: 'media', multiple: true },
+      { id: 'b', apiId: 'gallery', label: 'Gallery', type: 'media', multiple: true, requireAlt: true },
       {
         id: 'c',
         apiId: 'seo',
@@ -389,18 +389,18 @@ describe('buildEntrySchema', () => {
     it('finds media items in fields, lists, groups, blocks and their children, by block _uid', () => {
       const data = {
         image: { assetId: uid(1) },
-        gallery: [{ assetId: uid(2) }, { assetId: uid(3) }],
+        gallery: [{ assetId: uid(2), alt: 'A sunset' }, { assetId: uid(3), alt: ' ' }],
         seo: { ogImage: { assetId: uid(4) } },
         body: [{ _uid: uid(10), _block: 'hero', image: { assetId: uid(5) }, children: [{ _uid: uid(11), _block: 'hero', image: { assetId: uid(6) } }] }],
         extra: { assetId: uid(7) },
       };
       expect(mediaRefs(fields, data, blocks)).toEqual([
-        { assetId: uid(1), path: 'image' },
-        { assetId: uid(2), path: 'gallery.0' },
-        { assetId: uid(3), path: 'gallery.1' },
-        { assetId: uid(4), path: 'seo.ogImage' },
-        { assetId: uid(5), path: `body.${uid(10)}.image` },
-        { assetId: uid(6), path: `body.${uid(10)}.children.${uid(11)}.image` },
+        { assetId: uid(1), path: 'image', requireAlt: false },
+        { assetId: uid(2), path: 'gallery.0', alt: 'A sunset', requireAlt: true },
+        { assetId: uid(3), path: 'gallery.1', requireAlt: true },
+        { assetId: uid(4), path: 'seo.ogImage', requireAlt: false },
+        { assetId: uid(5), path: `body.${uid(10)}.image`, requireAlt: false },
+        { assetId: uid(6), path: `body.${uid(10)}.children.${uid(11)}.image`, requireAlt: false },
       ]);
     });
 
@@ -570,6 +570,12 @@ describe('buildEntrySchema', () => {
       ]);
       expect(issues(schema, { body: [{ ...styled, _style: { size: 12 } }] })).toHaveLength(1);
       expect(issues(schema, { body: [{ ...styled, _style: ['brand'] }] })).toHaveLength(1);
+    });
+
+    it('keeps hidden blocks hidden', () => {
+      const hidden = { _uid: uid(1), _block: 'hero', heading: 'Hi', _hidden: true };
+      expect(schema.parse({ body: [hidden] })).toEqual({ body: [hidden] });
+      expect(issues(schema, { body: [{ ...hidden, _hidden: 'yes' }] })).toHaveLength(1);
     });
 
     it('rejects block types the field does not allow, or that do not exist', () => {

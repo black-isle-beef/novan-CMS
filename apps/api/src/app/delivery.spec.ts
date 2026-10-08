@@ -580,6 +580,58 @@ describe('delivery and preview APIs', () => {
       });
     });
 
+    describe('preview data (visual editor)', () => {
+      const render = (as: string, entryId: string, data: object, spaceId = spaceA) =>
+        manage(spaceId, as).post(`/environments/main/entries/${entryId}/preview-data`, { data });
+
+      it('returns unsaved data as sites get it, without hidden blocks, and saves nothing', async () => {
+        const viewerA = await jwt(clientId, [{ id: spaceA, role: 'viewer' }]);
+        const shown = randomUUID();
+        const res = await render(viewerA, home.id, {
+          title: 'Not saved',
+          slug: 'home',
+          hero: { assetId: photo },
+          related: [authorB.id],
+          cta: { type: 'internal', entryId: about.id, text: 'About' },
+          body: [
+            { _uid: shown, _block: 'card', heading: 'Shown' },
+            { _uid: randomUUID(), _block: 'card', heading: 'Hidden', _hidden: true },
+          ],
+        });
+        expect(res.status, JSON.stringify(res.body)).toBe(200);
+        const page: DeliveryEntry = res.body;
+        expect(page).toMatchObject({ id: home.id, contentType: 'page', path: '/', locale: 'en-GB' });
+        expect(page.data['title']).toBe('Not saved');
+        // Preview has no image route, so files get signed Storage addresses (none locally for a made-up file).
+        expect(page.data['hero']).toMatchObject({ id: photo, filename: 'sunrise.jpg', alt: 'Sunrise' });
+        expect((page.data['related'] as DeliveryEntry[])[0]).toMatchObject({ id: authorB.id, data: { name: 'Bo' } });
+        expect(page.data['cta']).toEqual({ type: 'internal', entryId: about.id, text: 'About', path: '/about' });
+        expect(page.data['body']).toEqual([{ _uid: shown, _block: 'card', heading: 'Shown' }]);
+
+        expect((await manage(spaceA, editorA).get(`/environments/main/entries/${home.id}`)).body.data.title).toBe('Welcome');
+      });
+
+      it('never shows another space’s files or entries', async () => {
+        const res = await render(editorA, home.id, { title: 'x', slug: 'home', hero: { assetId: photoB }, related: [secretB.id] });
+        expect(res.status, JSON.stringify(res.body)).toBe(200);
+        expect(res.body.data.hero).toBeNull();
+        expect(res.body.data.related).toEqual([]);
+      });
+
+      it('checks the data as a draft', async () => {
+        const res = await render(editorA, home.id, { title: 5, cta: { type: 'external', url: 'javascript:alert(1)' } });
+        expect(res.status).toBe(400);
+        expect(res.body.code).toBe('entry_invalid');
+        expect(Object.keys(res.body.errors).sort()).toEqual(['cta.url', 'title']);
+      });
+
+      it('refuses pages in another space or that do not exist', async () => {
+        expect((await render(developerA, secretB.id, {})).status).toBe(404);
+        expect((await render(developerA, randomUUID(), {})).status).toBe(404);
+        expect((await render(developerA, secretB.id, {}, spaceB)).status).toBe(403);
+      });
+    });
+
     describe('a token for space A never returns space B content', () => {
       it('not by path, id, type or singleton', async () => {
         expect((await delivery('/pages?path=/secret')).status).toBe(404);

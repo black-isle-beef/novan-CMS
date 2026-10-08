@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { badRequest, conflict, forbidden, notFound } from '@novan/api-common';
-import type { AuthUser, SpaceAccess } from '@novan/api-auth';
+import { type AuthUser, hasStaffAccess, type SpaceAccess } from '@novan/api-auth';
 import {
   assetUsages,
   completeOnboardingStep,
@@ -13,6 +13,7 @@ import {
   profiles,
   publishedContent,
   recordAudit,
+  reviewRequests,
   spaces,
 } from '@novan/api-db';
 import {
@@ -32,14 +33,23 @@ import {
   type MediaRef,
   mediaRefs,
   type moveEntryRequestSchema,
+  type PendingReview,
+  type ReviewDecision,
+  type ReviewRequest,
   slugify,
   type updateEntryRequestSchema,
+  type WorkflowAction,
+  type EntryWorkflow,
+  type WorkflowState,
 } from '@novan/shared-schemas';
-import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, type SQL, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, ne, or, type SQL, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import { canPublish } from './content-access';
 import { contentProblem } from './content-errors';
 import { type ContentEvent, ContentEvents } from './content-events';
+import { allowedActions, refusal, storedStatus, type WorkflowActor, workflowState } from './workflow';
+import { type NotifiedPage, WorkflowNotifier } from './workflow-notifier';
 import {
   contentTypeByApiId,
   contentTypeById,
@@ -90,6 +100,7 @@ export class EntriesService {
   constructor(
     private readonly db: DbService,
     private readonly events: ContentEvents,
+    private readonly notifier: WorkflowNotifier,
   ) {}
 
   list(user: AuthUser, spaceId: string, env: string, query: ListQuery): Promise<EntrySummary[]> {
@@ -173,6 +184,8 @@ export class EntriesService {
       return await this.db.userDb(user.claims, async (tx) => {
         const model = await loadModel(tx, spaceId, env);
         const entry = await liveEntry(tx, model.environmentId, id);
+        const flow = await workflowOf(tx, user, entry);
+        check(flow, 'edit');
         const type = contentTypeById(model, entry.contentTypeId);
         const data = validateData(model, type, body.data, 'draft', await loadAssets(tx, spaceId, model, type, body.data));
         await saveVersion(tx, entry, user, data, {
@@ -180,6 +193,7 @@ export class EntriesService {
           autosave: false,
           slug: slugInData(type, data) ?? entry.slug,
         });
+        await leaveReview(tx, entry, flow, user);
         if (isHomePage(entry, type)) await completeOnboardingStep(tx, spaceId, 'homePage');
         return readEntry(tx, model.environmentId, id);
       });
@@ -198,6 +212,8 @@ export class EntriesService {
       return await this.db.userDb(user.claims, async (tx) => {
         const model = await loadModel(tx, spaceId, env);
         const entry = await liveEntry(tx, model.environmentId, id);
+        const flow = await workflowOf(tx, user, entry);
+        check(flow, 'edit');
         const type = contentTypeById(model, entry.contentTypeId);
         const data = validateData(model, type, body.data, 'draft', await loadAssets(tx, spaceId, model, type, body.data));
         const slug = slugInData(type, data) ?? entry.slug;
@@ -223,6 +239,7 @@ export class EntriesService {
         } else {
           await saveVersion(tx, entry, user, data, { message: null, autosave: true, slug });
         }
+        await leaveReview(tx, entry, flow, user);
         if (isHomePage(entry, type)) await completeOnboardingStep(tx, spaceId, 'homePage');
         return readEntry(tx, model.environmentId, id);
       });
@@ -231,17 +248,46 @@ export class EntriesService {
     }
   }
 
-  /** Validates the current version in full, copies it into `published_content` and points `published_version_id` at it. */
-  async publish(user: AuthUser, spaceId: string, env: string, id: string): Promise<Entry> {
+  /**
+   * Validates the current version in full, copies it into `published_content` and points `published_version_id` at it.
+   * With a message, the version is saved again with it first. Publishing a published page refreshes its live copy.
+   */
+  async publish(user: AuthUser, spaceId: string, env: string, id: string, message: string | null = null): Promise<Entry> {
+    return this.publishAs('publish', user, spaceId, env, id, message);
+  }
+
+  /** Publishes a page waiting for review (space admins and agency staff), and tells whoever sent it. */
+  approve(user: AuthUser, spaceId: string, env: string, id: string, message: string | null = null): Promise<Entry> {
+    return this.publishAs('approve', user, spaceId, env, id, message);
+  }
+
+  private async publishAs(
+    action: 'publish' | 'approve',
+    user: AuthUser,
+    spaceId: string,
+    env: string,
+    id: string,
+    message: string | null,
+  ): Promise<Entry> {
     let event: ContentEvent | null = null;
+    let notify: { page: NotifiedPage; requester: string | null; path: string } | null = null;
     try {
       const result = await this.db.userDb(user.claims, async (tx) => {
         const model = await loadModel(tx, spaceId, env);
-        const entry = await liveEntry(tx, model.environmentId, id);
+        let entry = await liveEntry(tx, model.environmentId, id);
+        const flow = await workflowOf(tx, user, entry);
+        check(flow, action);
         const type = contentTypeById(model, entry.contentTypeId);
-        const versionId = entry.currentVersionId as string;
-        const [version] = await tx.select({ data: entryVersions.data }).from(entryVersions).where(eq(entryVersions.id, versionId));
+        const [version] = await tx
+          .select({ data: entryVersions.data, message: entryVersions.message })
+          .from(entryVersions)
+          .where(eq(entryVersions.id, entry.currentVersionId as string));
         const data = validateData(model, type, version.data, 'publish', await loadAssets(tx, spaceId, model, type, version.data));
+        if (message && message !== version.message) {
+          await saveVersion(tx, entry, user, data, { message, autosave: false, slug: entry.slug });
+          entry = await findEntry(tx, model.environmentId, id);
+        }
+        const versionId = entry.currentVersionId as string;
 
         const path = entryPath(entry.folderId ? await folderPath(tx, model.environmentId, entry.folderId) : null, entry.slug);
         const tags = cacheTags({ id: entry.id, environmentId: model.environmentId, contentType: type.apiId });
@@ -265,13 +311,20 @@ export class EntriesService {
           .set({ status: 'published', publishedVersionId: versionId, publishedAt: sql`now()` })
           .where(eq(entries.id, entry.id));
         await recordUsages(tx, entry, mediaRefs(type.fields, data, model.blockTypes));
+        const review = await closeReview(tx, entry.id, flow.state === 'in_review' ? 'approved' : 'withdrawn', user);
         await recordAudit(tx, {
           spaceId,
           actorId: user.id,
-          action: 'entry.published',
+          action: action === 'approve' ? 'entry.approved' : 'entry.published',
           targetType: 'entry',
           targetId: entry.id,
-          diff: { environment: env, versionId, path, ...(entry.publishedVersionId ? { previousVersionId: entry.publishedVersionId } : {}) },
+          diff: {
+            environment: env,
+            versionId,
+            path,
+            ...(entry.publishedVersionId ? { previousVersionId: entry.publishedVersionId } : {}),
+            ...(message ? { message } : {}),
+          },
         });
         await completeOnboardingStep(tx, spaceId, 'publish');
 
@@ -289,7 +342,104 @@ export class EntriesService {
           versionId,
           publishedAt: saved.publishedAt as string,
         };
+        if (flow.state === 'in_review') notify = { page: page(saved, spaceId), requester: review?.requestedBy ?? null, path };
         return saved;
+      });
+      this.emit(event);
+      const sent = notify as { page: NotifiedPage; requester: string | null; path: string } | null;
+      if (sent) await this.notifier.published(sent.page, sent.requester, user.id, sitePathOf(sent.path));
+      return result;
+    } catch (error) {
+      throw contentProblem(error);
+    }
+  }
+
+  /** Sends the page for review: it waits for a space admin, who gets an email. */
+  async submit(user: AuthUser, spaceId: string, env: string, id: string, message: string | null = null): Promise<Entry> {
+    let notify: NotifiedPage | null = null;
+    try {
+      const result = await this.db.userDb(user.claims, async (tx) => {
+        const envId = await environmentId(tx, spaceId, env);
+        const entry = await liveEntry(tx, envId, id);
+        check(await workflowOf(tx, user, entry), 'submit');
+        await tx.insert(reviewRequests).values({
+          spaceId,
+          entryId: entry.id,
+          versionId: entry.currentVersionId as string,
+          message,
+          requestedBy: user.id,
+        });
+        await tx.update(entries).set({ status: 'in_review' }).where(eq(entries.id, entry.id));
+        await recordAudit(tx, {
+          spaceId,
+          actorId: user.id,
+          action: 'entry.submitted',
+          targetType: 'entry',
+          targetId: entry.id,
+          diff: { environment: env, versionId: entry.currentVersionId, ...(message ? { message } : {}) },
+        });
+        const saved = await readEntry(tx, envId, id);
+        notify = page(saved, spaceId);
+        return saved;
+      });
+      if (notify) await this.notifier.reviewRequested(notify, user.id, message);
+      return result;
+    } catch (error) {
+      throw contentProblem(error);
+    }
+  }
+
+  /** Sends the page back to whoever asked for the review, with what to change. */
+  async requestChanges(user: AuthUser, spaceId: string, env: string, id: string, comment: string): Promise<Entry> {
+    let notify: { page: NotifiedPage; requester: string | null } | null = null;
+    try {
+      const result = await this.db.userDb(user.claims, async (tx) => {
+        const envId = await environmentId(tx, spaceId, env);
+        const entry = await liveEntry(tx, envId, id);
+        const flow = await workflowOf(tx, user, entry);
+        check(flow, 'requestChanges');
+        const review = await closeReview(tx, entry.id, 'changes_requested', user, comment);
+        await tx.update(entries).set({ status: storedStatus('draft', flow.live) }).where(eq(entries.id, entry.id));
+        await recordAudit(tx, {
+          spaceId,
+          actorId: user.id,
+          action: 'entry.changes_requested',
+          targetType: 'entry',
+          targetId: entry.id,
+          diff: { environment: env, comment },
+        });
+        const saved = await readEntry(tx, envId, id);
+        notify = { page: page(saved, spaceId), requester: review?.requestedBy ?? null };
+        return saved;
+      });
+      const sent = notify as { page: NotifiedPage; requester: string | null } | null;
+      if (sent) await this.notifier.changesRequested(sent.page, sent.requester, user.id, comment);
+      return result;
+    } catch (error) {
+      throw contentProblem(error);
+    }
+  }
+
+  /** Takes the page off the site (if it is on it) and out of the way, until restored. */
+  async archive(user: AuthUser, spaceId: string, env: string, id: string): Promise<Entry> {
+    let event: ContentEvent | null = null;
+    try {
+      const result = await this.db.userDb(user.claims, async (tx) => {
+        const model = await loadModel(tx, spaceId, env);
+        const entry = await liveEntry(tx, model.environmentId, id);
+        check(await workflowOf(tx, user, entry), 'archive');
+        if (entry.publishedVersionId) event = await takeOffline(tx, model, entry, user);
+        await tx.update(entries).set({ status: 'archived' }).where(eq(entries.id, entry.id));
+        await closeReview(tx, entry.id, 'withdrawn', user);
+        await recordAudit(tx, {
+          spaceId,
+          actorId: user.id,
+          action: 'entry.archived',
+          targetType: 'entry',
+          targetId: entry.id,
+          diff: { environment: env, wasPublished: Boolean(entry.publishedVersionId) },
+        });
+        return readEntry(tx, model.environmentId, id);
       });
       this.emit(event);
       return result;
@@ -298,15 +448,108 @@ export class EntriesService {
     }
   }
 
+  /** Brings an archived page back as a draft. */
+  async unarchive(user: AuthUser, spaceId: string, env: string, id: string): Promise<Entry> {
+    try {
+      return await this.db.userDb(user.claims, async (tx) => {
+        const envId = await environmentId(tx, spaceId, env);
+        const entry = await liveEntry(tx, envId, id);
+        check(await workflowOf(tx, user, entry), 'restore');
+        await tx.update(entries).set({ status: 'draft' }).where(eq(entries.id, entry.id));
+        await recordAudit(tx, {
+          spaceId,
+          actorId: user.id,
+          action: 'entry.unarchived',
+          targetType: 'entry',
+          targetId: entry.id,
+          diff: { environment: env },
+        });
+        return readEntry(tx, envId, id);
+      });
+    } catch (error) {
+      throw contentProblem(error);
+    }
+  }
+
+  /** The page's place in the workflow, what the caller may do with it, and its latest review. */
+  workflow(user: AuthUser, spaceId: string, env: string, id: string): Promise<EntryWorkflow> {
+    return this.db.userDb(user.claims, async (tx) => {
+      const envId = await environmentId(tx, spaceId, env);
+      const entry = await findEntry(tx, envId, id);
+      const flow = await workflowOf(tx, user, entry);
+      const [review] = await reviewsOf(tx, eq(reviewRequests.entryId, entry.id))
+        .orderBy(sql`${reviewRequests.decision} is null desc`, desc(reviewRequests.requestedAt))
+        .limit(1);
+      return {
+        state: flow.state,
+        requireApproval: flow.requireApproval,
+        live: flow.live,
+        actions: entry.deletedAt ? [] : allowedActions(flow, flow.actor),
+        review: review ? toReview(review) : null,
+      };
+    });
+  }
+
+  /** Pages waiting for review in the environment, oldest first (the reviewer inbox). */
+  reviews(user: AuthUser, spaceId: string, env: string): Promise<PendingReview[]> {
+    return this.db.userDb(user.claims, async (tx) => {
+      const envId = await environmentId(tx, spaceId, env);
+      const open = await reviewsOf(tx, and(isNull(reviewRequests.decision), eq(reviewRequests.spaceId, spaceId))).orderBy(
+        asc(reviewRequests.requestedAt),
+      );
+      if (!open.length) return [];
+      const rows = await tx
+        .select(summaryColumns)
+        .from(entries)
+        .innerJoin(contentTypes, eq(contentTypes.id, entries.contentTypeId))
+        .innerJoin(entryVersions, eq(entryVersions.id, entries.currentVersionId))
+        .leftJoin(folders, eq(folders.id, entries.folderId))
+        .where(and(inArray(entries.id, open.map((row) => row.request.entryId)), eq(entries.environmentId, envId), isNull(entries.deletedAt)));
+      const summaries = new Map(rows.map((row) => [row.entry.id, toSummary(row)]));
+      return open.flatMap((row) => {
+        const entry = summaries.get(row.request.entryId);
+        return entry ? [{ ...toReview(row), entry }] : [];
+      });
+    });
+  }
+
+  /** Live pages and entries whose draft or published content points at this one (references and internal links). */
+  references(user: AuthUser, spaceId: string, env: string, id: string): Promise<EntrySummary[]> {
+    return this.db.userDb(user.claims, async (tx) => {
+      const envId = await environmentId(tx, spaceId, env);
+      const entry = await findEntry(tx, envId, id);
+      // Ids are UUIDs, so their text appears in data only where something points at them.
+      const pattern = `%${entry.id}%`;
+      const rows = await tx
+        .select(summaryColumns)
+        .from(entries)
+        .innerJoin(contentTypes, eq(contentTypes.id, entries.contentTypeId))
+        .innerJoin(entryVersions, eq(entryVersions.id, entries.currentVersionId))
+        .leftJoin(folders, eq(folders.id, entries.folderId))
+        .leftJoin(publishedContent, eq(publishedContent.entryId, entries.id))
+        .where(
+          and(
+            eq(entries.environmentId, envId),
+            isNull(entries.deletedAt),
+            ne(entries.id, entry.id),
+            or(sql`${entryVersions.data}::text like ${pattern}`, sql`${publishedContent.data}::text like ${pattern}`),
+          ),
+        )
+        .orderBy(asc(folders.path), asc(entries.slug));
+      return rows.map(toSummary);
+    });
+  }
+
   async unpublish(user: AuthUser, spaceId: string, env: string, id: string): Promise<Entry> {
     let event: ContentEvent | null = null;
     try {
       const result = await this.db.userDb(user.claims, async (tx) => {
         const model = await loadModel(tx, spaceId, env);
         const entry = await liveEntry(tx, model.environmentId, id);
-        if (!entry.publishedVersionId) throw conflict('not_published', 'This is not published.');
+        check(await workflowOf(tx, user, entry), 'unpublish');
 
         event = await takeOffline(tx, model, entry, user);
+        await closeReview(tx, entry.id, 'withdrawn', user);
         await recordAudit(tx, {
           spaceId,
           actorId: user.id,
@@ -336,6 +579,9 @@ export class EntriesService {
           .where(and(eq(entryVersions.id, versionId), eq(entryVersions.entryId, entry.id)));
         if (!version) throw notFound('version_not_found', 'This version does not belong to this entry.');
         if (version.id === entry.currentVersionId) return readEntry(tx, model.environmentId, id);
+        const flow = await workflowOf(tx, user, entry);
+        check(flow, 'edit');
+        await leaveReview(tx, entry, flow, user);
 
         const type = contentTypeById(model, entry.contentTypeId);
         const data = validateData(model, type, version.data, 'draft', await loadAssets(tx, spaceId, model, type, version.data));
@@ -366,7 +612,12 @@ export class EntriesService {
         const model = await loadModel(tx, spaceId, env);
         const entry = await liveEntry(tx, model.environmentId, id);
         if (entry.publishedVersionId) event = await takeOffline(tx, model, entry, user);
-        await tx.update(entries).set({ deletedAt: sql`now()` }).where(eq(entries.id, entry.id));
+        // A page in review comes back from the bin as a draft, its request closed.
+        await tx
+          .update(entries)
+          .set({ deletedAt: sql`now()`, ...(entry.status === 'in_review' ? { status: 'draft' } : {}) })
+          .where(eq(entries.id, entry.id));
+        await closeReview(tx, entry.id, 'withdrawn', user);
         await recordAudit(tx, {
           spaceId,
           actorId: user.id,
@@ -492,6 +743,104 @@ export class EntriesService {
 }
 
 // --- Helpers -------------------------------------------------------------------------------------
+
+/** What the workflow rules need about an entry, and who is acting. */
+interface Workflow {
+  state: WorkflowState;
+  live: boolean;
+  requireApproval: boolean;
+  actor: WorkflowActor;
+}
+
+async function workflowOf(tx: DbTransaction, user: AuthUser, entry: EntryRow): Promise<Workflow> {
+  const [space] = await tx.select({ requireApproval: spaces.requireApproval }).from(spaces).where(eq(spaces.id, entry.spaceId));
+  return {
+    state: workflowState({ status: entry.status as EntryStatus, currentVersionId: entry.currentVersionId, publishedVersionId: entry.publishedVersionId }),
+    live: entry.publishedVersionId !== null,
+    requireApproval: space?.requireApproval ?? false,
+    actor: { role: user.spaces.find((s) => s.id === entry.spaceId)?.role ?? null, agencyStaff: hasStaffAccess(user) },
+  };
+}
+
+/** Throws the problem the workflow gives for `action`: 403 for who is asking, 409 for the page's state. */
+function check(flow: Workflow, action: WorkflowAction): void {
+  const refused = refusal(action, flow, flow.actor);
+  if (!refused) return;
+  throw refused.code === 'insufficient_role' || refused.code === 'approval_required'
+    ? forbidden(refused.code, refused.detail)
+    : conflict(refused.code, refused.detail);
+}
+
+/** Closes the entry's open review request, if it has one, and says who had asked. */
+async function closeReview(
+  tx: DbTransaction,
+  entryId: string,
+  decision: ReviewDecision,
+  user: AuthUser,
+  comment: string | null = null,
+): Promise<{ requestedBy: string | null } | null> {
+  const [closed] = await tx
+    .update(reviewRequests)
+    .set({ decision, comment, decidedBy: user.id, decidedAt: sql`now()` })
+    .where(and(eq(reviewRequests.entryId, entryId), isNull(reviewRequests.decision)))
+    .returning({ requestedBy: reviewRequests.requestedBy });
+  return closed ?? null;
+}
+
+/** A change to a page in review takes it out of review: it has to be sent again. */
+async function leaveReview(tx: DbTransaction, entry: EntryRow, flow: Workflow, user: AuthUser): Promise<void> {
+  if (flow.state !== 'in_review') return;
+  await tx.update(entries).set({ status: storedStatus('draft', flow.live) }).where(eq(entries.id, entry.id));
+  await closeReview(tx, entry.id, 'withdrawn', user);
+}
+
+const requesters = alias(profiles, 'requesters');
+const deciders = alias(profiles, 'deciders');
+
+/** Review requests with the names of who asked and who decided. */
+function reviewsOf(tx: DbTransaction, where: SQL | undefined) {
+  return tx
+    .select({ request: reviewRequests, requestedByName: requesters.displayName, decidedByName: deciders.displayName })
+    .from(reviewRequests)
+    .leftJoin(requesters, eq(requesters.userId, reviewRequests.requestedBy))
+    .leftJoin(deciders, eq(deciders.userId, reviewRequests.decidedBy))
+    .where(where)
+    .$dynamic();
+}
+
+function toReview({
+  request,
+  requestedByName,
+  decidedByName,
+}: {
+  request: typeof reviewRequests.$inferSelect;
+  requestedByName: string | null;
+  decidedByName: string | null;
+}): ReviewRequest {
+  return {
+    id: request.id,
+    entryId: request.entryId,
+    versionId: request.versionId,
+    message: request.message,
+    requestedBy: request.requestedBy,
+    requestedByName,
+    requestedAt: request.requestedAt,
+    decision: request.decision as ReviewDecision | null,
+    comment: request.comment,
+    decidedBy: request.decidedBy,
+    decidedByName,
+    decidedAt: request.decidedAt,
+  };
+}
+
+function page(entry: Entry, spaceId: string): NotifiedPage {
+  return { spaceId, entryId: entry.id, title: entry.title };
+}
+
+/** A stored path as the site shows it: the top-level home page is `/`. */
+function sitePathOf(path: string): string {
+  return path === `/${HOME_SLUG}` ? '/' : path;
+}
 
 /** Inserts a version and points the entry at it (and at the slug its data holds). */
 async function saveVersion(

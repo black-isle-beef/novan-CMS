@@ -106,6 +106,14 @@ describe('NovanBlocks', () => {
     expect(el.innerHTML).not.toContain('ignored');
   });
 
+  it('leaves out hidden blocks', () => {
+    const el = render([
+      { _uid: uid(1), _block: 'hero', heading: 'Hidden', _hidden: true },
+      { _uid: uid(2), _block: 'hero', heading: 'Shown', _hidden: false },
+    ]);
+    expect([...el.querySelectorAll('novan-test-hero h2')].map((h) => h.textContent)).toEqual(['Shown']);
+  });
+
   it('gives a block with a settings input its style options, or null', () => {
     const el = render([
       { _uid: uid(1), _block: 'banner', text: 'Styled', _style: { tone: 'brand', rounded: true }, settings: 'a field' },

@@ -23,7 +23,34 @@ export type SiteMessage =
   /** The pointer moved onto a block, or off every block (`null`). */
   | { type: 'hover'; payload: { uid: string | null } }
   /** Where each block is, after a render, scroll or resize. */
-  | { type: 'rects'; payload: Record<string, BridgeRect> };
+  | { type: 'rects'; payload: Record<string, BridgeRect> }
+  /** The editor clicked a "+" button drawn next to a block: add a block there. */
+  | { type: 'insert'; payload: { uid: string; position: InsertPosition } }
+  /** The editor typed in a text field on the page; `done` once they leave it. */
+  | { type: 'text'; payload: { uid: string; field: string; value: string; done: boolean } }
+  /** The page's headings in order, after each render, for the pre-publish checklist. */
+  | { type: 'headings'; payload: { headings: PageHeading[] } };
+
+/** A heading on the page, and the block it is in (null outside blocks, e.g. in the site's header). */
+export interface PageHeading {
+  level: number;
+  /** Shortened to {@link MAX_HEADING_TEXT} characters. */
+  text: string;
+  uid: string | null;
+}
+
+export const MAX_HEADING_TEXT = 200;
+
+/** Where a new block goes, next to an existing one. */
+export type InsertPosition = 'before' | 'after';
+
+/** A plain text field of the selected block that the editor may change on the page. */
+export interface EditableText {
+  /** The field's api id. */
+  field: string;
+  value: string;
+  multiline: boolean;
+}
 
 /** What the admin sends the site. */
 export type AdminMessage =
@@ -33,7 +60,12 @@ export type AdminMessage =
   | { type: 'hover'; payload: { uid: string | null } }
   | { type: 'scrollTo'; payload: { uid: string } }
   /** A fresh signed preview token, before the one the page was opened with expires. */
-  | { type: 'token'; payload: { token: string } };
+  | { type: 'token'; payload: { token: string } }
+  /**
+   * What the editor may change on the page: the selected block's plain text fields, and whether "+" buttons are
+   * drawn for adding blocks. Read-only editors get neither.
+   */
+  | { type: 'editable'; payload: { uid: string | null; fields: EditableText[]; insert: boolean } };
 
 export type BridgeEnvelope<M> = M & { source: typeof BRIDGE_SOURCE; v: typeof BRIDGE_VERSION };
 
@@ -46,6 +78,10 @@ const MAX_UID = 100;
 const MAX_PATH = 1000;
 const MAX_TOKEN = 4096;
 const MAX_RECTS = 5000;
+const MAX_FIELD = 64;
+const MAX_TEXT = 10_000;
+const MAX_EDITABLE = 50;
+const MAX_HEADINGS = 500;
 
 /** A message from the site, or null when `data` is not one (wrong source or version, unknown type, bad payload). */
 export function parseSiteMessage(data: unknown): SiteMessage | null {
@@ -72,6 +108,37 @@ export function parseSiteMessage(data: unknown): SiteMessage | null {
       }
       return { type, payload: rects };
     }
+    case 'insert':
+      return isObject(payload) && isUid(payload['uid']) && (payload['position'] === 'before' || payload['position'] === 'after')
+        ? { type, payload: { uid: payload['uid'], position: payload['position'] } }
+        : null;
+    case 'text':
+      return isObject(payload) &&
+        isUid(payload['uid']) &&
+        isFieldName(payload['field']) &&
+        isString(payload['value'], MAX_TEXT) &&
+        typeof payload['done'] === 'boolean'
+        ? { type, payload: { uid: payload['uid'], field: payload['field'], value: payload['value'], done: payload['done'] } }
+        : null;
+    case 'headings': {
+      const items = isObject(payload) ? payload['headings'] : null;
+      if (!Array.isArray(items) || items.length > MAX_HEADINGS) return null;
+      const headings: PageHeading[] = [];
+      for (const item of items) {
+        if (
+          !isObject(item) ||
+          !Number.isInteger(item['level']) ||
+          (item['level'] as number) < 1 ||
+          (item['level'] as number) > 6 ||
+          !isString(item['text'], MAX_HEADING_TEXT) ||
+          !isUidOrNull(item['uid'])
+        ) {
+          return null;
+        }
+        headings.push({ level: item['level'] as number, text: item['text'], uid: item['uid'] });
+      }
+      return { type, payload: { headings } };
+    }
     default:
       return null;
   }
@@ -94,6 +161,19 @@ export function parseAdminMessage(data: unknown): AdminMessage | null {
       return isObject(payload) && isString(payload['token'], MAX_TOKEN) && payload['token'] !== ''
         ? { type, payload: { token: payload['token'] } }
         : null;
+    case 'editable': {
+      if (!isObject(payload) || !isUidOrNull(payload['uid']) || typeof payload['insert'] !== 'boolean') return null;
+      const fields = payload['fields'];
+      if (!Array.isArray(fields) || fields.length > MAX_EDITABLE) return null;
+      const editable: EditableText[] = [];
+      for (const item of fields) {
+        if (!isObject(item) || !isFieldName(item['field']) || !isString(item['value'], MAX_TEXT) || typeof item['multiline'] !== 'boolean') {
+          return null;
+        }
+        editable.push({ field: item['field'], value: item['value'], multiline: item['multiline'] });
+      }
+      return { type, payload: { uid: payload['uid'], fields: editable, insert: payload['insert'] } };
+    }
     default:
       return null;
   }
@@ -114,6 +194,10 @@ function isString(value: unknown, max: number): value is string {
 
 function isUid(value: unknown): value is string {
   return isString(value, MAX_UID) && value !== '';
+}
+
+function isFieldName(value: unknown): value is string {
+  return isString(value, MAX_FIELD) && /^[A-Za-z][A-Za-z0-9_]*$/.test(value);
 }
 
 function isUidOrNull(value: unknown): value is string | null {

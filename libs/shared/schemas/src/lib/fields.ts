@@ -309,6 +309,8 @@ export interface BlockNode {
   _block: string;
   /** The block's style options, by settings key: named presets and switches (docs/build/10-blocks-starter-site.md). */
   _style?: BlockStyle;
+  /** Kept in the page but not shown on the site (docs/build/12-visual-editor.md). */
+  _hidden?: boolean;
   children?: BlockNode[];
   [field: string]: unknown;
 }
@@ -550,6 +552,7 @@ class EntrySchemaBuilder {
         _uid: uuid,
         _block: allowed.length ? z.enum(allowed as [string, ...string[]], 'This block is not allowed here.') : apiIdSchema,
         _style: blockStyleSchema.optional(),
+        _hidden: z.boolean().optional(),
         children: z.array(z.lazy(() => node)).optional(),
       }) as unknown as z.ZodType<BlockNode>;
       union = node;
@@ -584,6 +587,7 @@ class EntrySchemaBuilder {
       _uid: uuid,
       _block: z.literal(apiId),
       _style: blockStyleSchema.optional(),
+      _hidden: z.boolean().optional(),
       ...this.shape(type.fields),
       children,
     });
@@ -684,6 +688,10 @@ export interface MediaRef {
   assetId: string;
   /** Dotted, with blocks named by `_uid`: `image`, `gallery.2`, `body.<uid>.image`, `seo.ogImage`. */
   path: string;
+  /** The page's own alternative text for the item, when it has one. */
+  alt?: string;
+  /** Whether the field needs alternative text to publish. */
+  requireAlt: boolean;
 }
 
 /**
@@ -720,8 +728,14 @@ export function mediaRefs(
       case 'media': {
         const items = field.multiple ? (Array.isArray(value) ? value : []) : [value];
         items.forEach((item: unknown, index) => {
-          const assetId = typeof item === 'object' && item !== null ? (item as { assetId?: unknown }).assetId : undefined;
-          if (typeof assetId === 'string') refs.push({ assetId, path: field.multiple ? `${path}.${index}` : path });
+          const { assetId, alt } = typeof item === 'object' && item !== null ? (item as { assetId?: unknown; alt?: unknown }) : {};
+          if (typeof assetId !== 'string') return;
+          refs.push({
+            assetId,
+            path: field.multiple ? `${path}.${index}` : path,
+            ...(typeof alt === 'string' && alt.trim() ? { alt } : {}),
+            requireAlt: field.requireAlt,
+          });
         });
         return;
       }

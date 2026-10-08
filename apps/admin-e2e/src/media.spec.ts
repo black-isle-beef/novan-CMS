@@ -85,6 +85,7 @@ test.describe('@media', () => {
     await expectNoAxeViolations(page);
 
     await page.getByRole('button', { name: 'Publish', exact: true }).click();
+    await page.getByRole('dialog', { name: /^Publish / }).getByRole('button', { name: /^Publish/ }).click();
     await expect(page.getByText(/^Published\. It is live at \//)).toBeVisible();
 
     // The library now knows where the image is used, and warns before deleting it.

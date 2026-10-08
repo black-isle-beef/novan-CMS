@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { ContentApi } from '@novan/admin-content';
 import { Confirm } from '@novan/admin-shell';
 import { ManagementApi, SpaceContext } from '@novan/admin-spaces';
-import type { EntrySummary, Onboarding } from '@novan/shared-schemas';
+import type { EntrySummary, Onboarding, PendingReview } from '@novan/shared-schemas';
 import { of } from 'rxjs';
 import { DashboardPage } from './dashboard-page';
 
@@ -36,7 +36,7 @@ const entries = [
   page('4', 'Site settings', '2026-10-06T10:00:00Z', { kind: 'singleton', contentType: 'siteSettings' }),
 ];
 
-async function render({ canEdit = true, checklist = null as Onboarding | null } = {}) {
+async function render({ canEdit = true, checklist = null as Onboarding | null, reviews = [] as PendingReview[], role = 'editor' as string | null } = {}) {
   const management = {
     onboarding: vi.fn(() => of({ checklist })),
     dismissOnboarding: vi.fn(() => of({ checklist: checklist && { ...checklist, dismissedAt: '2026-10-06T12:00:00Z' } })),
@@ -44,9 +44,9 @@ async function render({ canEdit = true, checklist = null as Onboarding | null } 
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
-      { provide: ContentApi, useValue: { listEntries: vi.fn(() => of(entries)) } },
+      { provide: ContentApi, useValue: { listEntries: vi.fn(() => of(entries)), reviews: vi.fn(() => of(reviews)) } },
       { provide: ManagementApi, useValue: management },
-      { provide: SpaceContext, useValue: { currentSpace: signal({ name: 'Demo site' }), canEditCurrent: signal(canEdit) } },
+      { provide: SpaceContext, useValue: { currentSpace: signal({ name: 'Demo site', role }), canEditCurrent: signal(canEdit) } },
     ],
   });
   const fixture = TestBed.createComponent(DashboardPage);
@@ -63,8 +63,41 @@ async function render({ canEdit = true, checklist = null as Onboarding | null } 
   return { fixture, el, management, section, links, settle };
 }
 
+const pending = (title: string, extra: Partial<PendingReview> = {}): PendingReview => ({
+  id: `review-${title}`,
+  entryId: title,
+  versionId: 'v',
+  message: null,
+  requestedBy: 'u',
+  requestedByName: 'Client User',
+  requestedAt: '2026-10-07T09:30:00Z',
+  decision: null,
+  comment: null,
+  decidedBy: null,
+  decidedByName: null,
+  decidedAt: null,
+  entry: page(title, title, '2026-10-07T09:00:00Z', { status: 'in_review' }),
+  ...extra,
+});
+
 describe('DashboardPage', () => {
-  it('lists recently edited pages, newest first, and the drafts awaiting review', async () => {
+  it('shows pages waiting for review first, with who sent them and their note', async () => {
+    const { links, section } = await render({ role: 'admin', reviews: [pending('Pricing', { message: 'New prices for 2027' }), pending('Team')] });
+    expect(links('reviews-heading')).toEqual(['Pricing', 'Team']);
+    expect(section('reviews-heading').textContent).toContain('Publish them, or ask for changes.');
+    expect(section('reviews-heading').textContent).toContain('Sent by Client User');
+    expect(section('reviews-heading').textContent).toContain('New prices for 2027');
+  });
+
+  it('tells others who reviews, and shows nothing when no page is waiting', async () => {
+    const author = await render({ role: 'author', reviews: [pending('Pricing')] });
+    expect(author.section('reviews-heading').textContent).toContain('A space admin publishes them');
+    TestBed.resetTestingModule();
+    const quiet = await render();
+    expect(quiet.el.querySelector('#reviews-heading')).toBeNull();
+  });
+
+  it('lists recently edited pages, newest first, and the changes not live yet', async () => {
     const { el, links } = await render();
     expect(el.querySelector('h1')?.textContent).toBe('Dashboard');
     expect(links('recent-heading')).toEqual(['About', 'Contact', 'Home']);

@@ -6,7 +6,10 @@ import { type HasUnsavedChanges, Shortcuts, shortcutKeys, Skeleton, warnBeforeUn
 import { ManagementApi, problemFieldErrors, problemMessage, SpaceContext } from '@novan/admin-spaces';
 import { firstValueFrom } from 'rxjs';
 
-/** Space admins and agency staff rename the space and set the address of its site (used for "View live page"). */
+/**
+ * Space admins and agency staff rename the space, set the address of its site (used for "View live page") and choose
+ * whether publishing needs their approval (docs/build/13-workflow-publishing.md).
+ */
 @Component({
   selector: 'nv-space-settings-page',
   imports: [DsAlertComponent, ReactiveFormsModule, Skeleton],
@@ -30,6 +33,7 @@ export class SpaceSettingsPage implements HasUnsavedChanges {
   protected readonly form = inject(NonNullableFormBuilder).group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
     previewUrl: ['', [Validators.maxLength(2048), Validators.pattern(/^https?:\/\/\S+$/i)]],
+    requireApproval: [false],
   });
   private readonly value = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
 
@@ -37,14 +41,21 @@ export class SpaceSettingsPage implements HasUnsavedChanges {
   private readonly dirty = computed(() => {
     const space = this.space();
     const value = this.value();
-    return space !== null && (value.name !== space.name || (value.previewUrl ?? '') !== (space.previewUrl ?? ''));
+    return (
+      space !== null &&
+      (value.name !== space.name ||
+        (value.previewUrl ?? '') !== (space.previewUrl ?? '') ||
+        (value.requireApproval ?? false) !== space.requireApproval)
+    );
   });
 
   constructor() {
     effect(() => {
       this.spaceId();
       const space = this.space();
-      if (space) untracked(() => this.form.reset({ name: space.name, previewUrl: space.previewUrl ?? '' }));
+      if (space) {
+        untracked(() => this.form.reset({ name: space.name, previewUrl: space.previewUrl ?? '', requireApproval: space.requireApproval }));
+      }
     });
     inject(Shortcuts).register('save', () => void this.submit());
     warnBeforeUnload(() => this.hasUnsavedChanges());
@@ -64,11 +75,11 @@ export class SpaceSettingsPage implements HasUnsavedChanges {
     this.serverErrors.set({});
     if (this.form.invalid || this.busy()) return;
 
-    const { name, previewUrl } = this.form.getRawValue();
+    const { name, previewUrl, requireApproval } = this.form.getRawValue();
     this.busy.set(true);
     try {
       const space = await firstValueFrom(
-        this.api.updateSpace(this.spaceId(), { name: name.trim(), previewUrl: previewUrl.trim() || null }),
+        this.api.updateSpace(this.spaceId(), { name: name.trim(), previewUrl: previewUrl.trim() || null, requireApproval }),
       );
       this.context.replace(space);
       this.submitted.set(false);

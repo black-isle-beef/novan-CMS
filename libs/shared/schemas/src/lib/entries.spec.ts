@@ -8,6 +8,7 @@ import {
   slugSchema,
   updateEntryRequestSchema,
   updateFolderRequestSchema,
+  workflowMessageRequestSchema,
 } from './entries';
 
 describe('slugs', () => {
@@ -62,6 +63,12 @@ describe('request schemas', () => {
     expect(createFolderRequestSchema.safeParse({ name: ' ', slug: 'blog' }).success).toBe(false);
     expect(updateFolderRequestSchema.safeParse({}).success).toBe(false);
     expect(updateFolderRequestSchema.safeParse({ parentId: null }).success).toBe(true);
+  });
+
+  it('publishes, submits and approves with or without a body', () => {
+    expect(workflowMessageRequestSchema.parse(undefined)).toEqual({});
+    expect(workflowMessageRequestSchema.parse({ message: ' Launch ' })).toEqual({ message: 'Launch' });
+    expect(workflowMessageRequestSchema.safeParse({ status: 'published' }).success).toBe(false);
   });
 
   it('reads list filters from the query string', () => {

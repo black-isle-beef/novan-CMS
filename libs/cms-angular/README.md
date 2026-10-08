@@ -247,7 +247,8 @@ other fields. The style options an editor chose for the block (`_style`, e.g. `{
 `settings` input, as `null` when there are none; check them against your own options, because stored values
 can be older than your component. Child blocks (`children`) go to a component with a `children` input, which places them with
 its own `<novan-blocks>`. For a component without one, the renderer puts them after the block. A block with
-no registered component shows nothing on the live site, and a warning box in preview.
+no registered component shows nothing on the live site, and a warning box in preview. Blocks an editor hid
+(`_hidden: true`) are never shown.
 
 ## Rich text
 
@@ -316,7 +317,11 @@ When the preview page is open in the admin's visual editor (inside its frame), t
 - tells the admin which block was clicked (links in it are not followed) and where every block is;
 - applies the editor's changes as they are made: read the page through `NovanPreview.withLiveData(page)` in a
   `computed`, as `examples/cms-page.ts` does, and the page re-renders without reloading;
-- takes the fresh signed token the admin sends before the old one expires.
+- takes the fresh signed token the admin sends before the old one expires;
+- draws "+" buttons above and below the block under the pointer, for adding a block there;
+- lets editors double-click a text field of the selected block to change it on the page. Mark the element that
+  shows a field with `data-novan-field="heading"` to be sure it is found; without the mark, the bridge looks for
+  the element whose whole text is the field's value.
 
 It talks only to the admin's origin, which the Preview API gives with the session, and ignores every other
 message.

@@ -51,6 +51,8 @@ export interface NovanBlockNode {
   _block: string;
   /** The style options an editor chose, e.g. `{ tone: 'brand' }`; given to the component's `settings` input. */
   _style?: Record<string, string | boolean>;
+  /** Hidden by an editor: kept in the page but never shown (the API leaves such blocks out already). */
+  _hidden?: boolean;
   children?: NovanBlockNode[];
   [field: string]: unknown;
 }

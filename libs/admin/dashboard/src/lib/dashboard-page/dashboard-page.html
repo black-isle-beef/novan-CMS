@@ -26,6 +26,26 @@
     />
   }
 
+  @if (reviews().length) {
+    <section class="mb-5" aria-labelledby="reviews-heading">
+      <h2 id="reviews-heading" class="h4">Waiting for review</h2>
+      <p class="small text-body-secondary">
+        {{ canReview() ? 'Publish them, or ask for changes.' : 'A space admin publishes them, or asks for changes.' }}
+      </p>
+      <ul class="list-unstyled mb-0">
+        @for (review of reviews(); track review.id) {
+          <li class="py-2" [class.border-top]="!$first">
+            <a [routerLink]="['/spaces', spaceId(), 'content', review.entryId]">{{ review.entry.title }}</a>
+            <div class="small text-body-secondary">Sent by {{ review.requestedByName ?? 'someone' }} on {{ sent(review) }}</div>
+            @if (review.message) {
+              <div class="small">{{ review.message }}</div>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
   <div class="row g-5">
     <section class="col-lg-6" aria-labelledby="recent-heading">
       <h2 id="recent-heading" class="h4">Recently edited</h2>
@@ -44,7 +64,7 @@
     </section>
 
     <section class="col-lg-6" aria-labelledby="drafts-heading">
-      <h2 id="drafts-heading" class="h4">Drafts awaiting review</h2>
+      <h2 id="drafts-heading" class="h4">Changes not live yet</h2>
       <p class="small text-body-secondary">Pages with changes that are not on the live site yet.</p>
       @if (drafts().length) {
         <ul class="list-unstyled mb-0">

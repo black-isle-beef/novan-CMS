@@ -1,5 +1,10 @@
 <h1 class="mb-1">{{ copy.pages }}</h1>
-<p class="lead text-muted mb-4">The pages of {{ context.currentSpace()?.name ?? 'this site' }}, and the content they share.</p>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <p class="lead text-muted mb-0">The pages of {{ context.currentSpace()?.name ?? 'this site' }}, and the content they share.</p>
+  <a class="btn btn-secondary" [routerLink]="['/spaces', spaceId(), 'content', 'bin']">
+    <i class="bi bi-trash3 me-1" aria-hidden="true"></i>Recycle bin
+  </a>
+</div>
 
 @if (status(); as message) {
   <div id="content-status" tabindex="-1" class="mb-3">

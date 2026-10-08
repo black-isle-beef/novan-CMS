@@ -13,6 +13,7 @@ const space: SpaceSummary = {
   slug: 'demo-site',
   organisationId: '00000000-0000-4000-8000-000000000100',
   previewUrl: 'http://localhost:4300',
+  requireApproval: false,
   role: 'admin',
   createdAt: '2026-10-01T00:00:00Z',
 };
@@ -64,9 +65,22 @@ describe('SpaceSettingsPage', () => {
     expect(fixture.componentInstance.hasUnsavedChanges()).toBe(true);
     await save();
 
-    expect(updateSpace).toHaveBeenCalledWith(spaceId, { name: 'Demo Ltd', previewUrl: null });
+    expect(updateSpace).toHaveBeenCalledWith(spaceId, { name: 'Demo Ltd', previewUrl: null, requireApproval: false });
     expect(context.replace).toHaveBeenCalledWith(expect.objectContaining({ name: 'Demo Ltd', previewUrl: null }));
     expect(fixture.componentInstance.hasUnsavedChanges()).toBe(false);
+  });
+
+  it('turns approval before publishing on, as a labelled switch', async () => {
+    const { el, save, updateSpace, fixture } = await render();
+    const toggle = el.querySelector<HTMLInputElement>('#space-settings-approval') as HTMLInputElement;
+    expect(toggle.getAttribute('role')).toBe('switch');
+    expect(toggle.checked).toBe(false);
+    expect(el.querySelector(`label[for="space-settings-approval"]`)?.textContent).toContain('need approval');
+    toggle.click();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.hasUnsavedChanges()).toBe(true);
+    await save();
+    expect(updateSpace).toHaveBeenCalledWith(spaceId, expect.objectContaining({ requireApproval: true }));
   });
 
   it('checks the fields before saving, and ties the message to each', async () => {

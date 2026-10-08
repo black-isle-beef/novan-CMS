@@ -10,6 +10,16 @@ export interface StatusBadge {
 /** Plain-language status of a page; never colour alone, the label says it. */
 export function statusBadges(entry: Pick<EntrySummary, 'status' | 'hasUnpublishedChanges' | 'deletedAt'>): StatusBadge[] {
   if (entry.deletedAt) return [{ label: 'In the bin', variant: 'neutral' }];
+  if (entry.status === 'archived') return [{ label: 'Archived', variant: 'neutral' }];
+  if (entry.status === 'in_review') {
+    // A live page waiting for review of its changes.
+    return entry.hasUnpublishedChanges
+      ? [
+          { label: 'Published', variant: 'secondary' },
+          { label: 'Waiting for review', variant: 'info' },
+        ]
+      : [{ label: 'Waiting for review', variant: 'info' }];
+  }
   if (entry.status !== 'published') return [{ label: 'Draft', variant: 'neutral' }];
   return entry.hasUnpublishedChanges
     ? [

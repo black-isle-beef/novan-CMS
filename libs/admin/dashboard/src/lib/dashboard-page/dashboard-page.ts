@@ -4,7 +4,7 @@ import { DsAlertComponent, DsBadgeComponent, DsToastService } from '@black-isle-
 import { ContentApi, statusBadges } from '@novan/admin-content';
 import { Confirm, copy, Skeleton } from '@novan/admin-shell';
 import { ManagementApi, problemMessage, SpaceContext } from '@novan/admin-spaces';
-import { type EntrySummary, HOME_SLUG, type Onboarding } from '@novan/shared-schemas';
+import { type EntrySummary, HOME_SLUG, type Onboarding, type PendingReview } from '@novan/shared-schemas';
 import { firstValueFrom } from 'rxjs';
 import { OnboardingChecklist } from '../onboarding-checklist/onboarding-checklist';
 
@@ -14,8 +14,8 @@ const LIST_LENGTH = 5;
 const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 /**
- * A space's home: the getting-started checklist while it is new, recently edited pages, drafts awaiting review
- * (pages with changes that are not live yet) and a quick way to add a page.
+ * A space's home: the getting-started checklist while it is new, pages waiting for review (the reviewer inbox,
+ * docs/build/13-workflow-publishing.md), recently edited pages, changes not live yet and a quick way to add a page.
  */
 @Component({
   selector: 'nv-dashboard-page',
@@ -39,6 +39,13 @@ export class DashboardPage {
   protected readonly loadError = signal<string | null>(null);
   private readonly entries = signal<EntrySummary[]>([]);
   protected readonly checklist = signal<Onboarding | null>(null);
+  /** Pages sent for review, oldest first. */
+  protected readonly reviews = signal<PendingReview[]>([]);
+  /** Space admins and agency staff review; the role is the space's own (agency staff have none). */
+  protected readonly canReview = computed(() => {
+    const role = this.context.currentSpace()?.role;
+    return role === 'admin' || role === null;
+  });
 
   private readonly pages = computed(() =>
     this.entries()
@@ -70,6 +77,10 @@ export class DashboardPage {
     return when.format(new Date(entry.updatedAt));
   }
 
+  protected sent(review: PendingReview): string {
+    return when.format(new Date(review.requestedAt));
+  }
+
   protected async dismissChecklist(): Promise<void> {
     const confirmed = await this.confirm.ask({
       heading: 'Dismiss the checklist?',
@@ -90,12 +101,14 @@ export class DashboardPage {
     this.loading.set(true);
     this.loadError.set(null);
     try {
-      const [entries, onboarding] = await Promise.all([
+      const [entries, onboarding, reviews] = await Promise.all([
         firstValueFrom(this.content.listEntries(spaceId)),
         firstValueFrom(this.management.onboarding(spaceId)),
+        firstValueFrom(this.content.reviews(spaceId)),
       ]);
       this.entries.set(entries);
       this.checklist.set(onboarding.checklist);
+      this.reviews.set(reviews);
     } catch (error) {
       this.loadError.set(problemMessage(error));
     } finally {

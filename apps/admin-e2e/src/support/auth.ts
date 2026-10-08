@@ -6,6 +6,8 @@ import { expectNoAxeViolations } from './axe';
 export const agency = { email: 'agency@novan.test', password: 'password123' };
 export const client = { email: 'client@novan.test', password: 'password123' };
 export const developer = { email: 'developer@novan.test', password: 'password123' };
+/** The demo space's admin without agency staff rights, so no second factor (supabase/seed.sql). */
+export const spaceAdmin = { email: 'novanwebservices@gmail.com', password: 'password123' };
 
 /** The seeded agency user's TOTP secret (supabase/seed.sql). */
 const agencyTotp = new TOTP({ secret: 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP', digits: 6, period: 30 });
@@ -52,4 +54,27 @@ export async function authLinkFromEmail(to: string): Promise<string> {
     )
     .toBeTruthy();
   return link as string;
+}
+
+/**
+ * Waits for an email to `to` whose subject starts with `subject`, sent after `since` (the workflow emails,
+ * docs/build/13-workflow-publishing.md), and returns its text.
+ */
+export async function emailTo(to: string, subject: string, since: Date): Promise<string> {
+  let text = '';
+  await expect
+    .poll(
+      async () => {
+        const search = await fetch(`${mailpitUrl}/api/v1/search?query=${encodeURIComponent(`to:"${to}" subject:"${subject}"`)}`);
+        const { messages } = (await search.json()) as { messages: { ID: string; Created: string; Subject: string }[] };
+        const found = messages.find((message) => message.Subject.startsWith(subject) && Date.parse(message.Created) >= since.getTime() - 1000);
+        if (!found) return false;
+        const message = await fetch(`${mailpitUrl}/api/v1/message/${found.ID}`);
+        text = ((await message.json()) as { Text: string }).Text;
+        return true;
+      },
+      { message: `an email to ${to}: ${subject}`, timeout: 15_000 },
+    )
+    .toBe(true);
+  return text;
 }

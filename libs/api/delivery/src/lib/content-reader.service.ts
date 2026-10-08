@@ -4,6 +4,7 @@ import { cacheTag, notFound } from '@novan/api-common';
 import { assets, blockTypes, contentTypes, DbService } from '@novan/api-db';
 import {
   assetUrl,
+  type BlockNode,
   type BlockTypeDef,
   type DeliveryAsset,
   type DeliveryEntriesPage,
@@ -48,7 +49,8 @@ export function deliveryConfigFromEnv(env: NodeJS.ProcessEnv = process.env): Del
   return { publicApiUrl: env['PUBLIC_API_URL'] || `http://localhost:${env['API_PORT'] ?? env['PORT'] ?? 3000}` };
 }
 
-interface Row {
+/** An entry as read from the content source. */
+export interface Row {
   id: string;
   contentType: string;
   kind: string;
@@ -175,6 +177,15 @@ export class ContentReader {
     };
   }
 
+  /**
+   * Unsaved data of one entry as the Preview API would deliver it, for the visual editor's live preview. The
+   * caller has checked that the user may read the entry and validated `row.data` as a draft.
+   */
+  async render(access: ApiTokenAccess, row: Row, include: number): Promise<DeliveryEntry> {
+    const { items } = await this.expand(access, await this.model(access), [row], { include });
+    return items[0];
+  }
+
   /** Every page's address and when it last changed, for a site's sitemap.xml. */
   async sitemap(access: ApiTokenAccess, query: SitemapQuery): Promise<Delivered<Sitemap>> {
     const src = this.source(access);
@@ -247,6 +258,7 @@ export class ContentReader {
       const wanted = new Set<string>();
       for (const row of frontier) {
         mapEntryData(fieldsOf(row), asData(row.data), model.blockTypes, {
+          block: visible,
           reference: (id) => {
             if (isUuid(id) && !known.has(id)) wanted.add(id);
             return id;
@@ -266,6 +278,7 @@ export class ContentReader {
     const linkIds = new Set<string>();
     for (const row of [...top, ...[...known.values()].filter((r): r is Row => r !== null)]) {
       mapEntryData(fieldsOf(row), asData(row.data), model.blockTypes, {
+        block: visible,
         media: (item) => {
           if (isUuid(item.assetId)) assetIds.add(item.assetId);
           return item;
@@ -285,6 +298,7 @@ export class ContentReader {
       tags.add(cacheTag.entry(row.id));
       const inside = new Set(ancestors).add(row.id);
       const data = mapEntryData(fieldsOf(row), asData(row.data), model.blockTypes, {
+        block: visible,
         reference: (id) => {
           const target = known.get(id);
           if (target === null) return DROP;
@@ -384,6 +398,9 @@ function columns(src: ContentSource) {
     data: src.data,
   };
 }
+
+/** Hidden blocks stay in the page for its editors but are never delivered. */
+const visible = (node: BlockNode): BlockNode | typeof DROP => (node._hidden === true ? DROP : node);
 
 const published = (access: ApiTokenAccess): string => (access.scope === 'delivery' ? 'published ' : '');
 

@@ -1,5 +1,5 @@
 <h1 class="mb-1">Space settings</h1>
-<p class="lead text-body-secondary mb-4">The space’s name, and where its site lives.</p>
+<p class="lead text-body-secondary mb-4">The space’s name, where its site lives, and who publishes.</p>
 
 @if (space(); as current) {
   <div class="col-lg-7">
@@ -48,6 +48,25 @@
           }}
         </div>
       </div>
+
+      <fieldset class="mb-4">
+        <legend class="form-label fs-6">Publishing</legend>
+        <div class="form-check form-switch">
+          <input
+            id="space-settings-approval"
+            type="checkbox"
+            role="switch"
+            class="form-check-input"
+            formControlName="requireApproval"
+            aria-describedby="space-settings-approval-hint"
+          />
+          <label for="space-settings-approval" class="form-check-label">Pages need approval before they are published</label>
+        </div>
+        <div id="space-settings-approval-hint" class="form-text">
+          Authors, editors and developers send pages for review, and a space admin publishes them or asks for changes. Admins
+          are emailed when a page is waiting.
+        </div>
+      </fieldset>
 
       <dl class="mb-4">
         <dt>Short name</dt>
