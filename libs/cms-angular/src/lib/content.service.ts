@@ -4,8 +4,9 @@ import { inject, Injectable, Injector, makeStateKey, PLATFORM_ID, TransferState 
 import { pendingUntilEvent } from '@angular/core/rxjs-interop';
 import { catchError, from, map, type Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { DEFAULT_PROXY_PATH, NOVAN_CMS_CONFIG, NOVAN_CMS_SERVER } from './config';
+import { NovanLocale } from './locale-state';
 import { NovanPreview } from './preview';
-import type { NovanEntry, Page, PageData, Paged } from './types';
+import type { NovanEntry, NovanLocales, Page, PageData, Paged } from './types';
 
 type Scalar = string | number | boolean;
 
@@ -36,8 +37,9 @@ export interface NovanEntryOptions {
   select?: readonly string[];
 }
 
+/** One item per page and locale it is in; a page's items share its `id`. */
 export interface NovanSitemap {
-  items: { path: string; locale: string; updatedAt: string }[];
+  items: { id: string; path: string; locale: string; updatedAt: string }[];
 }
 
 /** An error answer from the Novan API (RFC 9457 problem details, with the API's stable `code`). */
@@ -73,6 +75,7 @@ export class NovanContentService {
   private readonly injector = inject(Injector);
   private readonly config = inject(NOVAN_CMS_CONFIG);
   private readonly preview = inject(NovanPreview);
+  private readonly locale = inject(NovanLocale);
   private readonly transferState = inject(TransferState);
   private readonly server = isPlatformServer(inject(PLATFORM_ID));
 
@@ -104,12 +107,14 @@ export class NovanContentService {
     return this.get<Paged<T>>('entries', params, false).pipe(map((page) => page as Paged<T>));
   }
 
-  /** One entry by id, or null when there is none. */
-  entry<T = Record<string, unknown>>(id: string, options: Omit<NovanEntryOptions, 'locale'> = {}): Observable<NovanEntry<T> | null> {
-    // An entry has one locale already; the API refuses `locale` here.
-    const params = this.entryParams(options);
-    delete params['locale'];
-    return this.get<NovanEntry<T>>(`entries/${encodeURIComponent(id)}`, params, true);
+  /** One entry by id, in the locale, or null when there is none. */
+  entry<T = Record<string, unknown>>(id: string, options: NovanEntryOptions = {}): Observable<NovanEntry<T> | null> {
+    return this.get<NovanEntry<T>>(`entries/${encodeURIComponent(id)}`, this.entryParams(options), true);
+  }
+
+  /** The site's locales, and whether its addresses start with the locale (docs/build/16-localisation.md). */
+  locales(): Observable<NovanLocales> {
+    return this.get<NovanLocales>('locales', {}, false).pipe(map((locales) => locales as NovanLocales));
   }
 
   /** A singleton's content, e.g. site settings or navigation. */
@@ -119,15 +124,19 @@ export class NovanContentService {
     );
   }
 
-  /** Every page's path and when it last changed, for sitemap.xml. */
+  /**
+   * Every page's address in each locale it is in, and when it last changed, for sitemap.xml. All locales unless one
+   * is given (or set in `provideNovanCms`).
+   */
   sitemap(options: { locale?: string } = {}): Observable<NovanSitemap> {
     const locale = options.locale ?? this.config.locale;
     return this.get<NovanSitemap>('sitemap', locale ? { locale } : {}, false).pipe(map((sitemap) => sitemap as NovanSitemap));
   }
 
+  /** A call's locale: its own, else the page being shown's, else the configured one, else the API's default. */
   private entryParams(options: NovanEntryOptions): Record<string, string> {
     const params: Record<string, string> = {};
-    const locale = options.locale ?? this.config.locale;
+    const locale = options.locale ?? this.locale.current() ?? this.config.locale;
     if (locale) params['locale'] = locale;
     if (options.include !== undefined) params['include'] = String(options.include);
     if (options.select?.length) params['select'] = options.select.map((field) => `fields.${field}`).join(',');

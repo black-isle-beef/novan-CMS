@@ -1,7 +1,8 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { cacheTag } from '@novan/api-common';
 import { type ContentEvent, ContentEvents } from '@novan/api-content';
-import { DbService, spaces } from '@novan/api-db';
+import { DbService, readSpaceLocales, spaces } from '@novan/api-db';
+import { localisedPath } from '@novan/shared-schemas';
 import { type MediaEvent, MediaEvents } from '@novan/api-media';
 import { eq } from 'drizzle-orm';
 import type { Subscription } from 'rxjs';
@@ -42,26 +43,33 @@ export class CachePurge implements OnModuleInit, OnModuleDestroy {
   }
 
   contentChanged(event: ContentEvent): Promise<void> {
-    const urls = (paths: string[]) => async () => {
-      const domains = await this.domains(event.spaceId);
+    /** Each page's address in every locale (with its prefix, when the space uses them), and other addresses as they are. */
+    const urls = (pages: string[], others: string[] = []) => async () => {
+      const [domains, locales] = await Promise.all([this.domains(event.spaceId), readSpaceLocales(this.db.serviceDb, event.spaceId)]);
+      const paths = [
+        ...new Set([...pages.flatMap((path) => locales.locales.map((locale) => localisedPath(publicPath(path), locale.code, locales))), ...others]),
+      ];
       return domains.flatMap((origin) => paths.map((path) => `${origin}${path}`));
     };
     // Publishing and moving can change addresses, and with them the space's redirects (0012_seo_site.sql).
     const redirects = [cacheTag.redirects(event.spaceId), overflowTag(event.spaceId)];
     switch (event.type) {
       case 'redirects.changed':
-        return this.purge(`${event.type} ${event.spaceId}`, redirects, urls(event.paths));
+        return this.purge(`${event.type} ${event.spaceId}`, redirects, urls([], event.paths));
+      case 'locales.changed':
+        // Every page reads differently: the space's whole cache goes. Without tags, the home page and sitemap at least.
+        return this.purge(`${event.type} ${event.spaceId}`, [cacheTag.space(event.spaceId), ...redirects], urls(['/'], ['/sitemap.xml']));
       case 'paths.changed':
         return this.purge(
           `${event.type} ${event.entryIds.join(',')}`,
           [...event.cacheTags, cacheTag.entries(event.environmentId), cacheTag.sitemap(event.environmentId), ...redirects],
-          urls([...new Set([...event.paths.map(publicPath), '/sitemap.xml'])]),
+          urls(event.paths, ['/sitemap.xml']),
         );
       default:
         return this.purge(
           `${event.type} ${event.entryId}`,
           [...event.cacheTags, cacheTag.entries(event.environmentId), cacheTag.sitemap(event.environmentId), ...redirects],
-          urls(event.path ? [publicPath(event.path), '/sitemap.xml'] : ['/sitemap.xml']),
+          urls(event.path ? [event.path] : [], ['/sitemap.xml']),
         );
     }
   }

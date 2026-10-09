@@ -1,6 +1,7 @@
 import { badRequest } from '@novan/api-common';
 import type { FieldDef, FieldFilter } from '@novan/shared-schemas';
 import { type SQL, sql } from 'drizzle-orm';
+import type { Locale } from './content-reader.service';
 import type { ContentSource } from './content-source';
 
 // Field filters, sorting and keyset pagination for `GET entries`. Every value reaches Postgres as a bound
@@ -52,7 +53,7 @@ function filterValue(field: FieldDef, value: string): string {
 const typed = (value: string, cast: Cast): SQL =>
   cast === 'numeric' ? sql`${value}::numeric` : cast === 'timestamptz' ? sql`${value}::timestamptz` : sql`${value}`;
 
-export function fieldFilterSql(src: ContentSource, fields: readonly FieldDef[], type: string, filter: FieldFilter): SQL {
+export function fieldFilterSql(src: ContentSource, fields: readonly FieldDef[], type: string, filter: FieldFilter, locale: Locale): SQL {
   const field = findField(fields, filter.field, type);
   const shape = fieldShape(field);
   if (!shape) throw badRequest('field_not_filterable', `fields.${field.apiId} is a ${field.type} field, which cannot be filtered.`);
@@ -60,13 +61,13 @@ export function fieldFilterSql(src: ContentSource, fields: readonly FieldDef[], 
   const list = sql.join(values.map((value) => sql`${value}`), sql`, `);
 
   if (shape.kind === 'list') {
-    const json = sql`(${src.data} -> ${field.apiId})`;
+    const json = valueJson(src, field, locale);
     if (filter.op === 'eq') return sql`${json} @> jsonb_build_array(${values[0]}::text)`;
     if (filter.op === 'in') return sql`${json} ?| array[${list}]::text[]`;
     throw badRequest('invalid_filter', `fields.${field.apiId} holds a list; filter it with eq or in.`);
   }
 
-  const expr = fieldExpr(src, field.apiId, shape.cast);
+  const expr = fieldExpr(src, field, shape.cast, locale);
   switch (filter.op) {
     case 'eq':
       return sql`${expr} = ${typed(values[0], shape.cast)}`;
@@ -79,8 +80,20 @@ export function fieldFilterSql(src: ContentSource, fields: readonly FieldDef[], 
   }
 }
 
-function fieldExpr(src: ContentSource, apiId: string, cast: Cast): SQL {
-  const text = sql`(${src.data} ->> ${apiId})`;
+/**
+ * A field's JSON value as the locale reads it: for a translated field, the first translation filled in along the
+ * locale's fallbacks (a plain value, from before the field was translated, is the default locale's), as delivered.
+ */
+function valueJson(src: ContentSource, field: FieldDef, locale: Locale): SQL {
+  const json = sql`(${src.data} -> ${field.apiId})`;
+  if (!field.localised) return json;
+  const translations = locale.chain.map((code) => sql`nullif(nullif(${json} -> ${code}, 'null'::jsonb), '""'::jsonb)`);
+  if (locale.chain.includes(locale.defaultLocale)) translations.push(sql`case when jsonb_typeof(${json}) <> 'object' then ${json} end`);
+  return sql`coalesce(${sql.join(translations, sql`, `)})`;
+}
+
+function fieldExpr(src: ContentSource, field: FieldDef, cast: Cast, locale: Locale): SQL {
+  const text = sql`(${valueJson(src, field, locale)} #>> '{}')`;
   return cast === 'numeric' ? sql`${text}::numeric` : text;
 }
 
@@ -94,7 +107,7 @@ export interface Sort {
   descending: boolean;
 }
 
-export function sortOf(src: ContentSource, spec: string, fields: readonly FieldDef[] | null, type: string | undefined): Sort {
+export function sortOf(src: ContentSource, spec: string, fields: readonly FieldDef[] | null, type: string | undefined, locale: Locale): Sort {
   const descending = spec.startsWith('-');
   const key = descending ? spec.slice(1) : spec;
   if (key === 'updatedAt') return { spec, expr: sql`${src.updatedAt}`, cast: 'timestamptz', descending };
@@ -107,7 +120,7 @@ export function sortOf(src: ContentSource, spec: string, fields: readonly FieldD
   if (!shape || shape.kind !== 'scalar') {
     throw badRequest('field_not_sortable', `fields.${apiId} is a ${field.type} field, which cannot be sorted.`);
   }
-  return { spec, expr: fieldExpr(src, apiId, shape.cast), cast: shape.cast, descending };
+  return { spec, expr: fieldExpr(src, field, shape.cast, locale), cast: shape.cast, descending };
 }
 
 /** Rows without a value come last either way; equal values are ordered by id. */

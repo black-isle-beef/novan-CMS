@@ -1,6 +1,6 @@
 import { HttpStatus } from '@nestjs/common';
 import { notFound, ProblemException } from '@novan/api-common';
-import { assets, blockTypes, contentTypes, type DbTransaction, environments } from '@novan/api-db';
+import { assets, blockTypes, contentTypes, type DbTransaction, environments, readSpaceLocales } from '@novan/api-db';
 import {
   type BlockTypeDef,
   buildEntrySchema,
@@ -8,8 +8,11 @@ import {
   type EntryData,
   type FieldDef,
   kindOfMime,
+  type LocaleSettings,
+  localeSettings,
   type MediaAssetInfo,
   mediaRefs,
+  type SpaceLocales,
   slugSchema,
 } from '@novan/shared-schemas';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
@@ -23,11 +26,14 @@ export interface EntryContentType {
   fields: FieldDef[];
 }
 
-/** One environment's content model, loaded once per request. */
+/** One environment's content model and its space's locales, loaded once per request. */
 export interface EntryModel {
   environmentId: string;
   contentTypes: EntryContentType[];
   blockTypes: BlockTypeDef[];
+  locales: SpaceLocales;
+  /** The default locale, and every locale's code: what translated values may hold. */
+  localeSettings: LocaleSettings;
 }
 
 /** The environment named `env` in the space (RLS hides other spaces' environments). */
@@ -41,8 +47,12 @@ export async function environmentId(tx: DbTransaction, spaceId: string, env: str
 }
 
 export async function loadModel(tx: DbTransaction, spaceId: string, env: string): Promise<EntryModel> {
-  const id = await environmentId(tx, spaceId, env);
-  const [types, blocks] = await Promise.all([
+  return modelOf(tx, spaceId, await environmentId(tx, spaceId, env));
+}
+
+/** {@link loadModel} for an environment already found. */
+export async function modelOf(tx: DbTransaction, spaceId: string, id: string): Promise<EntryModel> {
+  const [types, blocks, locales] = await Promise.all([
     tx
       .select({
         id: contentTypes.id,
@@ -57,12 +67,15 @@ export async function loadModel(tx: DbTransaction, spaceId: string, env: string)
       .select({ apiId: blockTypes.apiId, fields: blockTypes.fields, allowedChildren: blockTypes.allowedChildren })
       .from(blockTypes)
       .where(eq(blockTypes.environmentId, id)),
+    readSpaceLocales(tx, spaceId),
   ]);
   // `fields` is written only by the content model API (validated) or the seed (tested).
   return {
     environmentId: id,
     contentTypes: types.map((type) => ({ ...type, kind: type.kind as ContentTypeKind, fields: type.fields as FieldDef[] })),
     blockTypes: blocks.map((block) => ({ ...block, fields: block.fields as FieldDef[] })),
+    locales,
+    localeSettings: localeSettings(locales.locales),
   };
 }
 
@@ -117,6 +130,7 @@ export function validateData(
     blockTypes: model.blockTypes,
     draft: mode === 'draft',
     assets: assets && ((id) => assets.get(id) ?? null),
+    locales: model.localeSettings,
   });
   const result = schema.safeParse(data);
   if (result.success) return result.data;

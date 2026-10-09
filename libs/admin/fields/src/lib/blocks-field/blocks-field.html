@@ -73,7 +73,7 @@
                 [attr.aria-controls]="controlId('panel', node)"
                 (click)="toggle(node)"
               >
-                {{ disabled() ? 'View' : 'Edit' }}<span class="visually-hidden"> {{ blockName(node) }} block {{ i + 1 }}</span>
+                {{ readOnly() ? 'View' : 'Edit' }}<span class="visually-hidden"> {{ blockName(node) }} block {{ i + 1 }}</span>
               </button>
               @if (!disabled()) {
                 <button type="button" class="btn btn-sm btn-danger" (click)="remove(i)">

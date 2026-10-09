@@ -1,4 +1,13 @@
-import type { BlockNode, BlockType, EntryData, FieldDef } from '@novan/shared-schemas';
+import {
+  ANY_LOCALE,
+  type BlockNode,
+  type BlockType,
+  type EntryData,
+  type FieldDef,
+  isTranslated,
+  translationOf,
+  withTranslation,
+} from '@novan/shared-schemas';
 import { type DataPath, getIn, isObject, setIn } from './patches';
 
 /**
@@ -139,13 +148,31 @@ export function copyBlock(node: BlockNode, newUid: () => string = () => crypto.r
   return copy;
 }
 
-/** The block's plain text fields with their current values (what the bridge may let editors change on the page). */
-export function textFields(node: BlockNode, type: BlockType | undefined): { field: string; value: string; multiline: boolean }[] {
-  return (type?.fields ?? []).flatMap((field) =>
-    field.type === 'text' && !field.hidden && typeof node[field.apiId] === 'string'
-      ? [{ field: field.apiId, value: node[field.apiId] as string, multiline: field.multiline }]
-      : [],
-  );
+/**
+ * The block's plain text fields with their current values in `locale` (what the bridge may let editors change on the
+ * page). In another locale than the default, only translated fields: the others are the same in every language.
+ * A field not translated yet holds the default locale's text, as the site shows it, until the editor types over it.
+ */
+export function textFields(
+  node: BlockNode,
+  type: BlockType | undefined,
+  locale = ANY_LOCALE.defaultLocale,
+  defaultLocale = locale,
+): { field: string; value: string; multiline: boolean }[] {
+  return (type?.fields ?? []).flatMap((field) => {
+    if (field.type !== 'text' || field.hidden) return [];
+    const translated = isTranslated(field);
+    if (!translated && locale !== defaultLocale) return [];
+    const stored = node[field.apiId];
+    const value = translated ? (translationOf(stored, locale, defaultLocale) ?? translationOf(stored, defaultLocale, defaultLocale)) : stored;
+    return typeof value === 'string' ? [{ field: field.apiId, value, multiline: field.multiline }] : [];
+  });
+}
+
+/** The block with text typed on the page in `locale`: a translated field keeps its other locales. */
+export function withText(node: BlockNode, type: BlockType | undefined, field: string, value: string, locale: string, defaultLocale: string): BlockNode {
+  const def = type?.fields.find((candidate) => candidate.apiId === field);
+  return { ...node, [field]: def && isTranslated(def) ? withTranslation(node[field], locale, value, defaultLocale) : value };
 }
 
 export function isBlockNode(value: unknown): value is BlockNode {

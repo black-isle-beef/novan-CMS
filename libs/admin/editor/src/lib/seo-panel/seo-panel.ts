@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { DsAlertComponent } from '@black-isle-beef/novan-design-system';
 import { FieldForm, FieldFormContext } from '@novan/admin-fields';
-import type { FieldDef, FieldDefOf } from '@novan/shared-schemas';
+import { fallbackChain, type FieldDef, type FieldDefOf, firstTranslation, isTranslated } from '@novan/shared-schemas';
 
 /** Where search engines cut titles and descriptions short, roughly; the previews do the same. */
 export const SEARCH_TITLE_LENGTH = 60;
@@ -53,13 +53,13 @@ export class SeoPanel {
   });
 
   protected readonly title = computed(() => {
-    const own = text(this.formValue()['metaTitle']) ?? text(this.pageTitle()) ?? 'Untitled page';
+    const own = text(this.shown('metaTitle')) ?? text(this.pageTitle()) ?? 'Untitled page';
     const site = text(this.defaults().siteName);
     return site && own !== site ? `${own} | ${site}` : own;
   });
-  protected readonly description = computed(() => text(this.formValue()['metaDescription']));
-  protected readonly hidden = computed(() => this.formValue()['noindex'] === true);
-  protected readonly canonical = computed(() => text(this.formValue()['canonical']));
+  protected readonly description = computed(() => text(this.shown('metaDescription')));
+  protected readonly hidden = computed(() => this.shown('noindex') === true);
+  protected readonly canonical = computed(() => text(this.shown('canonical')));
 
   /** How the address shows in results: `www.example.com › about › team`. */
   protected readonly address = computed(() => {
@@ -78,11 +78,22 @@ export class SeoPanel {
 
   /** The page's sharing image, else the site's, as the library shows it. */
   protected readonly image = computed(() => {
-    const own = mediaId(this.formValue()['ogImage']);
+    const own = mediaId(this.shown('ogImage'));
     const id = own ?? this.defaults().shareImageId;
     const preview = id ? this.form.assets().get(id) : null;
     return preview?.thumbnailUrl ? { url: preview.thumbnailUrl, alt: preview.alt ?? '', fromSite: own === null } : null;
   });
+
+  /**
+   * A field's value as the site shows it in the language being edited: a translated one along that language's
+   * fallbacks (docs/build/16-localisation.md).
+   */
+  private shown(key: string): unknown {
+    const stored = this.formValue()[key];
+    const field = this.group()?.fields.find((candidate) => candidate.apiId === key);
+    if (!field || !isTranslated(field)) return stored;
+    return firstTranslation(stored, fallbackChain(this.form.locales(), this.form.activeLocale()), this.form.defaultLocale());
+  }
 
   protected readonly shortTitle = computed(() => shorten(this.title(), SEARCH_TITLE_LENGTH));
   protected readonly shortDescription = computed(() => {

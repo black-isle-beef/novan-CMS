@@ -351,11 +351,11 @@ describe('delivery and preview APIs', () => {
         expect((page.data['body'] as { link: DeliveryEntry }[])[0].link).toMatchObject({ id: authorB.id, data: { name: 'Bo' } });
       });
 
-      it('finds pages in folders, ignores a trailing slash, and answers 404 for other locales', async () => {
+      it('finds pages in folders, ignores a trailing slash, and answers 404 for locales the site is not in', async () => {
         expect((await delivery('/pages?path=/blog/first/')).body).toMatchObject({ id: blogPost.id, path: '/blog/first' });
         const other = await delivery('/pages?path=/about&locale=fr-FR');
         expect(other.status).toBe(404);
-        expect(other.body.code).toBe('page_not_found');
+        expect(other.body.code).toBe('locale_not_found');
         expect(other.headers['cache-control']).toBe('no-store');
       });
 

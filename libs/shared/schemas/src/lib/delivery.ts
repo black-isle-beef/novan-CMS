@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiIdSchema } from './fields';
+import { LOCALE_CODE_PATTERN } from './locales';
 
 // API tokens (managed under /v1/management/spaces/:spaceId/api-tokens) and the Delivery and Preview APIs
 // client sites read content from (/v1/delivery/..., /v1/preview/...). docs/build/08-delivery-preview-api.md
@@ -79,6 +80,8 @@ export type PreviewSession = z.infer<typeof previewSessionSchema>;
  */
 export const previewDataRequestSchema = z.strictObject({
   data: z.record(z.string(), z.unknown()),
+  /** The locale the editor shows; the space's default locale when left out. */
+  locale: z.string().regex(LOCALE_CODE_PATTERN, 'Use a locale like en-GB.').optional(),
   /** How deep to expand references, as the site's own requests do (0 to 3). */
   include: z.int().min(0).max(3).default(1),
 });
@@ -86,8 +89,18 @@ export type PreviewDataRequest = z.input<typeof previewDataRequestSchema>;
 
 // --- Delivery and Preview: responses ------------------------------------------------------------
 
+/** The same page in another locale, for `hreflang` links. */
+export interface DeliveryAlternate {
+  locale: string;
+  /** The page's address on the site in that locale (with its prefix when the space uses locale prefixes). */
+  path: string;
+}
+
+export const deliveryAlternateSchema: z.ZodType<DeliveryAlternate> = z.object({ locale: z.string(), path: z.string() });
+
 /**
- * One page or entry as client sites get it. In `data`, media items are expanded to `DeliveryAsset`,
+ * One page or entry as client sites get it, in one locale (docs/build/16-localisation.md): each translated field holds
+ * that locale's value, or its fallback's. In `data`, media items are expanded to `DeliveryAsset`,
  * references to other entries are expanded to `DeliveryEntry` up to the `include` depth (deeper, or back
  * to an entry already being expanded, they stay `{ id }`), and internal links gain the `path` of the page
  * they point to. References to anything not published (or, in preview, in the bin) are left out.
@@ -96,12 +109,18 @@ export interface DeliveryEntry {
   id: string;
   /** Content type api id. */
   contentType: string;
-  /** Folder path and slug, e.g. `/blog/hello-world`; the top-level `home` page is `/`. */
+  /**
+   * The page's address on the site: folder path and slug, e.g. `/blog/hello-world`, and `/` for the top-level `home`
+   * page. When the space uses locale prefixes, other locales' addresses start with theirs, e.g. `/fr/blog/hello-world`.
+   */
   path: string;
+  /** The locale the data is in. */
   locale: string;
   /** Delivery: when this version went live. Preview: when it was last saved. */
   updatedAt: string;
   data: Record<string, unknown>;
+  /** Pages only: every locale the page is in (this one included), for `hreflang` links. */
+  alternates?: DeliveryAlternate[];
 }
 
 export const deliveryEntrySchema: z.ZodType<DeliveryEntry> = z.object({
@@ -111,6 +130,7 @@ export const deliveryEntrySchema: z.ZodType<DeliveryEntry> = z.object({
   locale: z.string(),
   updatedAt: z.string(),
   data: z.record(z.string(), z.unknown()),
+  alternates: z.array(deliveryAlternateSchema).optional(),
 });
 
 /** A reference left unexpanded: too deep for `include`, or a loop back to an entry being expanded. */
@@ -124,8 +144,9 @@ export const deliveryEntriesPageSchema = z.object({
 });
 export type DeliveryEntriesPage = z.infer<typeof deliveryEntriesPageSchema>;
 
+/** One address per page and locale it is in; the items of one page share its `id`. */
 export const sitemapSchema = z.object({
-  items: z.array(z.object({ path: z.string(), locale: z.string(), updatedAt: z.string() })),
+  items: z.array(z.object({ id: z.uuid(), path: z.string(), locale: z.string(), updatedAt: z.string() })),
 });
 export type Sitemap = z.infer<typeof sitemapSchema>;
 
@@ -145,7 +166,8 @@ export const deliveryPathSchema = z
   .transform((path) => (path.length > 1 ? path.replace(/\/+$/, '') : path))
   .pipe(z.string().regex(/^\/$|^(\/[a-z0-9]+(-[a-z0-9]+)*)+$/, 'Use a path like / or /blog/hello-world.'));
 
-const localeSchema = z.string().regex(/^[a-z]{2,3}(-[A-Z]{2})?$/, 'Use a locale like en-GB.');
+/** One of the space's locales; the default locale when left out. */
+const localeSchema = z.string().regex(LOCALE_CODE_PATTERN, 'Use a locale like en-GB.');
 
 /** How deep to expand references: 0 leaves them as `{ id }`, at most 3. */
 const includeSchema = z.coerce
@@ -170,15 +192,15 @@ const selectSchema = z
   .optional();
 
 export const deliveryPageQuerySchema = z.strictObject({
+  /** The page's path without a locale prefix: the locale is given by `locale`. */
   path: deliveryPathSchema,
-  /** Defaults to the space's default locale. */
   locale: localeSchema.optional(),
   include: includeSchema,
   select: selectSchema,
 });
 export type DeliveryPageQuery = z.input<typeof deliveryPageQuerySchema>;
 
-export const deliveryEntryQuerySchema = z.strictObject({ include: includeSchema, select: selectSchema });
+export const deliveryEntryQuerySchema = z.strictObject({ locale: localeSchema.optional(), include: includeSchema, select: selectSchema });
 export type DeliveryEntryQuery = z.input<typeof deliveryEntryQuerySchema>;
 
 export const deliverySingletonQuerySchema = z.strictObject({

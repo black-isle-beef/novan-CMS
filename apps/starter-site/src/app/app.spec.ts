@@ -3,7 +3,7 @@ import { RESPONSE_INIT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, withComponentInputBinding, withRouterConfig } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { NovanApiError, NovanContentService, provideNovanCms, type Page } from '@black-isle-beef/cms-angular';
+import { NovanApiError, NovanContentService, type NovanLocales, provideNovanCms, type Page } from '@black-isle-beef/cms-angular';
 import { novanBlocks } from '@novan/blocks';
 import { type Observable, of, throwError } from 'rxjs';
 import { appRoutes } from './app.routes';
@@ -50,7 +50,11 @@ const singletons: Record<string, unknown> = {
   notFound: { title: 'Lost?', body: [{ _uid: uid(31), _block: 'cta', heading: 'Try the home page' }] },
 };
 
-function setup(overrides: Partial<Record<'page' | 'singleton', (key: string) => Observable<unknown>>> = {}) {
+const english = { code: 'en-GB', name: 'English', fallback: null, isDefault: true, prefix: 'en' };
+
+function setup(
+  overrides: Partial<Record<'page' | 'singleton', (key: string, options?: { locale?: string }) => Observable<unknown>>> & { locales?: NovanLocales } = {},
+) {
   const response: ResponseInit = {};
   TestBed.configureTestingModule({
     providers: [
@@ -63,6 +67,7 @@ function setup(overrides: Partial<Record<'page' | 'singleton', (key: string) => 
         useValue: {
           page: overrides.page ?? ((path: string) => of(pages[path] ?? null)),
           singleton: overrides.singleton ?? ((apiId: string) => (apiId in singletons ? of(singletons[apiId]) : throwError(() => new Error('none')))),
+          locales: () => of(overrides.locales ?? { locales: [english], prefixes: false }),
         },
       },
     ],
@@ -177,6 +182,50 @@ describe('starter site routes', () => {
     expect(click.defaultPrevented).toBe(true);
     expect(document.activeElement?.id).toBe('ds-main-content');
     expect(scroll).toHaveBeenCalled();
+  });
+
+  describe('in several languages, with the language in addresses', () => {
+    const french: Page = {
+      ...pages['/about'],
+      path: '/fr/about',
+      locale: 'fr-FR',
+      data: { title: 'À propos', body: [{ _uid: uid(21), _block: 'cta', heading: 'Parlez-nous' }] },
+      alternates: [
+        { locale: 'en-GB', path: '/about' },
+        { locale: 'fr-FR', path: '/fr/about' },
+      ],
+    };
+    const locales = { locales: [english, { code: 'fr-FR', name: 'French', fallback: 'en-GB', isDefault: false, prefix: 'fr' }], prefixes: true };
+
+    it('reads the language from the address, for the page and the header and footer, and links the other languages', async () => {
+      const asked: string[] = [];
+      setup({
+        locales,
+        page: (path, options) => {
+          asked.push(`page ${path} ${options?.locale}`);
+          return of(options?.locale === 'fr-FR' ? french : (pages[path] ?? null));
+        },
+        singleton: (apiId, options) => {
+          asked.push(`${apiId} ${options?.locale}`);
+          const fr = apiId === 'siteSettings' && options?.locale === 'fr-FR';
+          return apiId in singletons ? of(fr ? { ...(singletons[apiId] as object), siteName: 'Site test' } : singletons[apiId]) : throwError(() => new Error('none'));
+        },
+      });
+      const harness = await RouterTestingHarness.create('/fr/about');
+      const root = harness.routeNativeElement?.ownerDocument.body ?? document.body;
+
+      expect(asked).toEqual(expect.arrayContaining(['page /about fr-FR', 'navigation fr-FR', 'siteSettings fr-FR']));
+      expect(root.querySelector('novan-cta-block h2')?.textContent).toBe('Parlez-nous');
+      expect(root.querySelector('ds-header [dsBrand]')?.textContent?.trim()).toBe('Site test');
+      expect(document.documentElement.getAttribute('lang')).toBe('fr-FR');
+      const hreflang = [...document.head.querySelectorAll('link[rel="alternate"][hreflang]')].map((link) => link.getAttribute('hreflang'));
+      expect(hreflang).toEqual(['en-GB', 'fr-FR', 'x-default']);
+
+      // Back to the main language: the header and footer follow.
+      await harness.navigateByUrl('/about');
+      expect(root.querySelector('ds-header [dsBrand]')?.textContent?.trim()).toBe('Test site');
+      expect(document.documentElement.getAttribute('lang')).toBe('en-GB');
+    });
   });
 
   it('resolves the new page when the address changes', async () => {

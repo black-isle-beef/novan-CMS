@@ -12,6 +12,7 @@ import {
   notFoundReportSchema,
   sitemapQuerySchema,
   sitemapSchema,
+  spaceLocalesSchema,
 } from '@novan/shared-schemas';
 import { z } from 'zod';
 import type { ApiTokenAccess } from './api-token-resolver';
@@ -83,6 +84,13 @@ abstract class ContentApiController {
     @Query(new ZodValidationPipe(sitemapQuerySchema)) query: z.output<typeof sitemapQuerySchema>,
   ): Promise<Delivered<unknown>> {
     return this.reader.sitemap(access, query);
+  }
+
+  /** The site's locales, and whether its addresses start with a locale prefix (package 16). */
+  @Get('locales')
+  @ApiResponse(spaceLocalesSchema)
+  locales(@TokenAccess() access: ApiTokenAccess): Promise<Delivered<unknown>> {
+    return this.reader.locales(access);
   }
 
   /** The space's redirects, for the site's server to apply before rendering (package 14). */

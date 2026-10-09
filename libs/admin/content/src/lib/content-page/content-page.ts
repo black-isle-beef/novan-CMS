@@ -14,7 +14,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { DsAlertComponent, DsBadgeComponent, DsButtonComponent, DsModalComponent } from '@black-isle-beef/novan-design-system';
 import { copy, Skeleton } from '@novan/admin-shell';
-import { problemFieldErrors, problemMessage, SpaceContext } from '@novan/admin-spaces';
+import { problemFieldErrors, problemMessage, SpaceContext, SpaceLocales } from '@novan/admin-spaces';
 import { type ContentType, type EntrySummary, type Folder, slugify, slugSchema } from '@novan/shared-schemas';
 import { firstValueFrom } from 'rxjs';
 import { ContentApi } from '../content-api';
@@ -43,6 +43,7 @@ export class ContentPage {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   protected readonly context = inject(SpaceContext);
+  private readonly spaceLocales = inject(SpaceLocales);
 
   /** Bound from the `:spaceId` route parameter. */
   readonly spaceId = input.required<string>();
@@ -280,6 +281,8 @@ export class ContentPage {
   private async load(spaceId: string, showSpinner = true): Promise<void> {
     if (showSpinner) this.loading.set(true);
     this.loadError.set(null);
+    // For the names of languages with translations missing; their codes show until then.
+    this.spaceLocales.load(spaceId).catch(() => undefined);
     try {
       const [folders, entries, bin, types] = await Promise.all([
         firstValueFrom(this.api.listFolders(spaceId)),

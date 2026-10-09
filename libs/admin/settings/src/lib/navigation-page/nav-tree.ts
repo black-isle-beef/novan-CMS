@@ -1,4 +1,4 @@
-import type { EntryData, FieldDef, FieldDefOf } from '@novan/shared-schemas';
+import { type EntryData, type FieldDef, type FieldDefOf, isEmptyValue, isLocaleMap } from '@novan/shared-schemas';
 
 /** One item of a menu: its fields, e.g. `{ label, link, subItems }`. */
 export type NavNode = Record<string, unknown>;
@@ -104,8 +104,10 @@ export function unnestItem(data: EntryData, tree: NavTree, index: number, childI
 }
 
 /** What to call an item in buttons and announcements: its name, or its position. */
-export function itemName(node: NavNode | undefined, key: string, position: number): string {
-  const name = node?.[key];
+export function itemName(node: NavNode | undefined, key: string, position: number, locale?: string): string {
+  const stored = node?.[key];
+  // A translated name: in the locale shown, else the first translation there is.
+  const name = isLocaleMap(stored) ? [...(locale ? [stored[locale]] : []), ...Object.values(stored)].find((value) => !isEmptyValue(value)) : stored;
   return typeof name === 'string' && name.trim() ? `“${name.trim()}”` : `item ${position}`;
 }
 

@@ -16,7 +16,7 @@ Local Supabase running from the repo, the core tenancy tables migrated, Drizzle 
 1. `npx supabase init` at repo root. In `supabase/config.toml` set the project name, enable email auth with confirmations, set `site_url` to the admin dev URL, and add the admin dev URL to `additional_redirect_urls`.
 2. Migration `0001_tenancy.sql`:
    - `organisations (id, name, plan text default 'agency', created_at)`
-   - `spaces (id, organisation_id, name, slug unique, default_locale default 'en-GB', preview_url, settings jsonb default '{}', created_at)`
+   - `spaces (id, organisation_id, name, slug unique, default_locale default 'en-GB', preview_url, settings jsonb default '{}', created_at)` (package 16 replaced `default_locale` with `space_locales.is_default`)
    - `environments (id, space_id, name, is_main bool, cloned_from_id, created_at)`; create a `main` environment for each new space via trigger
    - `roles (id, space_id, key, name, permissions jsonb)`; seed default roles per space via trigger: `admin`, `developer`, `editor`, `author`, `viewer`
    - `members (space_id, user_id references auth.users, role_id, invited_by, created_at, primary key (space_id, user_id))`

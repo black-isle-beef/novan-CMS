@@ -36,7 +36,41 @@ const apply = (...args: Parameters<typeof applyNovanSeo>) => TestBed.runInInject
 describe('applyNovanSeo', () => {
   afterEach(() => {
     const document = TestBed.inject(DOCUMENT);
-    document.head.querySelectorAll('meta, link[rel="canonical"]').forEach((el) => el.remove());
+    document.head.querySelectorAll('meta, link[rel="canonical"], link[hreflang]').forEach((el) => el.remove());
+  });
+
+  describe('in several languages', () => {
+    const french: Page = {
+      ...page({ title: 'À propos' }, '/fr/about'),
+      locale: 'fr-FR',
+      alternates: [
+        { locale: 'en-GB', path: '/about' },
+        { locale: 'fr-FR', path: '/fr/about' },
+      ],
+    };
+    const links = () =>
+      [...TestBed.inject(DOCUMENT).head.querySelectorAll('link[rel="alternate"][hreflang]')].map((link) => [link.getAttribute('hreflang'), link.getAttribute('href')]);
+
+    it('links each language of the page, the default one as x-default, and sets the page language', () => {
+      apply(french, { baseUrl: 'https://www.example.com' });
+      expect(links()).toEqual([
+        ['en-GB', 'https://www.example.com/about'],
+        ['fr-FR', 'https://www.example.com/fr/about'],
+        ['x-default', 'https://www.example.com/about'],
+      ]);
+      expect(head()).toMatchObject({ canonical: 'https://www.example.com/fr/about', ogLocale: 'fr_FR' });
+      const document = TestBed.inject(DOCUMENT);
+      expect(document.documentElement.getAttribute('lang')).toBe('fr-FR');
+      expect(document.head.querySelector('meta[property="og:locale:alternate"]')?.getAttribute('content')).toBe('en_GB');
+    });
+
+    it('drops them for a page in one language, or hidden from search engines', () => {
+      apply(french, { baseUrl: 'https://www.example.com' });
+      apply({ ...french, alternates: [{ locale: 'fr-FR', path: '/fr/about' }] }, { baseUrl: 'https://www.example.com' });
+      expect(links()).toEqual([]);
+      apply({ ...french, data: { title: 'x', seo: { noindex: true } } }, { baseUrl: 'https://www.example.com' });
+      expect(links()).toEqual([]);
+    });
   });
 
   it('sets the title, description, canonical and Open Graph tags from the SEO fields', () => {

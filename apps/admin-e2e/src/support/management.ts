@@ -23,6 +23,19 @@ async function token(request: APIRequestContext): Promise<string> {
 }
 
 /**
+ * Puts the demo space back to one language, as the other journeys expect: removes `code` (if it is there) and turns
+ * locale prefixes off (docs/build/16-localisation.md).
+ */
+export async function removeLocale(request: APIRequestContext, spaceId: string, code: string): Promise<void> {
+  const headers = { Authorization: `Bearer ${await token(request)}` };
+  const locales = `${apiUrl}/v1/management/spaces/${spaceId}/locales`;
+  const removed = await request.delete(`${locales}/${code}`, { headers });
+  expect([200, 404], await removed.text()).toContain(removed.status());
+  const prefixes = await request.put(`${locales}/prefixes`, { headers, data: { prefixes: false } });
+  expect(prefixes.ok(), await prefixes.text()).toBe(true);
+}
+
+/**
  * Keeps a seeded page as it is now and returns a function that saves and publishes it again, so a journey
  * that publishes a seeded page leaves it as the other e2e projects (starter-site-e2e) expect it.
  */

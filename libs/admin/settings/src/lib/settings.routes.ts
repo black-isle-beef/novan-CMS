@@ -30,6 +30,12 @@ export const settingsRoutes: Route[] = [
     loadComponent: () => import('./navigation-page/navigation-page').then((m) => m.NavigationPage),
   },
   {
+    path: 'spaces/:spaceId/settings/languages',
+    title: 'Languages | Novan CMS',
+    canActivate: [requirePermission('space.read')],
+    loadComponent: () => import('./languages-page/languages-page').then((m) => m.LanguagesPage),
+  },
+  {
     path: 'spaces/:spaceId/settings/redirects',
     title: 'Redirects | Novan CMS',
     canActivate: [requirePermission('space.read')],

@@ -1,38 +1,17 @@
-@switch (field().type) {
-  @case ('text') {
-    <nv-text-field [field]="def('text')" [path]="path()" [(value)]="value" />
+@if (translated()) {
+  @let shown = locale();
+  @if (compare(); as source) {
+    <div class="row g-3">
+      <div class="col-md-6">
+        <nv-field-input [field]="fieldIn(source)" [path]="pathIn(source)" [value]="valueIn(source)" [locale]="source" [locked]="true" />
+      </div>
+      <div class="col-md-6">
+        <nv-field-input [field]="fieldIn(shown)" [path]="pathIn(shown)" [value]="valueIn(shown)" (valueChange)="setIn(shown, $event)" [locale]="shown" />
+      </div>
+    </div>
+  } @else {
+    <nv-field-input [field]="fieldIn(shown)" [path]="pathIn(shown)" [value]="valueIn(shown)" (valueChange)="setIn(shown, $event)" [locale]="shown" />
   }
-  @case ('richText') {
-    <nv-rich-text-field [field]="def('richText')" [path]="path()" [(value)]="value" />
-  }
-  @case ('number') {
-    <nv-number-field [field]="def('number')" [path]="path()" [(value)]="value" />
-  }
-  @case ('boolean') {
-    <nv-boolean-field [field]="def('boolean')" [path]="path()" [(value)]="value" />
-  }
-  @case ('date') {
-    <nv-date-field [field]="def('date')" [path]="path()" [(value)]="value" />
-  }
-  @case ('select') {
-    <nv-select-field [field]="def('select')" [path]="path()" [(value)]="value" />
-  }
-  @case ('media') {
-    <nv-media-field [field]="def('media')" [path]="path()" [(value)]="value" />
-  }
-  @case ('link') {
-    <nv-link-field [field]="def('link')" [path]="path()" [(value)]="value" />
-  }
-  @case ('reference') {
-    <nv-reference-field [field]="def('reference')" [path]="path()" [(value)]="value" />
-  }
-  @case ('blocks') {
-    <nv-blocks-field [field]="def('blocks')" [path]="path()" [(value)]="value" />
-  }
-  @case ('json') {
-    <nv-json-field [field]="def('json')" [path]="path()" [(value)]="value" />
-  }
-  @case ('group') {
-    <nv-group-field [field]="def('group')" [path]="path()" [(value)]="value" />
-  }
+} @else {
+  <nv-field-input [field]="field()" [path]="path()" [(value)]="value" />
 }

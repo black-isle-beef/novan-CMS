@@ -3,7 +3,7 @@ import { ContentApi } from '@novan/admin-content';
 import { describePath, errorsFromIssues, FieldFormContext, fieldId } from '@novan/admin-fields';
 import { MediaPicker } from '@novan/admin-media';
 import { type HasUnsavedChanges, Shortcuts, warnBeforeUnload } from '@novan/admin-shell';
-import { problemCode, problemFieldErrors, problemMessage, SpaceContext } from '@novan/admin-spaces';
+import { problemCode, problemFieldErrors, problemMessage, SpaceContext, SpaceLocales } from '@novan/admin-spaces';
 import { buildEntrySchema, type ContentType, type Entry, type EntryData, type FieldDef, sameJson } from '@novan/shared-schemas';
 import { firstValueFrom } from 'rxjs';
 
@@ -23,6 +23,7 @@ export abstract class SingletonEditor implements HasUnsavedChanges {
   private readonly injector = inject(Injector);
   private readonly document = inject(DOCUMENT);
   protected readonly context = inject(SpaceContext);
+  protected readonly spaceLocales = inject(SpaceLocales);
 
   /** The singleton's content type api id, e.g. `siteSettings`. */
   protected abstract readonly apiId: string;
@@ -61,9 +62,10 @@ export abstract class SingletonEditor implements HasUnsavedChanges {
     if (!type) return null;
     this.form.assets();
     const assets = (id: string) => this.form.assetInfo(id);
+    const locales = this.form.localeSettings();
     return {
-      draft: buildEntrySchema(type.fields, { draft: true, assets }),
-      publish: buildEntrySchema(type.fields, { assets }),
+      draft: buildEntrySchema(type.fields, { draft: true, assets, locales }),
+      publish: buildEntrySchema(type.fields, { assets, locales }),
     };
   });
 
@@ -119,7 +121,7 @@ export abstract class SingletonEditor implements HasUnsavedChanges {
 
   /** A readable name for a data path, for the error summary. */
   protected describe(path: string, fields: readonly FieldDef[]): string {
-    return describePath(path, fields, this.data(), []);
+    return describePath(path, fields, this.data(), [], (code) => this.form.localeName(code));
   }
 
   protected async save(): Promise<void> {
@@ -149,11 +151,13 @@ export abstract class SingletonEditor implements HasUnsavedChanges {
     this.loadError.set(null);
     this.missing.set(false);
     try {
-      const [types, found, entries] = await Promise.all([
+      const [types, found, entries, locales] = await Promise.all([
         firstValueFrom(this.api.listContentTypes(spaceId)),
         firstValueFrom(this.api.listEntries(spaceId, { contentType: this.apiId })),
         firstValueFrom(this.api.listEntries(spaceId)),
+        this.spaceLocales.load(spaceId),
       ]);
+      this.form.locales.set(locales.locales);
       const type = types.find((candidate) => candidate.apiId === this.apiId) ?? null;
       if (!type || !found.length) {
         this.missing.set(true);

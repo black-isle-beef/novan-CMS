@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { AuthService } from '@novan/admin-auth';
 import { ContentApi } from '@novan/admin-content';
 import { MediaApi, Thumbnails } from '@novan/admin-media';
-import { ManagementApi, SpaceContext } from '@novan/admin-spaces';
+import { ManagementApi, SpaceContext, SpaceLocales } from '@novan/admin-spaces';
 import {
   type BlockNode,
   type BlockType,
@@ -12,7 +12,9 @@ import {
   type Entry,
   type EntryData,
   fieldListSchema,
+  type ManagedLocales,
   type SignedPreviewToken,
+  type SpaceLocale,
 } from '@novan/shared-schemas';
 import { of, throwError } from 'rxjs';
 import { EditorApi } from '../editor-api';
@@ -117,7 +119,7 @@ const entry = (extra: Partial<Entry> = {}): Entry => ({
   folderId: null,
   slug: 'home',
   path: '/home',
-  locale: 'en-GB',
+  missingTranslations: [],
   title: 'Home',
   status: 'draft',
   hasUnpublishedChanges: false,
@@ -146,6 +148,18 @@ interface Options {
   type?: ContentType;
   /** The space's site settings, for the SEO tab's previews. */
   settings?: EntryData;
+  /** The space's languages; English only by default. */
+  locales?: ManagedLocales;
+  /** `?locale=` */
+  locale?: string;
+}
+
+const english: SpaceLocale = { code: 'en-GB', name: 'English', fallback: null, isDefault: true, prefix: 'en' };
+const french: SpaceLocale = { code: 'fr-FR', name: 'French', fallback: 'en-GB', isDefault: false, prefix: 'fr' };
+const englishOnly: ManagedLocales = { locales: [english], prefixes: false, machineTranslation: false };
+
+function fakeLocales(value: ManagedLocales) {
+  return { load: () => Promise.resolve(value), value: signal(value), locales: signal(value.locales), multilingual: signal(value.locales.length > 1) };
 }
 
 // jsdom has no modal dialogs.
@@ -159,7 +173,16 @@ beforeAll(() => {
   };
 });
 
-async function render({ page = entry(), previewUrl = `${SITE}/`, role = 'editor', tokens = [() => token('first')], type = pageType, settings }: Options = {}) {
+async function render({
+  page = entry(),
+  previewUrl = `${SITE}/`,
+  role = 'editor',
+  tokens = [() => token('first')],
+  type = pageType,
+  settings,
+  locales = englishOnly,
+  locale,
+}: Options = {}) {
   const presence = fakePresence();
   const previewToken = vi.fn(() => {
     const next = tokens.shift();
@@ -191,6 +214,7 @@ async function render({ page = entry(), previewUrl = `${SITE}/`, role = 'editor'
       { provide: PRESENCE_TRANSPORT, useValue: presence.transport },
       { provide: AuthService, useValue: { claims: signal({ sub: 'me' }), email: signal('me@novan.test') } },
       { provide: ManagementApi, useValue: { me: () => of({ displayName: 'Me Myself', email: 'me@novan.test' }) } },
+      { provide: SpaceLocales, useValue: fakeLocales(locales) },
       {
         provide: SpaceContext,
         useValue: {
@@ -206,6 +230,7 @@ async function render({ page = entry(), previewUrl = `${SITE}/`, role = 'editor'
   const fixture = TestBed.createComponent(VisualEditorPage);
   fixture.componentRef.setInput('spaceId', spaceId);
   fixture.componentRef.setInput('entryId', entryId);
+  if (locale) fixture.componentRef.setInput('locale', locale);
   await settle(fixture);
   const el = fixture.nativeElement as HTMLElement;
   const injector = fixture.debugElement.injector;
@@ -321,6 +346,50 @@ describe('VisualEditorPage', () => {
       await settle(fixture);
       expect(previewData).toHaveBeenCalledTimes(1);
       expect(sent('update')).toEqual([{ type: 'update', payload: { data: { ...startData(), title: 'Two', delivered: true } } }]);
+    });
+  });
+
+  describe('in another language', () => {
+    const translatedHero = blockType('hero', 'Hero banner', {
+      fields: fieldListSchema.parse([{ id: 'heading', apiId: 'heading', label: 'Heading', type: 'text', required: true, localised: true }]),
+    });
+    const translated = entry({
+      data: { title: 'Home', body: [{ _uid: HERO, _block: 'hero', heading: { 'en-GB': 'Hi' } }] },
+    });
+
+    it('opens the page at its address in the language, and previews the language', async () => {
+      const prefixed = { locales: [english, french], prefixes: true, machineTranslation: false };
+      const { fixture, frame, ready, store, previewData } = await render({ page: translated, locales: prefixed, locale: 'fr-FR' });
+      expect(frame()?.getAttribute('src')).toBe(`${SITE}/fr?novan_preview=first`);
+      await ready();
+      store.change({ ...store.data(), title: 'Accueil' });
+      await wait(PREVIEW_DEBOUNCE_MS + 20);
+      await settle(fixture);
+      expect(previewData).toHaveBeenLastCalledWith(spaceId, entryId, expect.anything(), 'fr-FR');
+    });
+
+    it('lets text typed on the page fill in the translation, and not the text every language shares', async () => {
+      const { fixture, bridge, ready, body, sent } = await render({
+        page: translated,
+        locales: { locales: [english, french], prefixes: false, machineTranslation: false },
+        locale: 'fr-FR',
+      });
+      const [original] = blockTypes.splice(0, 1, translatedHero);
+      try {
+        await ready();
+        bridge.listener?.select(HERO);
+        await settle(fixture);
+        const editable = sent('editable');
+        expect(editable[editable.length - 1]).toEqual({
+          type: 'editable',
+          payload: { uid: HERO, fields: [{ field: 'heading', value: 'Hi', multiline: false }], insert: true },
+        });
+        bridge.listener?.text({ uid: HERO, field: 'heading', value: 'Salut', done: true });
+        await settle(fixture);
+        expect(body()[0]['heading']).toEqual({ 'en-GB': 'Hi', 'fr-FR': 'Salut' });
+      } finally {
+        blockTypes.splice(0, 1, original);
+      }
     });
   });
 

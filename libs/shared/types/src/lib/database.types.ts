@@ -151,13 +151,13 @@ isOneToOne: false
                   ]
                 },"entries": {
                   Row: {
-                    "content_type_id": string,"created_at": string,"created_by": string | null,"current_version_id": string | null,"deleted_at": string | null,"environment_id": string,"folder_id": string | null,"id": string,"locale": string,"published_at": string | null,"published_version_id": string | null,"slug": string,"space_id": string,"status": string,"updated_at": string
+                    "content_type_id": string,"created_at": string,"created_by": string | null,"current_version_id": string | null,"deleted_at": string | null,"environment_id": string,"folder_id": string | null,"id": string,"published_at": string | null,"published_version_id": string | null,"slug": string,"space_id": string,"status": string,"updated_at": string
                   }
                   Insert: {
-                    "content_type_id": string,"created_at"?: string,"created_by"?: string | null,"current_version_id"?: string | null,"deleted_at"?: string | null,"environment_id": string,"folder_id"?: string | null,"id"?: string,"locale": string,"published_at"?: string | null,"published_version_id"?: string | null,"slug": string,"space_id": string,"status"?: string,"updated_at"?: string
+                    "content_type_id": string,"created_at"?: string,"created_by"?: string | null,"current_version_id"?: string | null,"deleted_at"?: string | null,"environment_id": string,"folder_id"?: string | null,"id"?: string,"published_at"?: string | null,"published_version_id"?: string | null,"slug": string,"space_id": string,"status"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "content_type_id"?: string,"created_at"?: string,"created_by"?: string | null,"current_version_id"?: string | null,"deleted_at"?: string | null,"environment_id"?: string,"folder_id"?: string | null,"id"?: string,"locale"?: string,"published_at"?: string | null,"published_version_id"?: string | null,"slug"?: string,"space_id"?: string,"status"?: string,"updated_at"?: string
+                    "content_type_id"?: string,"created_at"?: string,"created_by"?: string | null,"current_version_id"?: string | null,"deleted_at"?: string | null,"environment_id"?: string,"folder_id"?: string | null,"id"?: string,"published_at"?: string | null,"published_version_id"?: string | null,"slug"?: string,"space_id"?: string,"status"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -351,13 +351,13 @@ isOneToOne: false
                   ]
                 },"published_content": {
                   Row: {
-                    "cache_tags": (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"locale": string,"published_at": string,"space_id": string
+                    "cache_tags": (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"published_at": string,"space_id": string
                   }
                   Insert: {
-                    "cache_tags"?: (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"locale": string,"published_at": string,"space_id": string
+                    "cache_tags"?: (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"published_at": string,"space_id": string
                   }
                   Update: {
-                    "cache_tags"?: (string)[],"content_type_api_id"?: string,"data"?: NonNullable<Json>,"entry_id"?: string,"environment_id"?: string,"full_path"?: string,"locale"?: string,"published_at"?: string,"space_id"?: string
+                    "cache_tags"?: (string)[],"content_type_api_id"?: string,"data"?: NonNullable<Json>,"entry_id"?: string,"environment_id"?: string,"full_path"?: string,"published_at"?: string,"space_id"?: string
                   }
                   Relationships: [
                     {
@@ -455,15 +455,40 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"spaces": {
+                },"space_locales": {
                   Row: {
-                    "created_at": string,"default_locale": string,"id": string,"name": string,"organisation_id": string,"preview_url": string | null,"require_approval": boolean,"settings": NonNullable<Json>,"slug": string
+                    "code": string,"created_at": string,"fallback_code": string | null,"is_default": boolean,"name": string,"path_prefix": string,"space_id": string
                   }
                   Insert: {
-                    "created_at"?: string,"default_locale"?: string,"id"?: string,"name": string,"organisation_id": string,"preview_url"?: string | null,"require_approval"?: boolean,"settings"?: NonNullable<Json>,"slug": string
+                    "code": string,"created_at"?: string,"fallback_code"?: string | null,"is_default"?: boolean,"name": string,"path_prefix": string,"space_id": string
                   }
                   Update: {
-                    "created_at"?: string,"default_locale"?: string,"id"?: string,"name"?: string,"organisation_id"?: string,"preview_url"?: string | null,"require_approval"?: boolean,"settings"?: NonNullable<Json>,"slug"?: string
+                    "code"?: string,"created_at"?: string,"fallback_code"?: string | null,"is_default"?: boolean,"name"?: string,"path_prefix"?: string,"space_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "space_locales_space_id_fallback_code_fkey"
+      columns: ["space_id","fallback_code"]
+isOneToOne: false
+      referencedRelation: "space_locales"
+      referencedColumns: ["space_id","code"]
+    },{
+      foreignKeyName: "space_locales_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"spaces": {
+                  Row: {
+                    "created_at": string,"id": string,"locale_prefixes": boolean,"name": string,"organisation_id": string,"preview_url": string | null,"require_approval": boolean,"settings": NonNullable<Json>,"slug": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"locale_prefixes"?: boolean,"name": string,"organisation_id": string,"preview_url"?: string | null,"require_approval"?: boolean,"settings"?: NonNullable<Json>,"slug": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"locale_prefixes"?: boolean,"name"?: string,"organisation_id"?: string,"preview_url"?: string | null,"require_approval"?: boolean,"settings"?: NonNullable<Json>,"slug"?: string
                   }
                   Relationships: [
                     {

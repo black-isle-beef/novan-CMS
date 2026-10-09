@@ -2,13 +2,16 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { ADMIN_CONFIG } from '@novan/admin-auth';
 import type {
+  CreateLocaleRequest,
   CreateSpaceRequest,
   InviteRequest,
+  ManagedLocales,
   MeResponse,
   Member,
   OnboardingResponse,
   SpaceRole,
   SpaceSummary,
+  UpdateLocaleRequest,
   UpdateSpaceRequest,
 } from '@novan/shared-schemas';
 import type { Observable } from 'rxjs';
@@ -47,6 +50,27 @@ export class ManagementApi {
 ull) viewing the space as a role. */
   viewAs(spaceId: string, role: SpaceRole | null): Observable<void> {
     return this.http.post<void>(`${this.base}/spaces/${spaceId}/view-as`, { role });
+  }
+
+  /** The space's locales (docs/build/16-localisation.md). */
+  listLocales(spaceId: string): Observable<ManagedLocales> {
+    return this.http.get<ManagedLocales>(`${this.base}/spaces/${spaceId}/locales`);
+  }
+
+  createLocale(spaceId: string, body: CreateLocaleRequest): Observable<ManagedLocales> {
+    return this.http.post<ManagedLocales>(`${this.base}/spaces/${spaceId}/locales`, body);
+  }
+
+  updateLocale(spaceId: string, code: string, body: UpdateLocaleRequest): Observable<ManagedLocales> {
+    return this.http.patch<ManagedLocales>(`${this.base}/spaces/${spaceId}/locales/${code}`, body);
+  }
+
+  removeLocale(spaceId: string, code: string): Observable<ManagedLocales> {
+    return this.http.delete<ManagedLocales>(`${this.base}/spaces/${spaceId}/locales/${code}`);
+  }
+
+  setLocalePrefixes(spaceId: string, prefixes: boolean): Observable<ManagedLocales> {
+    return this.http.put<ManagedLocales>(`${this.base}/spaces/${spaceId}/locales/prefixes`, { prefixes });
   }
 
   listMembers(spaceId: string): Observable<Member[]> {

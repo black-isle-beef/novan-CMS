@@ -43,7 +43,13 @@
           </button>
         }
         @if (isPage()) {
-          <a class="btn btn-secondary" [routerLink]="['/spaces', spaceId(), 'pages', e.id, 'edit']">Edit on the page</a>
+          <a
+            class="btn btn-secondary"
+            [routerLink]="['/spaces', spaceId(), 'pages', e.id, 'edit']"
+            [queryParams]="form.locale() ? { locale: form.locale() } : {}"
+          >
+            Edit on the page
+          </a>
         }
         <button type="button" class="btn btn-secondary" (click)="historyOpen.set(true)">{{ copy.versionHistory }}</button>
         @if (liveUrl(); as url) {
@@ -113,7 +119,48 @@
       </div>
     }
 
-    <form class="col-lg-8 mb-5" novalidate [attr.aria-label]="title()" (submit)="$event.preventDefault(); save()">
+    @if (machineTranslated(); as translated) {
+      <ds-alert variant="warning" class="d-block mb-3" [title]="'Machine-translated into ' + form.localeName(translated.locale) + ': check before publishing'">
+        <ul class="mb-0">
+          @for (name of translated.fields; track $index) {
+            <li>{{ name }}</li>
+          }
+        </ul>
+      </ds-alert>
+    }
+
+    @if (spaceLocales.multilingual()) {
+      <div class="mb-4">
+        <div class="d-flex flex-wrap align-items-end gap-3">
+          <nv-locale-switcher
+            [locales]="form.locales()"
+            [missing]="missingLocales()"
+            [locale]="form.locale()"
+            (localeChange)="form.locale.set($event)"
+            [compare]="form.compareLocale()"
+            (compareChange)="form.compareLocale.set($event)"
+          />
+          @if (canMachineTranslate()) {
+            <button type="button" class="btn btn-secondary mb-0" [disabled]="busy() !== null" (click)="machineTranslate()">
+              <i class="bi bi-translate me-1" aria-hidden="true"></i>Machine-translate empty fields
+            </button>
+          }
+        </div>
+        @if (form.locale(); as shown) {
+          <p class="form-text mb-0">
+            You are editing the {{ form.localeName(shown) }} text. Fields every language shares can only be changed in
+            {{ form.localeName(form.defaultLocale()) }}.
+          </p>
+        }
+      </div>
+    }
+
+    <form
+      [class]="form.compareLocale() ? 'mb-5' : 'col-lg-8 mb-5'"
+      novalidate
+      [attr.aria-label]="title()"
+      (submit)="$event.preventDefault(); save()"
+    >
       <nv-field-form [fields]="type.fields" [value]="data()" (valueChange)="setData($event)" />
     </form>
 

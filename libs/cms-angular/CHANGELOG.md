@@ -2,6 +2,21 @@
 
 All notable changes to `@black-isle-beef/cms-angular`. The package follows [semantic versioning](https://semver.org).
 
+## 0.6.0
+
+Languages (docs/build/16-localisation.md).
+
+- `novanPageResolver` reads the locale from the address when the site puts it there (`/fr/about`), through the new
+  `novanResolveLocale` and `NovanContentService.locales()` (`GET /v1/delivery/locales`); `NovanLocale.current` holds it
+  and later calls ask in it. `novanLocaleOfPath` splits an address into locale and path.
+- `applyNovanSeo` sets `<html lang>`, `hreflang` and `x-default` links from `page.alternates`, and
+  `og:locale:alternate`; `applyNovanLang` sets `lang` alone. `novanBreadcrumbTrail` starts from the locale's home page.
+- `entry(id)` takes `locale` (an entry now holds every locale). Sitemap items have the page's `id`.
+- Types: `NovanEntry.alternates`, `NovanAlternate`, `NovanLocale`, `NovanLocales`.
+- `createNovanProxy` passes `locales` through.
+- Breaking: `provideNovanCms({ locale })` now pins every call to that locale and skips reading it from addresses;
+  leave it out for a site in every language of its space.
+
 ## 0.5.0
 
 SEO and site features (docs/build/14-seo-site-features.md).

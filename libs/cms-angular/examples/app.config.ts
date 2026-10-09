@@ -13,7 +13,6 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(withFetch()),
     provideNovanCms({
-      locale: 'en-GB',
       blocks: defineBlocks({ hero: HeroBlock }),
     }),
   ],

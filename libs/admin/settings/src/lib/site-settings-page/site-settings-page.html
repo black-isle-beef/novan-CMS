@@ -39,6 +39,24 @@
     @if (!canEdit()) {
       <ds-alert variant="info" class="mb-3">You can look at the site settings, but your role cannot change them.</ds-alert>
     }
+    @if (spaceLocales.multilingual()) {
+      <div class="mb-4">
+        <nv-locale-switcher
+          idPrefix="site-settings-locale"
+          [locales]="form.locales()"
+          [locale]="form.locale()"
+          (localeChange)="form.locale.set($event)"
+          [compare]="form.compareLocale()"
+          (compareChange)="form.compareLocale.set($event)"
+        />
+        @if (form.locale(); as shown) {
+          <p class="form-text mb-0">
+            You are editing the {{ form.localeName(shown) }} text. Settings every language shares can only be changed in
+            {{ form.localeName(form.defaultLocale()) }}.
+          </p>
+        }
+      </div>
+    }
 
     <div>
       <nv-field-form [fields]="settings.fields" [value]="data()" (valueChange)="setData($event)" />

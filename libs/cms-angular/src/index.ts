@@ -25,6 +25,7 @@ export {
   type NovanFieldFilter,
   type NovanSitemap,
 } from './lib/content.service';
+export { applyNovanLang, NovanLocale, type NovanLocalePath, novanLocaleOfPath, novanResolveLocale } from './lib/locale';
 export { NovanPreview, PREVIEW_PARAM } from './lib/preview';
 export { NovanRichText } from './lib/rich-text/rich-text.component';
 export { novanImage, type NovanImageOptions } from './lib/image';

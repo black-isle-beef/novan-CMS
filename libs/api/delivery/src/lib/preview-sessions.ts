@@ -2,7 +2,7 @@ import { Body, Controller, Get, Headers, HttpCode, Injectable, Param, Post, Res,
 import { AuthGuard, type AuthUser, CurrentSpace, CurrentUser, type SpaceAccess, SpaceGuard } from '@novan/api-auth';
 import { ApiResponse, forbidden, notFound, ZodValidationPipe } from '@novan/api-common';
 import { contentTypeById, entryPath, loadModel, validateData } from '@novan/api-content';
-import { contentTypes, DbService, entries, environments, folders, spaces } from '@novan/api-db';
+import { contentTypes, DbService, entries, environments, folders } from '@novan/api-db';
 import {
   type DeliveryEntry,
   deliveryEntrySchema,
@@ -65,31 +65,27 @@ export class PreviewSessions {
           kind: contentTypes.kind,
           slug: entries.slug,
           folderPath: folders.path,
-          locale: entries.locale,
           updatedAt: entries.updatedAt,
-          defaultLocale: spaces.defaultLocale,
         })
         .from(entries)
         .innerJoin(contentTypes, eq(contentTypes.id, entries.contentTypeId))
-        .innerJoin(spaces, eq(spaces.id, entries.spaceId))
         .leftJoin(folders, eq(folders.id, entries.folderId))
         .where(and(eq(entries.id, entryId), eq(entries.environmentId, model.environmentId), isNull(entries.deletedAt)));
       if (!entry) throw notFound('entry_not_found', 'This page does not exist, or has been deleted.');
       const data = validateData(model, contentTypeById(model, entry.contentTypeId), body.data, 'draft');
       return {
-        access: { tokenId: '', scope: 'preview', spaceId, environmentId: model.environmentId, defaultLocale: entry.defaultLocale } satisfies ApiTokenAccess,
+        access: { tokenId: '', scope: 'preview', spaceId, environmentId: model.environmentId } satisfies ApiTokenAccess,
         row: {
           id: entryId,
           contentType: entry.contentType,
           kind: entry.kind,
           path: entryPath(entry.folderPath, entry.slug),
-          locale: entry.locale,
           updatedAt: new Date(entry.updatedAt).toISOString(),
           data,
         },
       };
     });
-    return this.reader.render(access, row, body.include);
+    return this.reader.render(access, row, body.include, body.locale);
   }
 
   /** What a signed token allows, if it is valid and was issued for the preview token's own space and environment. */

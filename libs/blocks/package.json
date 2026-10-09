@@ -7,6 +7,6 @@
     "@angular/common": "~22.2.0",
     "@angular/core": "~22.2.0",
     "@angular/router": "~22.2.0",
-    "@black-isle-beef/cms-angular": "^0.5.0"
+    "@black-isle-beef/cms-angular": "^0.6.0"
   }
 }

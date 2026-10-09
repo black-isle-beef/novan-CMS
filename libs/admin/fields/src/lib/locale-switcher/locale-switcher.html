@@ -1,0 +1,23 @@
+<div class="d-flex flex-wrap align-items-end gap-3">
+  <div>
+    <label class="form-label" [for]="idPrefix() + '-language'">Language</label>
+    <select class="form-select" [id]="idPrefix() + '-language'" (change)="choose($event)">
+      @for (option of locales(); track option.code) {
+        <option [value]="option.code" [selected]="option.code === shown()">{{ label(option) }}</option>
+      }
+    </select>
+  </div>
+  @if (sideBySide() && translating() && defaultLocale(); as source) {
+    <div class="form-check form-switch mb-2">
+      <input
+        class="form-check-input"
+        type="checkbox"
+        role="switch"
+        [id]="idPrefix() + '-compare'"
+        [checked]="compare() !== null"
+        (change)="toggleCompare($event)"
+      />
+      <label class="form-check-label" [for]="idPrefix() + '-compare'">Show {{ source.name }} alongside</label>
+    </div>
+  }
+</div>

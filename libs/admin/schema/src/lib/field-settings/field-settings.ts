@@ -73,6 +73,14 @@ export class FieldSettings {
   protected readonly uid = `nv-field-settings-${nextId++}`;
   protected readonly headingId = `${this.uid}-heading`;
   protected readonly typeLabel = computed(() => fieldTypeLabel(this.field().type));
+  /**
+   * Value fields are translated one by one (docs/build/16-localisation.md): groups and blocks are shared by every
+   * language, and a page's slug is its address in all of them. A field already marked keeps its box, to unmark it.
+   */
+  protected readonly translatable = computed(() => {
+    const field = this.field();
+    return field.localised || (field.type !== 'group' && field.type !== 'blocks' && field.apiId !== 'slug');
+  });
 
   protected readonly markChoices: ListChoice[] = richTextMarks.map((value) => ({ value, label: markLabels[value] }));
   protected readonly nodeChoices: ListChoice[] = richTextNodes.map((value) => ({ value, label: nodeLabels[value] }));

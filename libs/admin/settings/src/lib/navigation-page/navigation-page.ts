@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DsAlertComponent } from '@black-isle-beef/novan-design-system';
-import { Field, FieldFormContext, fieldId } from '@novan/admin-fields';
+import { Field, FieldFormContext, fieldId, LocaleSwitcher } from '@novan/admin-fields';
 import { MediaPicker } from '@novan/admin-media';
 import { copy, shortcutKeys, Skeleton } from '@novan/admin-shell';
-import type { FieldDef } from '@novan/shared-schemas';
+import { type FieldDef, isTranslated } from '@novan/shared-schemas';
 import { SingletonEditor } from '../singleton-editor';
 import {
   addItem,
@@ -35,7 +35,7 @@ const NAMES: Readonly<Record<string, { item: string; child: string }>> = {
  */
 @Component({
   selector: 'nv-navigation-page',
-  imports: [DsAlertComponent, Field, RouterLink, Skeleton],
+  imports: [DsAlertComponent, Field, LocaleSwitcher, RouterLink, Skeleton],
   providers: [FieldFormContext, MediaPicker],
   templateUrl: './navigation-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,7 +74,17 @@ export class NavigationPage extends SingletonEditor {
   }
 
   protected name(node: NavNode | undefined, key: string, position: number): string {
-    return itemName(node, key, position);
+    return itemName(node, key, position, this.form.activeLocale());
+  }
+
+  /** Menus are the same in every language: items are added, moved and removed in the main language only. */
+  protected readonly canArrange = computed(() => this.canEdit() && this.form.locale() === null);
+
+  /** The id of the control for an item's name field, which is translated per locale. */
+  private nameId(listPath: (string | number)[], index: number, key: string, fields: readonly FieldDef[]): string {
+    const field = fields.find((candidate) => candidate.apiId === key);
+    const path = [...listPath, index, key, ...(field && isTranslated(field) ? [this.form.activeLocale()] : [])];
+    return fieldId(path.join('.'));
   }
 
   protected path(...parts: (string | number)[]): string {
@@ -84,7 +94,7 @@ export class NavigationPage extends SingletonEditor {
   protected canAdd(tree: NavTree, index?: number): boolean {
     const field = index === undefined ? tree.field : tree.children;
     const count = index === undefined ? this.items(tree).length : this.children(tree, index).length;
-    return this.canEdit() && !!field && (field.max === undefined || count < field.max);
+    return this.canArrange() && !!field && (field.max === undefined || count < field.max);
   }
 
   // --- Changes ---
@@ -100,7 +110,8 @@ export class NavigationPage extends SingletonEditor {
     const position = listAt(this.data(), listPath).length;
     const words = this.words(tree);
     this.announcement.set(index === undefined ? `Added ${words.item} ${position}.` : `Added ${words.child} ${position}.`);
-    this.focus(fieldId([...listPath, position - 1, index === undefined ? tree.nameKey : tree.childNameKey].join('.')));
+    const fields = (index === undefined ? tree.field : tree.children)?.fields ?? [];
+    this.focus(this.nameId(listPath, position - 1, index === undefined ? tree.nameKey : tree.childNameKey, fields));
   }
 
   protected move(tree: NavTree, index: number, offset: -1 | 1, parent?: number): void {

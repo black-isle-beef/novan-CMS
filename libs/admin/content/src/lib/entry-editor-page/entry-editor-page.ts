@@ -15,10 +15,10 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { DsAlertComponent, DsBadgeComponent, DsButtonComponent, DsModalComponent } from '@black-isle-beef/novan-design-system';
-import { describePath, errorsFromIssues, FieldForm, FieldFormContext, fieldId } from '@novan/admin-fields';
+import { describePath, errorsFromIssues, FieldForm, FieldFormContext, fieldId, LocaleSwitcher } from '@novan/admin-fields';
 import { MediaPicker, MediaPickerDialog } from '@novan/admin-media';
 import { copy, type HasUnsavedChanges, Shortcuts, shortcutKeys, Skeleton, warnBeforeUnload } from '@novan/admin-shell';
-import { problemCode, problemFieldErrors, problemMessage, SpaceContext } from '@novan/admin-spaces';
+import { problemCode, problemFieldErrors, problemMessage, SpaceContext, SpaceLocales } from '@novan/admin-spaces';
 import {
   type BlockNode,
   type BlockType,
@@ -29,6 +29,9 @@ import {
   entryTitle,
   type FieldDef,
   type Folder,
+  LOCALE_CODE_PATTERN,
+  localesMissingTranslations,
+  localisedPath,
   mediaRefs,
   sameJson,
   sitePath,
@@ -66,6 +69,7 @@ const clock = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
     DsButtonComponent,
     DsModalComponent,
     FieldForm,
+    LocaleSwitcher,
     MediaPickerDialog,
     PageWorkflow,
     RouterLink,
@@ -81,15 +85,18 @@ export class EntryEditorPage implements HasUnsavedChanges {
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
-  private readonly form = inject(FieldFormContext);
+  protected readonly form = inject(FieldFormContext);
   private readonly media = inject(MediaPicker);
   protected readonly context = inject(SpaceContext);
+  protected readonly spaceLocales = inject(SpaceLocales);
   protected readonly copy = copy;
   protected readonly shortcutKeys = shortcutKeys;
 
   /** Route parameters (component input binding). */
   readonly spaceId = input.required<string>();
   readonly entryId = input.required<string>();
+  /** `?locale=`: the language to open the page in (from the visual editor). */
+  readonly locale = input<string | undefined>();
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
@@ -114,7 +121,19 @@ export class EntryEditorPage implements HasUnsavedChanges {
   protected readonly confirmingDelete = signal(false);
   protected readonly moveTo = signal<string | null>(null);
 
-  protected readonly title = computed(() => entryTitle(this.data(), this.entry()?.slug ?? ''));
+  protected readonly title = computed(() => entryTitle(this.data(), this.entry()?.slug ?? '', this.form.defaultLocale()));
+  /** Languages with translations missing, as the form stands. */
+  protected readonly missingLocales = computed(() => {
+    const type = this.contentType();
+    const others = this.form.locales().filter((locale) => !locale.isDefault).map((locale) => locale.code);
+    return type ? localesMissingTranslations(type.fields, this.data(), others, this.form.defaultLocale(), this.blockTypes()) : [];
+  });
+  /** Machine translation can fill the shown language's empty translations (when a translator is set up). */
+  protected readonly canMachineTranslate = computed(
+    () => this.canEdit() && this.spaceLocales.value()?.machineTranslation === true && this.form.locale() !== null,
+  );
+  /** The fields last filled in by machine translation, to check. */
+  protected readonly machineTranslated = signal<{ locale: string; fields: string[] } | null>(null);
   protected readonly badges = computed(() => {
     const entry = this.entry();
     return entry ? statusBadges(entry) : [];
@@ -132,13 +151,14 @@ export class EntryEditorPage implements HasUnsavedChanges {
     const data = this.data();
     const result = schemas.publish.safeParse(data);
     this.form.assets();
+    const localeName = (code: string) => this.form.localeName(code);
     return pageChecks({
       errors: result.success ? {} : errorsFromIssues(result.error.issues),
-      describe: (path) => describePath(path, type.fields, data, this.blockTypes()),
+      describe: (path) => describePath(path, type.fields, data, this.blockTypes(), localeName),
       blockAt: (path) => blockUidAt(data, path),
       media: mediaRefs(type.fields, data, this.blockTypes()),
       asset: (id) => this.form.assetInfo(id),
-      describeMedia: (ref) => describeMediaPath(ref.path, type.fields, data, this.blockTypes()),
+      describeMedia: (ref) => describeMediaPath(ref.path, type.fields, data, this.blockTypes(), localeName),
       headings: null,
     });
   });
@@ -148,7 +168,9 @@ export class EntryEditorPage implements HasUnsavedChanges {
     const origin = this.context.currentSpace()?.previewUrl;
     const path = this.entry()?.publishedPath;
     if (!this.published() || !path || !origin || !/^https?:\/\//i.test(origin)) return null;
-    return `${origin.replace(/\/+$/, '')}${sitePath(path)}`;
+    const locales = this.spaceLocales.value();
+    const address = locales ? localisedPath(sitePath(path), this.form.activeLocale(), locales) : sitePath(path);
+    return `${origin.replace(/\/+$/, '')}${address}`;
   });
   /** Pages can be edited on the site itself, in the visual editor. */
   protected readonly isPage = computed(() => this.entry()?.kind === 'page');
@@ -164,9 +186,10 @@ export class EntryEditorPage implements HasUnsavedChanges {
     // Media items are checked against the previews the form has loaded (kind, alt text, still there).
     this.form.assets();
     const assets = (id: string) => this.form.assetInfo(id);
+    const locales = this.form.localeSettings();
     return {
-      draft: buildEntrySchema(type.fields, { blockTypes, draft: true, assets }),
-      publish: buildEntrySchema(type.fields, { blockTypes, assets }),
+      draft: buildEntrySchema(type.fields, { blockTypes, draft: true, assets, locales }),
+      publish: buildEntrySchema(type.fields, { blockTypes, assets, locales }),
     };
   });
 
@@ -191,7 +214,7 @@ export class EntryEditorPage implements HasUnsavedChanges {
     const items = Object.entries(errors).flatMap(([path, messages]) =>
       messages.map((message) => ({
         href: `#${fieldId(path)}`,
-        text: `${describePath(path, type.fields, this.data(), this.blockTypes())}: ${message}`,
+        text: `${describePath(path, type.fields, this.data(), this.blockTypes(), (code) => this.form.localeName(code))}: ${message}`,
       })),
     );
     return { check: this.check() ?? 'draft', items };
@@ -284,6 +307,36 @@ export class EntryEditorPage implements HasUnsavedChanges {
     });
     return saved;
   };
+
+  /**
+   * Fills the shown language's empty translations by machine. The API translates the saved draft, so unsaved changes
+   * are saved first; the result is a new draft version marked as machine-translated, for a person to check.
+   */
+  protected async machineTranslate(): Promise<void> {
+    const to = this.form.locale();
+    const type = this.contentType();
+    if (!to || !type || !this.canMachineTranslate() || this.busy()) return;
+    if (this.dirty() && !this.checkFor('draft')) return;
+    this.cancelAutosave();
+    await this.run('saving', async () => {
+      if (this.dirty()) {
+        const data = this.data();
+        this.afterSave(await firstValueFrom(this.api.saveEntry(this.spaceId(), this.entryId(), data)), data);
+      }
+      const result = await firstValueFrom(this.api.translate(this.spaceId(), this.entryId(), { to }));
+      this.entry.set(result.entry);
+      this.data.set(result.entry.data);
+      this.afterSave(result.entry, result.entry.data);
+      const describe = (path: string) => describePath(path, type.fields, result.entry.data, this.blockTypes(), (code) => this.form.localeName(code));
+      this.machineTranslated.set(result.translated.length ? { locale: to, fields: result.translated.map(describe) } : null);
+      this.status.set(
+        result.translated.length
+          ? `Machine translation saved as a draft (${result.provider}). Check every translated field before publishing.`
+          : `Nothing to translate: every field already has a ${this.form.localeName(to)} translation.`,
+      );
+      this.focus('entry-status');
+    });
+  }
 
   protected workflowChanged(entry: Entry): void {
     this.entry.set(entry);
@@ -407,13 +460,17 @@ export class EntryEditorPage implements HasUnsavedChanges {
     this.loadError.set(null);
     this.cancelAutosave();
     try {
-      const [entry, types, blocks, entries, folders] = await Promise.all([
+      const [entry, types, blocks, entries, folders, locales] = await Promise.all([
         firstValueFrom(this.api.getEntry(spaceId, entryId)),
         firstValueFrom(this.api.listContentTypes(spaceId)),
         firstValueFrom(this.api.listBlockTypes(spaceId)),
         firstValueFrom(this.api.listEntries(spaceId)),
         firstValueFrom(this.api.listFolders(spaceId)),
+        this.spaceLocales.load(spaceId),
       ]);
+      this.form.locales.set(locales.locales);
+      const asked = untracked(() => this.locale());
+      this.form.locale.set(locales.locales.some((locale) => locale.code === asked && !locale.isDefault) ? (asked as string) : null);
       const type = types.find((t) => t.apiId === entry.contentType) ?? null;
       if (!type) {
         this.loadError.set('The type of this page no longer exists.');
@@ -455,7 +512,13 @@ function blockUidAt(data: EntryData, path: string): string | null {
 }
 
 /** A media item's place in words (`Content › Hero block › Background image`), and its block. */
-function describeMediaPath(path: string, fields: readonly FieldDef[], data: EntryData, blockTypes: readonly BlockType[]): { label: string; uid: string | null } {
+function describeMediaPath(
+  path: string,
+  fields: readonly FieldDef[],
+  data: EntryData,
+  blockTypes: readonly BlockType[],
+  localeName: (code: string) => string,
+): { label: string; uid: string | null } {
   const blocks = new Map<string, BlockNode>();
   const walk = (value: unknown): void => {
     if (Array.isArray(value)) value.forEach(walk);
@@ -477,6 +540,7 @@ function describeMediaPath(path: string, fields: readonly FieldDef[], data: Entr
       return `${type?.name ?? node._block} block`;
     }
     const field = available?.find((f) => f.apiId === part);
+    if (!field && LOCALE_CODE_PATTERN.test(part)) return localeName(part);
     available = field?.type === 'group' ? field.fields : undefined;
     return field?.label ?? (/^\d+$/.test(part) ? `Item ${Number(part) + 1}` : part);
   });

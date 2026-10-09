@@ -54,7 +54,8 @@ All require `Authorization: Bearer <token>`; the space and environment come from
   gets the delivery or preview header). `ETag` is Express's weak ETag; `If-None-Match` answers 304.
 - **The home page is the top-level page with slug `home`.** `pages?path=/` finds it, and it is delivered (and
   listed in the sitemap) with `path: "/"`.
-- **Delivered entries** are `{ id, contentType, path, locale, updatedAt, data }`. `updatedAt` is when the
+- **Delivered entries** are `{ id, contentType, path, locale, updatedAt, data }` (pages add `alternates`, and every
+  answer is in one locale along its fallbacks: package 16, 16-localisation.md). `updatedAt` is when the
   version went live (delivery) or was last saved (preview). In `data`, references are expanded to
   `DeliveryEntry` up to `include` (default 1); deeper, or back to an entry already being expanded, they stay
   `{ id }`; references to unpublished entries (preview: entries in the bin) are left out. Internal links gain

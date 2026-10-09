@@ -1,17 +1,53 @@
 // What the Delivery and Preview APIs send (docs/build/08-delivery-preview-api.md). The SDK is published on its
 // own, so these mirror `@novan/shared-schemas` instead of importing it; `types.spec.ts` keeps them in step.
 
-/** One page or entry. `data` holds one key per field `apiId`, with references, files and links expanded. */
+/**
+ * One page or entry, in one locale. `data` holds one key per field `apiId`, with references, files and links
+ * expanded, and translated fields in the locale (or its fallback).
+ */
 export interface NovanEntry<TData = Record<string, unknown>> {
   id: string;
   /** Content type api id, e.g. `page`. */
   contentType: string;
-  /** Folder path and slug, e.g. `/blog/hello-world`; the home page is `/`. */
+  /**
+   * The page's address on the site: folder path and slug, e.g. `/blog/hello-world`, and `/` for the home page. When
+   * the site shows the locale in addresses, other locales' start with its prefix, e.g. `/fr/blog/hello-world`.
+   */
   path: string;
+  /** The locale `data` is in, e.g. `fr-FR`. */
   locale: string;
   /** Delivery: when this version went live. Preview: when it was last saved. */
   updatedAt: string;
   data: TData;
+  /** Pages only: every locale the page is in, this one included, for `hreflang` links. */
+  alternates?: NovanAlternate[];
+}
+
+/** The same page in another locale. */
+export interface NovanAlternate {
+  locale: string;
+  /** Its address on the site. */
+  path: string;
+}
+
+/** One of the site's languages (docs/build/16-localisation.md). */
+export interface NovanLocale {
+  /** e.g. `fr-FR`. */
+  code: string;
+  name: string;
+  /** Where its missing translations come from; null for nowhere. */
+  fallback: string | null;
+  /** The main language: never prefixed. */
+  isDefault: boolean;
+  /** The start of its addresses when `prefixes` is on, e.g. `fr`. */
+  prefix: string;
+}
+
+/** `GET /v1/delivery/locales`: the site's languages, the default first. */
+export interface NovanLocales {
+  locales: NovanLocale[];
+  /** Whether addresses of other languages than the default start with their prefix (`/fr/about`). */
+  prefixes: boolean;
 }
 
 /** The fields every page has; content types add their own. */

@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { badRequest, conflict, forbidden, notFound } from '@novan/api-common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { badRequest, conflict, forbidden, MACHINE_TRANSLATOR, notFound, ProblemException, type Translator } from '@novan/api-common';
 import { type AuthUser, hasStaffAccess, type SpaceAccess } from '@novan/api-auth';
 import {
   assetUsages,
@@ -14,6 +14,7 @@ import {
   publishedContent,
   recordAudit,
   reviewRequests,
+  spaceLocales,
   spaces,
 } from '@novan/api-db';
 import {
@@ -30,6 +31,9 @@ import {
   entryTitle,
   HOME_SLUG,
   type listEntriesQuerySchema,
+  localesMissingTranslations,
+  type MachineTranslation,
+  machineTranslationMessage,
   type MediaRef,
   mediaRefs,
   type moveEntryRequestSchema,
@@ -37,6 +41,7 @@ import {
   type ReviewDecision,
   type ReviewRequest,
   slugify,
+  type translateEntryRequestSchema,
   type updateEntryRequestSchema,
   type WorkflowAction,
   type EntryWorkflow,
@@ -58,9 +63,11 @@ import {
   hasSlugField,
   loadAssets,
   loadModel,
+  modelOf,
   slugInData,
   validateData,
 } from './entry-model';
+import { planTranslation } from './machine-translation';
 import { cacheTags, entryPath, lastSegment } from './paths';
 
 type ListQuery = z.output<typeof listEntriesQuerySchema>;
@@ -68,24 +75,30 @@ type CreateBody = z.output<typeof createEntryRequestSchema>;
 type UpdateBody = z.output<typeof updateEntryRequestSchema>;
 type AutosaveBody = z.output<typeof autosaveEntryRequestSchema>;
 type MoveBody = z.output<typeof moveEntryRequestSchema>;
+type TranslateBody = z.output<typeof translateEntryRequestSchema>;
 
 type EntryRow = typeof entries.$inferSelect;
 
 /** How long autosave keeps overwriting its own version before starting a new one (see 0006_entries.sql). */
 const AUTOSAVE_WINDOW_MS = 2 * 60 * 1000;
 
+/** A text field of the current version; a translated one in the space's default locale. */
+const textSql = (key: string) => sql`nullif(btrim(case jsonb_typeof(${entryVersions.data} -> ${key})
+  when 'object' then ${entryVersions.data} -> ${key} ->> (
+    select l.code from ${spaceLocales} l where l.space_id = ${entries.spaceId} and l.is_default
+  )
+  else ${entryVersions.data} ->> ${key}
+end), '')`;
+
 /** Title shown in lists: the current version's `title` or `name`, else the slug (as `entryTitle`). */
-const titleSql = sql<string>`coalesce(
-  nullif(btrim(${entryVersions.data} ->> 'title'), ''),
-  nullif(btrim(${entryVersions.data} ->> 'name'), ''),
-  ${entries.slug}
-)`;
+const titleSql = sql<string>`coalesce(${textSql('title')}, ${textSql('name')}, ${entries.slug})`;
 
 const summaryColumns = {
   entry: entries,
   contentType: { apiId: contentTypes.apiId, name: contentTypes.name, kind: contentTypes.kind },
   folderPath: folders.path,
   title: titleSql,
+  data: entryVersions.data,
 };
 
 /**
@@ -101,6 +114,7 @@ export class EntriesService {
     private readonly db: DbService,
     private readonly events: ContentEvents,
     private readonly notifier: WorkflowNotifier,
+    @Inject(MACHINE_TRANSLATOR) private readonly translator: Translator | null,
   ) {}
 
   list(user: AuthUser, spaceId: string, env: string, query: ListQuery): Promise<EntrySummary[]> {
@@ -124,7 +138,8 @@ export class EntriesService {
         .leftJoin(folders, eq(folders.id, entries.folderId))
         .where(and(...filters))
         .orderBy(asc(folders.path), asc(entries.slug));
-      return rows.map(toSummary);
+      const model = await modelOf(tx, spaceId, envId);
+      return rows.map((row) => toSummary(row, model));
     });
   }
 
@@ -148,7 +163,6 @@ export class EntriesService {
         const input = hasSlugField(type) ? { ...body.data, slug } : body.data;
         const data = validateData(model, type, input, 'draft', await loadAssets(tx, spaceId, model, type, input));
 
-        const [{ locale }] = await tx.select({ locale: spaces.defaultLocale }).from(spaces).where(eq(spaces.id, spaceId));
         const [entry] = await tx
           .insert(entries)
           .values({
@@ -157,7 +171,6 @@ export class EntriesService {
             contentTypeId: type.id,
             folderId: body.folderId ?? null,
             slug,
-            locale,
             createdBy: user.id,
           })
           .returning();
@@ -297,7 +310,6 @@ export class EntriesService {
           environmentId: model.environmentId,
           contentTypeApiId: type.apiId,
           fullPath: path,
-          locale: entry.locale,
           data,
           publishedAt: sql`now()`,
           cacheTags: tags,
@@ -335,7 +347,6 @@ export class EntriesService {
           environmentId: model.environmentId,
           entryId: entry.id,
           contentType: type.apiId,
-          locale: entry.locale,
           path,
           cacheTags: tags,
           actorId: user.id,
@@ -505,7 +516,8 @@ export class EntriesService {
         .innerJoin(entryVersions, eq(entryVersions.id, entries.currentVersionId))
         .leftJoin(folders, eq(folders.id, entries.folderId))
         .where(and(inArray(entries.id, open.map((row) => row.request.entryId)), eq(entries.environmentId, envId), isNull(entries.deletedAt)));
-      const summaries = new Map(rows.map((row) => [row.entry.id, toSummary(row)]));
+      const model = await modelOf(tx, spaceId, envId);
+      const summaries = new Map(rows.map((row) => [row.entry.id, toSummary(row, model)]));
       return open.flatMap((row) => {
         const entry = summaries.get(row.request.entryId);
         return entry ? [{ ...toReview(row), entry }] : [];
@@ -536,7 +548,8 @@ export class EntriesService {
           ),
         )
         .orderBy(asc(folders.path), asc(entries.slug));
-      return rows.map(toSummary);
+      const model = await modelOf(tx, spaceId, envId);
+      return rows.map((row) => toSummary(row, model));
     });
   }
 
@@ -562,6 +575,66 @@ export class EntriesService {
       });
       this.emit(event);
       return result;
+    } catch (error) {
+      throw contentProblem(error);
+    }
+  }
+
+  /**
+   * Fills the empty translations of locale `to` from `from` (the default locale when left out) with the machine
+   * translator, and saves the result as a draft version whose message says it was machine-translated, so it is
+   * checked before anyone publishes it (docs/build/16-localisation.md). The translator is called outside any
+   * transaction; if the page changed meanwhile, nothing is saved.
+   */
+  async translate(user: AuthUser, spaceId: string, env: string, id: string, body: TranslateBody): Promise<MachineTranslation> {
+    const translator = this.translator;
+    if (!translator) {
+      throw new ProblemException(HttpStatus.NOT_IMPLEMENTED, 'translation_unavailable', 'Machine translation unavailable', 'Machine translation is not set up for this site.');
+    }
+    try {
+      const planned = await this.db.userDb(user.claims, async (tx) => {
+        const model = await loadModel(tx, spaceId, env);
+        const entry = await liveEntry(tx, model.environmentId, id);
+        check(await workflowOf(tx, user, entry), 'edit');
+        const { defaultLocale } = model.localeSettings;
+        const from = body.from ?? defaultLocale;
+        const to = model.locales.locales.find((locale) => locale.code === body.to);
+        if (!to || !model.locales.locales.some((locale) => locale.code === from)) {
+          throw badRequest('locale_not_found', 'Translate between two of the space\'s locales.');
+        }
+        if (to.code === from) throw badRequest('same_locale', 'Choose a different locale to translate into.');
+        const [version] = await tx.select({ data: entryVersions.data }).from(entryVersions).where(eq(entryVersions.id, entry.currentVersionId as string));
+        const type = contentTypeById(model, entry.contentTypeId);
+        const plan = planTranslation(type.fields, version.data as EntryData, model.blockTypes, { from, to: to.code, defaultLocale });
+        return { plan, versionId: entry.currentVersionId, from, to };
+      });
+      const { plan, versionId, from, to } = planned;
+      const translated = plan.texts.length ? await translator.translate(plan.texts, from, to.code) : [];
+
+      return await this.db.userDb(user.claims, async (tx) => {
+        const model = await loadModel(tx, spaceId, env);
+        const entry = await liveEntry(tx, model.environmentId, id);
+        if (!plan.paths.length) return { entry: await readEntry(tx, model.environmentId, id, model), translated: [], provider: translator.name };
+        if (entry.currentVersionId !== versionId) {
+          throw conflict('entry_changed', 'The page changed while it was being translated. Try again.');
+        }
+        const flow = await workflowOf(tx, user, entry);
+        check(flow, 'edit');
+        const type = contentTypeById(model, entry.contentTypeId);
+        const input = plan.apply(translated);
+        const data = validateData(model, type, input, 'draft', await loadAssets(tx, spaceId, model, type, input));
+        await saveVersion(tx, entry, user, data, { message: machineTranslationMessage(to.name), autosave: false, slug: entry.slug });
+        await leaveReview(tx, entry, flow, user);
+        await recordAudit(tx, {
+          spaceId,
+          actorId: user.id,
+          action: 'entry.machine_translated',
+          targetType: 'entry',
+          targetId: entry.id,
+          diff: { environment: env, from, to: to.code, provider: translator.name, values: plan.paths.length },
+        });
+        return { entry: await readEntry(tx, model.environmentId, id, model), translated: plan.paths, provider: translator.name };
+      });
     } catch (error) {
       throw contentProblem(error);
     }
@@ -904,7 +977,6 @@ async function takeOffline(tx: DbTransaction, model: EntryModel, entry: EntryRow
     environmentId: entry.environmentId,
     entryId: entry.id,
     contentType: type.apiId,
-    locale: entry.locale,
     path,
     cacheTags: removed?.cacheTags ?? cacheTags({ id: entry.id, environmentId: entry.environmentId, contentType: type.apiId }),
     actorId: user.id,
@@ -941,9 +1013,9 @@ async function folderPath(tx: DbTransaction, envId: string, folderId: string): P
   return folder.path;
 }
 
-async function readEntry(tx: DbTransaction, envId: string, id: string): Promise<Entry> {
+async function readEntry(tx: DbTransaction, envId: string, id: string, model?: EntryModel): Promise<Entry> {
   const [row] = await tx
-    .select({ ...summaryColumns, data: entryVersions.data, publishedPath: publishedContent.fullPath })
+    .select({ ...summaryColumns, publishedPath: publishedContent.fullPath })
     .from(entries)
     .innerJoin(contentTypes, eq(contentTypes.id, entries.contentTypeId))
     .innerJoin(entryVersions, eq(entryVersions.id, entries.currentVersionId))
@@ -952,7 +1024,7 @@ async function readEntry(tx: DbTransaction, envId: string, id: string): Promise<
     .where(and(eq(entries.id, id), eq(entries.environmentId, envId)));
   if (!row) throw notFound('entry_not_found', 'This page does not exist, or has been deleted.');
   return {
-    ...toSummary(row),
+    ...toSummary(row, model ?? (await modelOf(tx, row.entry.spaceId, envId))),
     data: row.data as EntryData,
     currentVersionId: row.entry.currentVersionId as string,
     publishedVersionId: row.entry.publishedVersionId,
@@ -965,9 +1037,13 @@ interface SummaryRow {
   contentType: { apiId: string; name: string; kind: string };
   folderPath: string | null;
   title: string;
+  data: unknown;
 }
 
-function toSummary({ entry, contentType, folderPath: path, title }: SummaryRow): EntrySummary {
+function toSummary({ entry, contentType, folderPath: path, title, data }: SummaryRow, model: EntryModel): EntrySummary {
+  const { defaultLocale } = model.localeSettings;
+  const others = model.locales.locales.filter((locale) => !locale.isDefault).map((locale) => locale.code);
+  const fields = contentTypeById(model, entry.contentTypeId)?.fields ?? [];
   return {
     id: entry.id,
     contentType: contentType.apiId,
@@ -976,8 +1052,8 @@ function toSummary({ entry, contentType, folderPath: path, title }: SummaryRow):
     folderId: entry.folderId,
     slug: entry.slug,
     path: entryPath(path, entry.slug),
-    locale: entry.locale,
     title,
+    missingTranslations: others.length ? localesMissingTranslations(fields, (data ?? {}) as EntryData, others, defaultLocale, model.blockTypes) : [],
     status: entry.status as EntryStatus,
     hasUnpublishedChanges: entry.publishedVersionId !== null && entry.publishedVersionId !== entry.currentVersionId,
     createdAt: entry.createdAt,

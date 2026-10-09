@@ -75,6 +75,7 @@ export class RichTextField extends FieldControl<FieldDefOf<'richText'>> {
       ...(describedBy ? { 'aria-describedby': describedBy } : {}),
       ...(this.invalid() ? { 'aria-invalid': 'true' } : {}),
       ...(this.field().required ? { 'aria-required': 'true' } : {}),
+      ...(this.contentLang() ? { lang: this.contentLang() as string } : {}),
     };
   });
 

@@ -1,0 +1,213 @@
+<nav aria-label="Breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'settings']">{{ copy.settings }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Languages</li>
+  </ol>
+</nav>
+
+<h1 id="languages-heading" class="mb-1" tabindex="-1">Languages</h1>
+<p class="lead text-body-secondary mb-4">
+  The languages your site is published in. Pages are written in the main language first; until a page is translated,
+  each language shows the text of the language it falls back to.
+</p>
+
+@if (loading()) {
+  <nv-skeleton label="Loading the languages" [lines]="5" />
+} @else if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else {
+  @if (problem(); as message) {
+    <div id="languages-problem" tabindex="-1" class="mb-3">
+      <ds-alert variant="danger">{{ message }}</ds-alert>
+    </div>
+  }
+
+  <section class="mb-5" aria-labelledby="languages-list-heading">
+    <h2 id="languages-list-heading" class="h4" tabindex="-1">Your site's languages ({{ locales().length }})</h2>
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <caption class="visually-hidden">Languages, the main language first</caption>
+        <thead>
+          <tr>
+            <th scope="col">Language</th>
+            <th scope="col">Code</th>
+            <th scope="col">Untranslated text comes from</th>
+            <th scope="col">Address of the About page</th>
+            @if (canChange()) {
+              <th scope="col"><span class="visually-hidden">Actions</span></th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (locale of locales(); track locale.code) {
+            <tr>
+              <td>
+                {{ locale.name }}
+                @if (locale.isDefault) {
+                  <span class="text-body-secondary">(main language)</span>
+                }
+              </td>
+              <td><code>{{ locale.code }}</code></td>
+              <td>
+                @if (locale.isDefault) {
+                  <span class="text-body-secondary">Not needed</span>
+                } @else if (locale.fallback) {
+                  {{ nameOf(locale.fallback) }}
+                } @else {
+                  Nowhere: untranslated pages are not shown
+                }
+              </td>
+              <td><code>{{ example(locale) }}</code></td>
+              @if (canChange()) {
+                <td class="text-nowrap">
+                  <button type="button" class="btn btn-sm btn-secondary me-1" [disabled]="busy()" (click)="edit(locale)">
+                    Change<span class="visually-hidden"> {{ locale.name }}</span>
+                  </button>
+                  @if (!locale.isDefault) {
+                    <button type="button" class="btn btn-sm btn-secondary me-1" [disabled]="busy()" (click)="makeMain(locale)">
+                      Make main<span class="visually-hidden"> language: {{ locale.name }}</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger" [disabled]="busy()" (click)="remove(locale)">
+                      Remove<span class="visually-hidden"> {{ locale.name }}</span>
+                    </button>
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="col-lg-8 mb-5" aria-labelledby="languages-addresses-heading">
+    <h2 id="languages-addresses-heading" class="h4">Addresses</h2>
+    <div class="form-check form-switch">
+      <input
+        id="languages-prefixes"
+        class="form-check-input"
+        type="checkbox"
+        role="switch"
+        aria-describedby="languages-prefixes-hint"
+        [checked]="value()?.prefixes"
+        [disabled]="!canChangePrefixes() || busy()"
+        (change)="setPrefixes($event)"
+      />
+      <label class="form-check-label" for="languages-prefixes">Start addresses with the language</label>
+    </div>
+    <div id="languages-prefixes-hint" class="form-text">
+      Pages in other languages than {{ main()?.name }} get their own addresses, like
+      <code>/{{ locales()[1]?.prefix ?? 'fr' }}/about</code>, so visitors and search engines can find each one. Your site
+      shows the main language at the addresses it has now.
+      @if (!canChangePrefixes()) {
+        Only space admins can change this.
+      }
+    </div>
+  </section>
+
+  @if (canChange()) {
+    <section class="col-lg-8 mb-5" aria-labelledby="language-form-heading">
+      <h2 id="language-form-heading" class="h4">{{ editing() ? 'Change ' + editing()?.name : 'Add a language' }}</h2>
+      @if (full() && !editing()) {
+        <p>A site can have up to {{ maxLocales }} languages.</p>
+      } @else {
+        <form novalidate (submit)="$event.preventDefault(); submit()">
+          @if (!editing()) {
+            <div class="mb-3">
+              <label for="language-code" class="form-label">Language code</label>
+              <input
+                id="language-code"
+                type="text"
+                class="form-control"
+                list="language-suggestions"
+                spellcheck="false"
+                autocomplete="off"
+                required
+                aria-describedby="language-code-hint"
+                [value]="form().code"
+                [class.is-invalid]="invalid('code')"
+                [attr.aria-invalid]="invalid('code') || null"
+                (input)="set('code', $event)"
+              />
+              <datalist id="language-suggestions">
+                @for (code of suggested; track code) {
+                  <option [value]="code"></option>
+                }
+              </datalist>
+              <div id="language-code-hint" [class]="invalid('code') ? 'invalid-feedback' : 'form-text'">
+                {{ errors()['code']?.join(' ') || 'A language and, if it matters, a country: fr for French, fr-CA for French in Canada.' }}
+              </div>
+            </div>
+          }
+          <div class="mb-3">
+            <label for="language-name" class="form-label">Name</label>
+            <input
+              id="language-name"
+              type="text"
+              class="form-control"
+              required
+              aria-describedby="language-name-hint"
+              [value]="form().name"
+              [class.is-invalid]="invalid('name')"
+              [attr.aria-invalid]="invalid('name') || null"
+              (input)="set('name', $event)"
+            />
+            <div id="language-name-hint" [class]="invalid('name') ? 'invalid-feedback' : 'form-text'">
+              {{ errors()['name']?.join(' ') || 'How editors see it, like French (France).' }}
+            </div>
+          </div>
+          @if (!editing()?.isDefault) {
+            <div class="mb-3">
+              <label for="language-fallback" class="form-label">Untranslated text comes from</label>
+              <select
+                id="language-fallback"
+                class="form-select"
+                aria-describedby="language-fallback-hint"
+                [class.is-invalid]="invalid('fallback')"
+                [attr.aria-invalid]="invalid('fallback') || null"
+                (change)="set('fallback', $event)"
+              >
+                @for (option of fallbacks(); track option.code) {
+                  <option [value]="option.code" [selected]="form().fallback === option.code">{{ option.name }}</option>
+                }
+                <option value="" [selected]="!form().fallback">Nowhere</option>
+              </select>
+              <div id="language-fallback-hint" [class]="invalid('fallback') ? 'invalid-feedback' : 'form-text'">
+                {{
+                  errors()['fallback']?.join(' ') ||
+                    'Until a page is translated, it shows this language’s text. With nowhere, untranslated pages are not shown in this language.'
+                }}
+              </div>
+            </div>
+          }
+          <div class="mb-3">
+            <label for="language-prefix" class="form-label">Address prefix</label>
+            <input
+              id="language-prefix"
+              type="text"
+              class="form-control"
+              spellcheck="false"
+              autocomplete="off"
+              aria-describedby="language-prefix-hint"
+              [value]="form().prefix"
+              [class.is-invalid]="invalid('prefix')"
+              [attr.aria-invalid]="invalid('prefix') || null"
+              (input)="set('prefix', $event)"
+            />
+            <div id="language-prefix-hint" [class]="invalid('prefix') ? 'invalid-feedback' : 'form-text'">
+              {{ errors()['prefix']?.join(' ') || 'The start of its addresses when they show the language, like fr in /fr/about.' }}
+            </div>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-primary" [disabled]="busy()" [attr.aria-busy]="busy()">
+              {{ editing() ? 'Save changes' : 'Add language' }}
+            </button>
+            @if (editing()) {
+              <button type="button" class="btn btn-secondary" (click)="cancelEdit()">Cancel</button>
+            }
+          </div>
+        </form>
+      }
+    </section>
+  }
+}

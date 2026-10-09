@@ -19,11 +19,23 @@
       <h1 class="mb-1">{{ title() }}</h1>
       <p class="text-body-secondary mb-0">
         Click a block on the page, or in the list of blocks, to edit it.
-        <a [routerLink]="['/spaces', spaceId(), 'content', e.id]">Edit in the form instead</a>
+        <a [routerLink]="['/spaces', spaceId(), 'content', e.id]" [queryParams]="form.locale() ? { locale: form.locale() } : {}">
+          Edit in the form instead
+        </a>
       </p>
     </div>
 
     <div class="d-flex flex-wrap align-items-end gap-3">
+      @if (spaceLocales.multilingual()) {
+        <nv-locale-switcher
+          idPrefix="nv-editor-locale"
+          [sideBySide]="false"
+          [locales]="form.locales()"
+          [missing]="missingLocales()"
+          [locale]="form.locale()"
+          (localeChange)="form.locale.set($event)"
+        />
+      }
       <fieldset>
         <legend class="form-label small mb-1">Screen size</legend>
         <div class="btn-group" role="group">
@@ -235,8 +247,8 @@
               <nv-seo-panel
                 [field]="seoField()"
                 [value]="store.data()['seo']"
-                [pageTitle]="title()"
-                [path]="sitePathOf(e.path)"
+                [pageTitle]="shownTitle()"
+                [path]="shownPath()"
                 [siteUrl]="siteUrl()"
                 [defaults]="seoDefaults()"
                 (valueChange)="changeSeo($event)"

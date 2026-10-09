@@ -126,14 +126,14 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(withFetch()),
     provideNovanCms({
-      locale: 'en-GB',
       blocks: defineBlocks({ hero: HeroBlock }),
     }),
   ],
 };
 ```
 
-`provideNovanCms` options: `blocks` (required), `locale` (default: the space's default locale),
+`provideNovanCms` options: `blocks` (required), `locale` (only for a site in one language of a multilingual space,
+say one domain per language: every call asks for it; without it the locale comes from each address, see Languages),
 `proxyPath` (default `/_novan`), `apiUrl` and `publicDeliveryToken` (see below).
 
 ### Alternative: a public delivery token
@@ -241,6 +241,26 @@ slash, and a redirect without a query of its own keeps the request's.
 `createNovanNotFoundReporter(options)` returns a function to call when the server answers 404: it posts the path and
 referrer to `POST /v1/delivery/not-found`, so editors see the most visited missing addresses and can redirect them.
 It never throws. Both take the server options (`apiUrl` and `deliveryToken`) and run only on the server.
+
+## Languages
+
+A space can publish in several languages (docs/build/16-localisation.md). Every answer is in one locale: translated
+fields hold that locale's text, or its fallback's. When the space puts the language in addresses (Settings ›
+Languages in the admin), other languages than the default live under their prefix: `/fr/about` is the French
+`/about`, `/fr` the French home page.
+
+- `novanPageResolver` reads the locale from the address (`novanResolveLocale`, using `GET /v1/delivery/locales`) and
+  asks for the page in it; a page with nothing to show in the locale, or its fallbacks, answers 404.
+- The locale it read is `NovanLocale.current`; later calls (navigation, site settings) use it unless they name one.
+  Resolve layout content per locale too: `novanResolveLocale(state.url)` in its resolver, and
+  `runGuardsAndResolvers: 'always'` on the layout route so switching language reloads it.
+- Delivered `path`s, internal links and site addresses in rich text are the site's addresses in the locale, so links
+  stay in the language.
+- `applyNovanSeo` sets `<html lang>`, an `hreflang` link per language the page is in (from `page.alternates`), an
+  `x-default` link and `og:locale:alternate`; `applyNovanLang` sets `lang` for pages without content (404s).
+- `novanBreadcrumbTrail` starts from the locale's home page (`/fr`).
+- `content.sitemap()` lists each page once per locale it is in, with its `id`, so a sitemap can link a page's
+  languages to each other.
 
 ## Blocks
 

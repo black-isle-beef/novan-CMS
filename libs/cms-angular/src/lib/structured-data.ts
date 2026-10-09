@@ -38,22 +38,35 @@ export function novanOrganizationJsonLd(settings: NovanSiteSettings | null | und
 
 /**
  * The trail to a page: the home page, then each folder above it, then the page. Folders are named from their slug
- * (`our-team` is "Our team") unless `names` gives a name for their path, e.g. the title of the page at that path.
+ * (`our-team` is "Our team") unless `names` gives a name for their path, e.g. the title of the page at that path. A
+ * page whose address starts with its locale (`/fr/about`) starts from that locale's home page (`/fr`).
  */
 export function novanBreadcrumbTrail(
-  page: Pick<Page, 'path' | 'data'>,
+  page: Pick<Page, 'path' | 'data' | 'alternates'>,
   options: { homeName?: string; names?: Readonly<Record<string, string>> } = {},
 ): NovanBreadcrumb[] {
-  const home = { name: options.homeName ?? 'Home', path: '/' };
-  if (page.path === '/') return [home];
-  const segments = page.path.split('/').filter(Boolean);
+  const prefix = localePrefix(page);
+  const home = { name: options.homeName ?? 'Home', path: prefix || '/' };
+  if (page.path === home.path) return [home];
+  const segments = page.path.slice(prefix.length).split('/').filter(Boolean);
   const steps = segments.map((segment, index) => {
-    const path = `/${segments.slice(0, index + 1).join('/')}`;
+    const path = `${prefix}/${segments.slice(0, index + 1).join('/')}`;
     const last = index === segments.length - 1;
     const name = (last ? text(page.data.title) : null) ?? text(options.names?.[path]) ?? humanise(segment);
     return { name, path };
   });
   return [home, ...steps];
+}
+
+/**
+ * The locale prefix of a page's address (`/fr` for `/fr/about`), from its alternates: the first is in the site's
+ * default locale, which has none. Empty when there is none, or it cannot be told.
+ */
+function localePrefix(page: Pick<Page, 'path' | 'alternates'>): string {
+  const plain = page.alternates?.[0]?.path;
+  if (!plain || plain === page.path) return '';
+  if (plain === '/') return /^\/[a-z0-9-]+$/.test(page.path) ? page.path : '';
+  return page.path.endsWith(plain) && /^\/[a-z0-9-]+$/.test(page.path.slice(0, -plain.length)) ? page.path.slice(0, -plain.length) : '';
 }
 
 /** Schema.org `BreadcrumbList` for a trail from {@link novanBreadcrumbTrail}. Null for the home page alone. */

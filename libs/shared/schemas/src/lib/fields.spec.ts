@@ -159,20 +159,82 @@ describe('buildEntrySchema', () => {
     });
   });
 
-  describe('localised fields', () => {
-    // Locale maps ({ "en-GB": ... }) arrive with package 16; until then a localised field holds a plain
-    // value and is validated exactly like any other field.
-    const schema = buildEntrySchema(
-      defs({ id: 'a', apiId: 'title', label: 'Title', type: 'text', required: true, localised: true, max: 10 }),
+  describe('translated fields', () => {
+    const locales = { defaultLocale: 'en-GB', codes: ['en-GB', 'fr-FR'] };
+    const fields = defs(
+      { id: 'a', apiId: 'title', label: 'Title', type: 'text', required: true, localised: true, max: 10 },
+      { id: 'b', apiId: 'code', label: 'Code', type: 'text' },
+      { id: 'c', apiId: 'live', label: 'Live', type: 'boolean', localised: true, default: false },
     );
+    const publish = buildEntrySchema(fields, { locales });
+    const draft = buildEntrySchema(fields, { locales, draft: true });
 
-    it('validates a plain value', () => {
-      expect(schema.parse({ title: 'Bonjour' })).toEqual({ title: 'Bonjour' });
-      expect(issues(schema, { title: 'Far too long a title' })).toEqual(['title: Use 10 characters or fewer.']);
+    it('stores one value per locale', () => {
+      expect(publish.parse({ title: { 'en-GB': 'Hello', 'fr-FR': 'Bonjour' }, code: 'x1' })).toEqual({
+        title: { 'en-GB': 'Hello', 'fr-FR': 'Bonjour' },
+        code: 'x1',
+        live: { 'en-GB': false },
+      });
     });
 
-    it('does not accept a locale map yet', () => {
-      expect(issues(schema, { title: { 'en-GB': 'Hello' } })).toEqual(['title: Expected text.']);
+    it('needs the default locale to publish; other locales may be empty and fall back', () => {
+      expect(publish.parse({ title: { 'en-GB': 'Hello', 'fr-FR': '' } })).toMatchObject({ title: { 'en-GB': 'Hello', 'fr-FR': '' } });
+      expect(issues(publish, { title: { 'fr-FR': 'Bonjour' } })).toEqual([`title.en-GB: ${REQUIRED_MESSAGE}`]);
+      expect(issues(publish, {})).toEqual([`title.en-GB: ${REQUIRED_MESSAGE}`]);
+      expect(issues(draft, { title: { 'fr-FR': 'Bonjour' } })).toEqual([]);
+    });
+
+    it('checks each translation with the field\'s rules, at its locale', () => {
+      expect(issues(publish, { title: { 'en-GB': 'Hello', 'fr-FR': 'Bien trop long' } })).toEqual([
+        'title.fr-FR: Use 10 characters or fewer.',
+      ]);
+      expect(issues(draft, { title: { 'en-GB': 42 } })).toEqual(['title.en-GB: Expected text.']);
+    });
+
+    it('drops locales the space does not have, and empty translations', () => {
+      expect(draft.parse({ title: { 'en-GB': 'Hello', 'de-DE': 'Hallo', 'fr-FR': null } })).toMatchObject({ title: { 'en-GB': 'Hello' } });
+      expect(draft.parse({ title: {} }).title).toBeUndefined();
+    });
+
+    it('keeps any locale when the space\'s locales are not given', () => {
+      expect(buildEntrySchema(fields).parse({ title: { 'en-GB': 'Hello', 'de-DE': 'Hallo' } })).toMatchObject({
+        title: { 'en-GB': 'Hello', 'de-DE': 'Hallo' },
+      });
+    });
+
+    it('reads a plain value of a translated field as the default locale\'s', () => {
+      expect(publish.parse({ title: 'Hello' })).toMatchObject({ title: { 'en-GB': 'Hello' } });
+    });
+
+    it('reads a locale map of a field no longer translated as its default locale\'s value', () => {
+      expect(publish.parse({ title: 'Hello', code: { 'en-GB': 'x1', 'fr-FR': 'x2' } })).toMatchObject({ code: 'x1' });
+      expect(publish.parse({ title: 'Hello', code: { 'fr-FR': 'x2' } })).toMatchObject({ code: 'x2' });
+    });
+
+    it('translates value fields inside groups and blocks, which every locale shares', () => {
+      const body = defs({ id: 'b', apiId: 'body', label: 'Body', type: 'blocks' });
+      const blockTypes: BlockTypeDef[] = [
+        {
+          apiId: 'hero',
+          fields: defs(
+            { id: 'h', apiId: 'heading', label: 'Heading', type: 'text', required: true, localised: true },
+            { id: 'i', apiId: 'icon', label: 'Icon', type: 'text' },
+          ),
+        },
+      ];
+      const schema = buildEntrySchema(body, { blockTypes, locales });
+      const hero = { _uid: uid(1), _block: 'hero', heading: { 'en-GB': 'Hi', 'fr-FR': 'Salut' }, icon: 'star' };
+
+      expect(schema.parse({ body: [hero] })).toEqual({ body: [hero] });
+      expect(issues(schema, { body: [{ ...hero, heading: { 'fr-FR': 'Salut' } }] })).toEqual([`body.0.heading.en-GB: ${REQUIRED_MESSAGE}`]);
+    });
+
+    it('refuses to translate a group or blocks field itself', () => {
+      const group = { id: 'g', apiId: 'seo', label: 'SEO', type: 'group', localised: true, fields: [{ id: 't', apiId: 't', label: 'T', type: 'text' }] };
+      expect(issues(fieldDefSchema, group)).toEqual([
+        'localised: Every language shares the layout of this field. Mark the fields inside it as translated instead.',
+      ]);
+      expect(fieldDefSchema.safeParse({ id: 'b', apiId: 'body', label: 'Body', type: 'blocks', localised: true }).success).toBe(false);
     });
   });
 

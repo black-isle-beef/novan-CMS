@@ -7,8 +7,11 @@ import type {
   DeliveryEntry,
   DeliveryRedirects,
   ProseMirrorNode as SchemaNode,
+  Sitemap,
+  SpaceLocales,
 } from '@novan/shared-schemas';
-import type { NovanAsset, NovanBlockNode, NovanEntry, NovanRedirects, Paged, ProseMirrorNode } from './types';
+import type { NovanSitemap } from './content.service';
+import type { NovanAsset, NovanBlockNode, NovanEntry, NovanLocales, NovanRedirects, Paged, ProseMirrorNode } from './types';
 
 // The SDK is published on its own, so it copies the delivered shapes instead of importing
 // @novan/shared-schemas. These assignments stop the copies drifting: they fail to compile if the API's
@@ -25,5 +28,7 @@ describe('SDK types', () => {
     expect(check<Same<NovanBlockNode, BlockNode>>()).toBe(true);
     expect(check<Same<ProseMirrorNode, SchemaNode>>()).toBe(true);
     expect(check<Same<NovanRedirects, DeliveryRedirects>>()).toBe(true);
+    expect(check<Same<NovanLocales, SpaceLocales>>()).toBe(true);
+    expect(check<Same<NovanSitemap, Sitemap>>()).toBe(true);
   });
 });

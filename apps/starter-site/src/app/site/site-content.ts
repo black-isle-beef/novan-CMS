@@ -1,4 +1,4 @@
-import { inject } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import type { ResolveFn } from '@angular/router';
 import {
   isSafeHref,
@@ -6,10 +6,11 @@ import {
   NovanContentService,
   novanLinkHref,
   type NovanLinkValue,
+  novanResolveLocale,
   type NovanSiteSettings,
 } from '@black-isle-beef/cms-angular';
 import type { FooterLinkGroup, NavItem } from '@black-isle-beef/novan-design-system';
-import { catchError, forkJoin, map, type Observable, of } from 'rxjs';
+import { catchError, forkJoin, map, type Observable, of, shareReplay, switchMap } from 'rxjs';
 
 /** The `navigation` singleton (supabase/seed.sql), edited in the admin's navigation editor. */
 export interface NavigationData {
@@ -59,18 +60,40 @@ const NETWORK_LABELS: Readonly<Record<string, string>> = {
   tiktok: 'TikTok',
 };
 
+/** The header and footer content of each language, loaded once per visit (once per request on the server). */
+@Injectable({ providedIn: 'root' })
+export class SiteContentCache {
+  private readonly content = inject(NovanContentService);
+  private readonly loaded = new Map<string, Observable<SiteContent>>();
+
+  /** The site's content in `locale` (the default when null). */
+  get(locale: string | null): Observable<SiteContent> {
+    const key = locale ?? '';
+    let content = this.loaded.get(key);
+    if (!content) {
+      const options = locale ? { locale } : {};
+      const optional = <T>(source: Observable<T>) => source.pipe(catchError(() => of(null)));
+      content = forkJoin([
+        optional(this.content.singleton<NavigationData>('navigation', options)),
+        optional(this.content.singleton<SiteSettingsData>('siteSettings', options)),
+      ]).pipe(
+        map(([navigation, settings]) => toSiteContent(navigation, settings)),
+        shareReplay(1),
+      );
+      this.loaded.set(key, content);
+    }
+    return content;
+  }
+}
+
 /**
- * Loads the header and footer content once per visit (once per request on the server). A singleton that is
- * missing or fails leaves its part empty rather than failing the page; the cache-tag interceptor stops a page
- * rendered after a failure from being cached.
+ * Loads the header and footer content in the language of the address (docs/build/16-localisation.md), once per
+ * language and visit. A singleton that is missing or fails leaves its part empty rather than failing the page; the
+ * cache-tag interceptor stops a page rendered after a failure from being cached.
  */
-export const siteContentResolver: ResolveFn<SiteContent> = () => {
-  const content = inject(NovanContentService);
-  const optional = <T>(source: Observable<T>) => source.pipe(catchError(() => of(null)));
-  return forkJoin([
-    optional(content.singleton<NavigationData>('navigation')),
-    optional(content.singleton<SiteSettingsData>('siteSettings')),
-  ]).pipe(map(([navigation, settings]) => toSiteContent(navigation, settings)));
+export const siteContentResolver: ResolveFn<SiteContent> = (_route, state) => {
+  const cache = inject(SiteContentCache);
+  return novanResolveLocale(state.url).pipe(switchMap(({ locale }) => cache.get(locale)));
 };
 
 export function toSiteContent(navigation: NavigationData | null, settings: SiteSettingsData | null): SiteContent {

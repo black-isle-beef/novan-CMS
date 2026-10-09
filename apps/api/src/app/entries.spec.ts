@@ -236,7 +236,7 @@ describe('entries API', () => {
           path: '/draft-page',
           title: 'Draft',
           status: 'draft',
-          locale: 'en-GB',
+          missingTranslations: [],
           publishedVersionId: null,
         });
         expect(await versionsOf(entry.id)).toHaveLength(1);
@@ -322,7 +322,7 @@ describe('entries API', () => {
         expect(res.body).toMatchObject({ status: 'published', publishedVersionId: v1, publishedPath: '/hello-world', hasUnpublishedChanges: false });
 
         const [published] = await db.serviceDb.select().from(publishedContent).where(eq(publishedContent.entryId, entry.id));
-        expect(published).toMatchObject({ contentTypeApiId: 'article', fullPath: '/hello-world', locale: 'en-GB' });
+        expect(published).toMatchObject({ contentTypeApiId: 'article', fullPath: '/hello-world' });
         expect(published.data).toMatchObject({ title: 'Hello world', content: [hero(1, 'One'), hero(2, 'Two')] });
         expect(published.cacheTags).toEqual([`entry:${entry.id}`, `type:${published.environmentId}:article`]);
         expect(await db.serviceDb.select().from(assetUsages).where(eq(assetUsages.entryId, entry.id))).toEqual([

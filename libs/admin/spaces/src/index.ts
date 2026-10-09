@@ -5,5 +5,6 @@ export * from './lib/permissions';
 export * from './lib/permission.guard';
 export * from './lib/roles';
 export * from './lib/space-context';
+export * from './lib/space-locales';
 export * from './lib/space-switcher/space-switcher';
 export * from './lib/spaces.routes';
