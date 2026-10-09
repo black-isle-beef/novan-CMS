@@ -1,5 +1,5 @@
 import { ContentEvents, type EntryPublishedEvent, type EntryUnpublishedEvent } from '@novan/api-content';
-import type { DbService } from '@novan/api-db';
+import { type DbService, spaceLocales } from '@novan/api-db';
 import { MediaEvents } from '@novan/api-media';
 import { CachePurge } from './cache-purge.service';
 import { CloudflareClient, CloudflarePurgeError } from './cloudflare-client';
@@ -14,7 +14,6 @@ const published: EntryPublishedEvent = {
   environmentId,
   entryId,
   contentType: 'article',
-  locale: 'en-GB',
   path: '/blog/hello',
   cacheTags: [`entry:${entryId}`, `type:${environmentId}:article`],
   actorId: 'user-1',
@@ -30,17 +29,25 @@ function mockCloudflare(enabled = true) {
   return { client, purgeTags, purgeUrls };
 }
 
-/** Just enough of DbService for reading `spaces.settings`. */
-function dbWithSettings(settings: unknown): DbService {
-  const query = { from: () => query, where: async () => [{ settings }] };
-  return { serviceDb: { select: () => query } } as unknown as DbService;
+const english = { code: 'en-GB', name: 'English', fallback: null, isDefault: true, prefix: 'en' };
+const french = { code: 'fr-FR', name: 'French', fallback: 'en-GB', isDefault: false, prefix: 'fr' };
+
+/** Just enough of DbService for reading `spaces.settings` and the space's locales. */
+function dbWith(settings: unknown, locales: { locales: object[]; prefixes: boolean }): DbService {
+  const rows = (table: unknown) => (table === spaceLocales ? locales.locales : [{ settings, prefixes: locales.prefixes }]);
+  const query = (table: unknown) => {
+    const result = Promise.resolve(rows(table));
+    return Object.assign(result, { orderBy: () => result });
+  };
+  const select = () => ({ from: (table: unknown) => ({ where: () => query(table) }) });
+  return { serviceDb: { select } } as unknown as DbService;
 }
 
-function setup(options: { enabled?: boolean; settings?: unknown } = {}) {
+function setup(options: { enabled?: boolean; settings?: unknown; locales?: { locales: object[]; prefixes: boolean } } = {}) {
   const cloudflare = mockCloudflare(options.enabled);
   const content = new ContentEvents();
   const media = new MediaEvents();
-  const purge = new CachePurge(cloudflare.client, content, media, dbWithSettings(options.settings ?? {}));
+  const purge = new CachePurge(cloudflare.client, content, media, dbWith(options.settings ?? {}, options.locales ?? { locales: [english], prefixes: false }));
   purge.onModuleInit();
   return { ...cloudflare, content, media, purge };
 }
@@ -96,6 +103,19 @@ describe('CachePurge', () => {
     purgeTags.mockRejectedValue(new Error('down'));
     await purge.contentChanged({ ...published, path: '/home' });
     expect(purgeUrls.mock.calls[0][0]).toEqual(['https://example.com/', 'https://example.com/sitemap.xml']);
+  });
+
+  it("falls back to the page's address in every locale when the space uses locale prefixes", async () => {
+    const { purge, purgeTags, purgeUrls } = setup({ settings: { domains: ['https://example.com'] }, locales: { locales: [english, french], prefixes: true } });
+    purgeTags.mockRejectedValue(new Error('down'));
+    await purge.contentChanged({ ...published, path: '/home' });
+    expect(purgeUrls.mock.calls[0][0]).toEqual(['https://example.com/', 'https://example.com/fr', 'https://example.com/sitemap.xml']);
+  });
+
+  it('purges the whole space when its locales change', async () => {
+    const { purge, purgeTags } = setup();
+    await purge.contentChanged({ type: 'locales.changed', spaceId, actorId: 'user-1' });
+    expect(purgeTags).toHaveBeenCalledExactlyOnceWith([`space:${spaceId}`, `redirects:${spaceId}`, `overflow:${spaceId}`]);
   });
 
   it('sends at most 30 tags or URLs a request', async () => {

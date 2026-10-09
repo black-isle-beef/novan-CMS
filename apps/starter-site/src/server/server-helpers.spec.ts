@@ -43,23 +43,41 @@ describe('sitemapXml', () => {
   it('lists each page path once, with its latest change, escaped', () => {
     const xml = sitemapXml('https://www.example.com/', {
       items: [
-        { path: '/', locale: 'en-GB', updatedAt: '2026-10-05T09:30:00.123456+00:00' },
-        { path: '/about', locale: 'en-GB', updatedAt: '2026-10-01T09:30:00Z' },
-        { path: '/about', locale: 'cy', updatedAt: '2026-10-04T09:30:00Z' },
-        { path: '/a&b', locale: 'en-GB', updatedAt: '2026-10-01T09:30:00Z' },
+        { id: 'home', path: '/', locale: 'en-GB', updatedAt: '2026-10-05T09:30:00.123456+00:00' },
+        { id: 'about', path: '/about', locale: 'en-GB', updatedAt: '2026-10-01T09:30:00Z' },
+        { id: 'about', path: '/about', locale: 'cy', updatedAt: '2026-10-04T09:30:00Z' },
+        { id: 'ab', path: '/a&b', locale: 'en-GB', updatedAt: '2026-10-01T09:30:00Z' },
       ],
     });
 
-    expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
+    expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">');
     expect(xml).toContain('<loc>https://www.example.com/</loc>\n    <lastmod>2026-10-05T09:30:00Z</lastmod>');
     expect(xml.match(/<loc>https:\/\/www\.example\.com\/about<\/loc>/g)).toHaveLength(1);
     expect(xml).toContain('<lastmod>2026-10-04T09:30:00Z</lastmod>');
     expect(xml).toContain('<loc>https://www.example.com/a&amp;b</loc>');
+    // Languages sharing an address need no alternates.
+    expect(xml).not.toContain('hreflang');
+  });
+
+  it('links each language of a page to the others when their addresses differ', () => {
+    const xml = sitemapXml('https://www.example.com', {
+      items: [
+        { id: 'about', path: '/about', locale: 'en-GB', updatedAt: '2026-10-01T09:30:00Z' },
+        { id: 'about', path: '/cy/about', locale: 'cy-GB', updatedAt: '2026-10-01T09:30:00Z' },
+      ],
+    });
+    const alternates = [
+      '    <xhtml:link rel="alternate" hreflang="en-GB" href="https://www.example.com/about"/>',
+      '    <xhtml:link rel="alternate" hreflang="cy-GB" href="https://www.example.com/cy/about"/>',
+      '    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.example.com/about"/>',
+    ].join('\n');
+    expect(xml).toContain(`<loc>https://www.example.com/about</loc>\n    <lastmod>2026-10-01T09:30:00Z</lastmod>\n${alternates}`);
+    expect(xml).toContain(`<loc>https://www.example.com/cy/about</loc>\n    <lastmod>2026-10-01T09:30:00Z</lastmod>\n${alternates}`);
   });
 
   it('is a valid empty sitemap without pages', () => {
     expect(sitemapXml('https://x.test', { items: [] })).toBe(
-      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n</urlset>\n',
+      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n</urlset>\n',
     );
   });
 });

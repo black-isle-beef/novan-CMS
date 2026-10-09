@@ -190,6 +190,68 @@ describe('FieldForm', () => {
     expect(value()).toEqual({ image: null });
   });
 
+  describe('translated fields', () => {
+    const english = { code: 'en-GB', name: 'English', fallback: null, isDefault: true, prefix: 'en' };
+    const french = { code: 'fr-FR', name: 'French', fallback: 'en-GB', isDefault: false, prefix: 'fr' };
+    const fields = defs(
+      { id: 't', apiId: 'title', label: 'Title', type: 'text', localised: true },
+      { id: 's', apiId: 'slug', label: 'Slug', type: 'text' },
+      {
+        id: 'f',
+        apiId: 'features',
+        label: 'Features',
+        type: 'group',
+        multiple: true,
+        fields: [{ id: 'ft', apiId: 'name', label: 'Name', type: 'text', localised: true }],
+      },
+    );
+    const data = { title: { 'en-GB': 'Hello' }, slug: 'hello', features: [{ name: { 'en-GB': 'Fast' } }] };
+
+    async function multilingual(locale: string | null, compare: string | null = null) {
+      const view = await render(fields, data);
+      view.context.locales.set([english, french]);
+      view.context.locale.set(locale);
+      view.context.compareLocale.set(compare);
+      await view.fixture.whenStable();
+      return view;
+    }
+
+    it('edits the default locale\'s value, at <field>.<locale>', async () => {
+      const { input, type, value } = await multilingual(null);
+      expect(input('Title (English)').value).toBe('Hello');
+      expect(input('Title (English)').id).toBe('field-title-en-GB');
+      await type('Title (English)', 'Hi');
+      expect(value()).toMatchObject({ title: { 'en-GB': 'Hi' } });
+    });
+
+    it('in another locale, translates inside shared groups and locks what every locale shares', async () => {
+      const { el, input, type, value } = await multilingual('fr-FR');
+      expect(input('Title (French)').value).toBe('');
+      // Announced with the control, and its content is in French.
+      const described = (input('Title (French)').getAttribute('aria-describedby') ?? '').split(' ').map((id) => el.querySelector(`#${id}`)?.textContent);
+      expect(described.join(' ')).toContain('Not translated yet: the site shows the English text until you add one.');
+      expect(input('Title (French)').getAttribute('lang')).toBe('fr-FR');
+      expect(input('Slug').getAttribute('lang')).toBeNull();
+      expect(input('Slug').disabled).toBe(true);
+      // The group's items are shared: no adding or removing them here, but their translated fields are open.
+      expect([...el.querySelectorAll('button')].some((b) => b.textContent?.includes('Add an item'))).toBe(false);
+      await type('Name (French)', 'Rapide');
+      await type('Title (French)', 'Bonjour');
+      expect(value()).toEqual({
+        title: { 'en-GB': 'Hello', 'fr-FR': 'Bonjour' },
+        slug: 'hello',
+        features: [{ name: { 'en-GB': 'Fast', 'fr-FR': 'Rapide' } }],
+      });
+    });
+
+    it('side by side, shows the source locale read-only next to the translation', async () => {
+      const { input } = await multilingual('fr-FR', 'en-GB');
+      expect(input('Title (English)').value).toBe('Hello');
+      expect(input('Title (English)').disabled).toBe(true);
+      expect(input('Title (French)').disabled).toBe(false);
+    });
+  });
+
   describe('with a media library', () => {
     const door: MediaPreview = {
       id: '00000000-0000-4000-8000-000000000001',

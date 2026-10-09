@@ -68,7 +68,7 @@ values (
 );
 
 -- ---------------------------------------------------------------------------
--- Organisation and space (the space trigger creates `main` and the default roles)
+-- Organisation and space (the space triggers create `main`, the default roles and the en-GB default locale)
 -- ---------------------------------------------------------------------------
 insert into public.organisations (id, name)
 values ('00000000-0000-4000-8000-000000000100', 'Novan Web Services');
@@ -103,10 +103,10 @@ select e.space_id, e.id, 'page', 'Page', 'page', 'A web page built from blocks.'
   {"id": "title", "apiId": "title", "label": "Title", "type": "text", "required": true, "localised": true,
    "multiline": false, "max": 120},
   {"id": "slug", "apiId": "slug", "label": "Slug", "help": "The last part of the page address, like about-us.",
-   "type": "text", "required": true, "localised": true, "multiline": false, "max": 100,
+   "type": "text", "required": true, "localised": false, "multiline": false, "max": 100,
    "pattern": "[a-z0-9]+(-[a-z0-9]+)*"},
   {"id": "seo", "apiId": "seo", "label": "SEO", "help": "How the page appears in search results and when shared.",
-   "type": "group", "required": false, "localised": true, "multiple": false, "fields": [
+   "type": "group", "required": false, "localised": false, "multiple": false, "fields": [
     {"id": "metaTitle", "apiId": "metaTitle", "label": "Search title", "help": "Leave empty to use the page title.",
      "type": "text", "required": false, "localised": true, "multiline": false, "max": 60},
     {"id": "metaDescription", "apiId": "metaDescription", "label": "Search description",
@@ -121,7 +121,7 @@ select e.space_id, e.id, 'page', 'Page', 'page', 'A web page built from blocks.'
     {"id": "noindex", "apiId": "noindex", "label": "Hide from search engines", "type": "boolean",
      "required": false, "localised": false, "default": false}
   ]},
-  {"id": "body", "apiId": "body", "label": "Content", "type": "blocks", "required": false, "localised": true,
+  {"id": "body", "apiId": "body", "label": "Content", "type": "blocks", "required": false, "localised": false,
    "allowedBlocks": ["hero", "richText", "image", "featureGrid", "cta"]}
 ]$json$::jsonb
 from public.environments e
@@ -178,7 +178,7 @@ cross join (
       {"id": "intro", "apiId": "intro", "label": "Introduction", "type": "text", "required": false, "localised": true,
        "multiline": true, "max": 300},
       {"id": "features", "apiId": "features", "label": "Features", "type": "group", "required": true,
-       "localised": true, "multiple": true, "min": 1, "max": 12, "fields": [
+       "localised": false, "multiple": true, "min": 1, "max": 12, "fields": [
         {"id": "icon", "apiId": "icon", "label": "Icon", "type": "select", "required": false, "localised": false,
          "multiple": false, "options": [
           {"value": "check-circle", "label": "Tick"}, {"value": "star", "label": "Star"},
@@ -230,13 +230,13 @@ cross join (
   values
     ('navigation', 'Navigation', 'The menu at the top of every page and the links in the footer.', $json$[
       {"id": "items", "apiId": "items", "label": "Main menu", "help": "The links across the top of every page.",
-       "type": "group", "required": false, "localised": true, "multiple": true, "max": 8, "fields": [
+       "type": "group", "required": false, "localised": false, "multiple": true, "max": 8, "fields": [
         {"id": "label", "apiId": "label", "label": "Label", "type": "text", "required": true, "localised": true,
          "multiline": false, "max": 40},
         {"id": "link", "apiId": "link", "label": "Link", "help": "Leave empty for a menu that only opens its sub-links.",
          "type": "link", "required": false, "localised": true, "allowExternal": true, "allowEmail": false},
         {"id": "subItems", "apiId": "subItems", "label": "Sub-links", "type": "group", "required": false,
-         "localised": true, "multiple": true, "max": 10, "fields": [
+         "localised": false, "multiple": true, "max": 10, "fields": [
           {"id": "label", "apiId": "label", "label": "Label", "type": "text", "required": true, "localised": true,
            "multiline": false, "max": 40},
           {"id": "link", "apiId": "link", "label": "Link", "type": "link", "required": true, "localised": true,
@@ -244,10 +244,10 @@ cross join (
         ]}
       ]},
       {"id": "footerGroups", "apiId": "footerGroups", "label": "Footer links", "help": "Columns of links above the copyright line.",
-       "type": "group", "required": false, "localised": true, "multiple": true, "max": 4, "fields": [
+       "type": "group", "required": false, "localised": false, "multiple": true, "max": 4, "fields": [
         {"id": "title", "apiId": "title", "label": "Title", "type": "text", "required": true, "localised": true,
          "multiline": false, "max": 40},
-        {"id": "links", "apiId": "links", "label": "Links", "type": "group", "required": true, "localised": true,
+        {"id": "links", "apiId": "links", "label": "Links", "type": "group", "required": true, "localised": false,
          "multiple": true, "min": 1, "max": 10, "fields": [
           {"id": "label", "apiId": "label", "label": "Label", "type": "text", "required": true, "localised": true,
            "multiline": false, "max": 40},
@@ -298,7 +298,7 @@ cross join (
     ('notFound', 'Page not found', 'What people see at an address with no page.', $json$[
       {"id": "title", "apiId": "title", "label": "Title", "type": "text", "required": true, "localised": true,
        "multiline": false, "max": 120},
-      {"id": "body", "apiId": "body", "label": "Content", "type": "blocks", "required": false, "localised": true,
+      {"id": "body", "apiId": "body", "label": "Content", "type": "blocks", "required": false, "localised": false,
        "allowedBlocks": ["richText", "cta"]}
     ]$json$::jsonb)
 ) as t (api_id, name, description, fields)
@@ -318,6 +318,47 @@ values
    'Abstract illustration of overlapping navy, purple and grey circles on a pale background', 'Light shapes', '{demo}',
    '00000000-0000-4000-8000-000000000001');
 
+-- The data below is written in the space's default locale (en-GB, from the space trigger in 0013). Translated fields
+-- are stored per locale (docs/build/16-localisation.md), so this wraps each translated value as `{ "en-GB": value }`,
+-- following the fields through groups and blocks (`blocks` maps a block type's api id to its fields).
+create function pg_temp.wrap_translated(fields jsonb, data jsonb, blocks jsonb)
+returns jsonb
+language plpgsql
+as $$
+declare
+  field jsonb;
+  key text;
+  value jsonb;
+begin
+  if jsonb_typeof(data) is distinct from 'object' then
+    return data;
+  end if;
+  for field in select f from jsonb_array_elements(fields) with ordinality as t (f, ord) order by ord loop
+    key := field ->> 'apiId';
+    if not data ? key or jsonb_typeof(data -> key) = 'null' then
+      continue;
+    end if;
+    value := data -> key;
+    if field ->> 'type' = 'group' and jsonb_typeof(value) = 'array' then
+      select jsonb_agg(pg_temp.wrap_translated(field -> 'fields', item, blocks) order by ord) into value
+      from jsonb_array_elements(value) with ordinality as t (item, ord);
+    elsif field ->> 'type' = 'group' then
+      value := pg_temp.wrap_translated(field -> 'fields', value, blocks);
+    elsif field ->> 'type' = 'blocks' then
+      select jsonb_agg(
+        case when blocks ? (node ->> '_block') then pg_temp.wrap_translated(blocks -> (node ->> '_block'), node, blocks) else node end
+        order by ord
+      ) into value
+      from jsonb_array_elements(value) with ordinality as t (node, ord);
+    elsif (field ->> 'localised')::boolean then
+      value := jsonb_build_object('en-GB', value);
+    end if;
+    data := jsonb_set(data, array[key], value);
+  end loop;
+  return data;
+end;
+$$;
+
 -- Creates an entry in the demo space's main environment with its first version, and publishes it at `/<slug>`.
 create function pg_temp.seed_published_entry(entry_id uuid, type_api_id text, slug text, data jsonb)
 returns void
@@ -331,19 +372,23 @@ declare
   version_id uuid := gen_random_uuid();
 begin
   select e.id into env from public.environments e where e.space_id = space and e.is_main;
-  select t.id into type_id from public.content_types t where t.environment_id = env and t.api_id = type_api_id;
+  select t.id, pg_temp.wrap_translated(t.fields, data, (
+    select coalesce(jsonb_object_agg(b.api_id, b.fields), '{}'::jsonb) from public.block_types b where b.environment_id = env
+  ))
+  into type_id, data
+  from public.content_types t where t.environment_id = env and t.api_id = type_api_id;
 
-  insert into public.entries (id, space_id, environment_id, content_type_id, slug, locale, created_by)
-  values (entry_id, space, env, type_id, slug, 'en-GB', author);
+  insert into public.entries (id, space_id, environment_id, content_type_id, slug, created_by)
+  values (entry_id, space, env, type_id, slug, author);
   insert into public.entry_versions (id, entry_id, space_id, data, message, created_by)
   values (version_id, entry_id, space, data, 'Seeded', author);
   update public.entries e
   set current_version_id = version_id, published_version_id = version_id, status = 'published', published_at = now()
   where e.id = entry_id;
   insert into public.published_content
-    (entry_id, space_id, environment_id, content_type_api_id, full_path, locale, data, published_at, cache_tags)
+    (entry_id, space_id, environment_id, content_type_api_id, full_path, data, published_at, cache_tags)
   values (
-    entry_id, space, env, type_api_id, '/' || slug, 'en-GB', data, now(),
+    entry_id, space, env, type_api_id, '/' || slug, data, now(),
     array['entry:' || entry_id, 'type:' || env || ':' || type_api_id]
   );
 end;

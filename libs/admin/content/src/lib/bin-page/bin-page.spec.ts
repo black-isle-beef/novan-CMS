@@ -18,7 +18,7 @@ const binned = (id: string, title: string, daysAgo: number): EntrySummary => ({
   folderId: null,
   slug: title.toLowerCase().replace(/\s+/g, '-'),
   path: `/${title.toLowerCase().replace(/\s+/g, '-')}`,
-  locale: 'en-GB',
+  missingTranslations: [],
   title,
   status: 'draft',
   hasUnpublishedChanges: false,

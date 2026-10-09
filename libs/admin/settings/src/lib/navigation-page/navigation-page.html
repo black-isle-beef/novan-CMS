@@ -41,6 +41,25 @@
     }
     <div class="visually-hidden" role="status">{{ announcement() }}</div>
 
+    @if (spaceLocales.multilingual()) {
+      <div class="mb-4">
+        <nv-locale-switcher
+          idPrefix="navigation-locale"
+          [locales]="form.locales()"
+          [locale]="form.locale()"
+          (localeChange)="form.locale.set($event)"
+          [compare]="form.compareLocale()"
+          (compareChange)="form.compareLocale.set($event)"
+        />
+        @if (form.locale()) {
+          <p class="form-text mb-0">
+            Menus are the same in every language: you translate their names and links here, and add, move or remove
+            items in {{ form.localeName(form.defaultLocale()) }}.
+          </p>
+        }
+      </div>
+    }
+
     @for (tree of trees(); track tree.field.id) {
       @let names = words(tree);
       <section class="mb-5" [attr.aria-labelledby]="'nav-' + tree.field.apiId + '-heading'">
@@ -66,7 +85,7 @@
                     }
                   </fieldset>
 
-                  @if (canEdit()) {
+                  @if (canArrange()) {
                     @let id = buttonId(tree, i);
                     <div class="d-flex flex-wrap gap-1 mb-2" role="group" [attr.aria-label]="'Arrange ' + itemName">
                       <button type="button" class="btn btn-sm btn-secondary" [id]="id + '-up'" [disabled]="first" (click)="move(tree, i, -1)">
@@ -105,7 +124,7 @@
                                   />
                                 }
                               </fieldset>
-                              @if (canEdit()) {
+                              @if (canArrange()) {
                                 @let childId = buttonId(tree, c, i);
                                 <div class="d-flex flex-wrap gap-1" role="group" [attr.aria-label]="'Arrange ' + childName">
                                   <button type="button" class="btn btn-sm btn-secondary" [id]="childId + '-up'" [disabled]="firstChild" (click)="move(tree, c, -1, i)">
@@ -146,7 +165,7 @@
           <button type="button" class="btn btn-secondary" [id]="tree.field.apiId + '-add'" (click)="add(tree)">
             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add a {{ names.item }}
           </button>
-        } @else if (canEdit() && tree.field.max) {
+        } @else if (canArrange() && tree.field.max) {
           <p class="small text-body-secondary">This has the most it can hold ({{ tree.field.max }}).</p>
         }
       </section>

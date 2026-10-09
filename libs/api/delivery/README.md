@@ -4,11 +4,12 @@ The Delivery and Preview APIs client sites read content from, and the API tokens
 
 | Route | Who | What |
 | --- | --- | --- |
-| `GET /v1/delivery/pages?path=/about` | delivery token | One published page by path (`/` is the top-level `home` page) and `locale` |
+| `GET /v1/delivery/pages?path=/about` | delivery token | One published page by path (`/` is the top-level `home` page, no locale prefix) and `locale`, with `alternates` |
 | `GET /v1/delivery/entries` | delivery token | `type`, `locale`, `fields.<field>[eq\|in\|lt\|gt]`, `sort`, `limit` ≤ 100, `cursor`, `select`, `include` 0–3 |
-| `GET /v1/delivery/entries/:id` | delivery token | One published entry |
-| `GET /v1/delivery/singletons/:apiId` | delivery token | A singleton's content (site settings, navigation) |
-| `GET /v1/delivery/sitemap` | delivery token | Every published page's path and `updatedAt`, except pages with `seo.noindex` |
+| `GET /v1/delivery/entries/:id` | delivery token | One published entry, in `locale` |
+| `GET /v1/delivery/singletons/:apiId` | delivery token | A singleton's content (site settings, navigation), in `locale` |
+| `GET /v1/delivery/sitemap` | delivery token | Every published page's address and `updatedAt` in each locale it is in, except pages with `seo.noindex` |
+| `GET /v1/delivery/locales` | delivery token | The site's locales (default first) and whether addresses carry a locale prefix (package 16) |
 | `GET /v1/delivery/redirects` | delivery token | The space's redirects, for the site's server to apply (package 14) |
 | `POST /v1/delivery/not-found` | delivery token | A site reports an address with no page: one row per address and day (202); 60 a minute per token |
 | `GET /v1/preview/...` | preview token | The same routes and shapes, reading current drafts |
@@ -30,7 +31,15 @@ The Delivery and Preview APIs client sites read content from, and the API tokens
 - Rate limits per token (`@nestjs/throttler`, in memory): delivery 50/s, preview 10/s, not-found reports 60/min
   (`NOT_FOUND_RATE_LIMIT`), 429 `rate_limited`.
 - `CachePurge` also purges `redirects:<space>` on publishing, `paths.changed` (a published page moved, or a folder above
-  it renamed) and `redirects.changed` (redirects managed in `@novan/api-site`).
+  it renamed) and `redirects.changed` (redirects managed in `@novan/api-site`), and the whole `space:<id>` on
+  `locales.changed`. Its URL fallback purges each page's address in every locale.
+- Locales (package 16, docs/build/16-localisation.md): every response is in one locale, the `locale` parameter or the
+  space's default (404 `locale_not_found` for one the space lacks). Data is read with `localiseEntryData` before
+  anything else: each translated value comes from the locale, then along its fallbacks. A page with nothing to show
+  along the chain is 404 `page_not_found` in that locale; `alternates` lists the locales it is in, the default first.
+  Filters and sorting on a translated field read it along the same chain in SQL. With locale prefixes on
+  (`spaces.locale_prefixes`), delivered paths, internal links, site addresses in rich text and alternates are the
+  site's addresses in the locale (`/fr/about`); `pages?path=` always takes the path without a prefix.
 
 Run `nx test api-delivery` (purge, tokens, walker) and `nx test api` (HTTP and database, including the
 cross-space token test); `nx e2e api-e2e` publishes through the API and checks the purge a fake Cloudflare

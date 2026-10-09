@@ -16,6 +16,7 @@
       [attr.aria-describedby]="describedBy()"
       [attr.aria-invalid]="invalid() || null"
       [attr.aria-required]="field().required || null"
+      [attr.lang]="contentLang()"
       (input)="set($event)"
     ></textarea>
   } @else {
@@ -29,6 +30,7 @@
       [attr.aria-describedby]="describedBy()"
       [attr.aria-invalid]="invalid() || null"
       [attr.aria-required]="field().required || null"
+      [attr.lang]="contentLang()"
       (input)="set($event)"
     />
   }

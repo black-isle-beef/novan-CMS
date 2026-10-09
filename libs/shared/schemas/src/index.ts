@@ -4,6 +4,7 @@ export * from './lib/entries';
 export * from './lib/entry-diff';
 export * from './lib/fields';
 export * from './lib/health';
+export * from './lib/locales';
 export * from './lib/media';
 export * from './lib/site';
 export * from './lib/tenancy';

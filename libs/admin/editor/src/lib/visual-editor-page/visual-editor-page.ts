@@ -17,10 +17,10 @@ import {
 import { RouterLink } from '@angular/router';
 import { DsAlertComponent } from '@black-isle-beef/novan-design-system';
 import { ContentApi, pageChecks, PageWorkflow, PublishChecklist, type WorkflowDialog } from '@novan/admin-content';
-import { describePath, errorsFromIssues, FieldFormContext, newBlock } from '@novan/admin-fields';
+import { describePath, errorsFromIssues, FieldFormContext, LocaleSwitcher, newBlock } from '@novan/admin-fields';
 import { MediaPicker, MediaPickerDialog } from '@novan/admin-media';
 import { copy, type HasUnsavedChanges, Shortcuts, shortcutKeys, Skeleton, warnBeforeUnload } from '@novan/admin-shell';
-import { problemMessage, SpaceContext } from '@novan/admin-spaces';
+import { problemMessage, SpaceContext, SpaceLocales } from '@novan/admin-spaces';
 import {
   type BlockNode,
   type BlockType,
@@ -29,6 +29,10 @@ import {
   type Entry,
   type EntryData,
   entryTitle,
+  fallbackChain,
+  firstTranslation,
+  localesMissingTranslations,
+  localisedPath,
   mediaRefs,
   sameJson,
   type SignedPreviewToken,
@@ -55,6 +59,7 @@ import {
   replaceBlock,
   rootLists,
   textFields,
+  withText,
 } from '../block-tree';
 import { EditorApi } from '../editor-api';
 import { EditorStore } from '../editor-store';
@@ -106,7 +111,19 @@ const clock = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
  */
 @Component({
   selector: 'nv-visual-editor-page',
-  imports: [BlockOutline, BlockPanel, BlockPicker, DsAlertComponent, MediaPickerDialog, PageWorkflow, PublishChecklist, RouterLink, SeoPanel, Skeleton],
+  imports: [
+    BlockOutline,
+    BlockPanel,
+    BlockPicker,
+    DsAlertComponent,
+    LocaleSwitcher,
+    MediaPickerDialog,
+    PageWorkflow,
+    PublishChecklist,
+    RouterLink,
+    SeoPanel,
+    Skeleton,
+  ],
   providers: [PreviewBridge, EditorStore, EditorPresence, FieldFormContext, MediaPicker],
   templateUrl: './visual-editor-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -114,7 +131,8 @@ const clock = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
 export class VisualEditorPage implements HasUnsavedChanges {
   private readonly content = inject(ContentApi);
   private readonly api = inject(EditorApi);
-  private readonly form = inject(FieldFormContext);
+  protected readonly form = inject(FieldFormContext);
+  protected readonly spaceLocales = inject(SpaceLocales);
   private readonly mediaPicker = inject(MediaPicker);
   private readonly injector = inject(Injector);
   private readonly document = inject(DOCUMENT);
@@ -125,12 +143,13 @@ export class VisualEditorPage implements HasUnsavedChanges {
   protected readonly copy = copy;
   protected readonly devices = DEVICES;
   protected readonly panelTabs = PANEL_TABS;
-  protected readonly sitePathOf = sitePath;
   protected readonly shortcutKeys = shortcutKeys;
 
   /** Route parameters (component input binding). */
   readonly spaceId = input.required<string>();
   readonly entryId = input.required<string>();
+  /** `?locale=`: the language to open the page in (from the form view). */
+  readonly locale = input<string | undefined>();
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
@@ -166,7 +185,24 @@ export class VisualEditorPage implements HasUnsavedChanges {
 
   protected readonly title = computed(() => {
     const entry = this.entry();
-    return entry ? entryTitle(this.store.data(), entry.slug) : '';
+    return entry ? entryTitle(this.store.data(), entry.slug, this.form.defaultLocale()) : '';
+  });
+  /** The title in the language shown, as the site shows it (along its fallbacks), for the SEO previews. */
+  protected readonly shownTitle = computed(() => {
+    const title = firstTranslation(this.store.data()['title'], fallbackChain(this.form.locales(), this.form.activeLocale()), this.form.defaultLocale());
+    return typeof title === 'string' && title.trim() ? title.trim() : this.title();
+  });
+  /** The page's address on the site in the language shown. */
+  protected readonly shownPath = computed(() => {
+    const path = sitePath(this.entry()?.path ?? '/');
+    const locales = this.spaceLocales.value();
+    return locales ? localisedPath(path, this.form.activeLocale(), locales) : path;
+  });
+  /** Languages with translations missing, as the page stands. */
+  protected readonly missingLocales = computed(() => {
+    const type = this.contentType();
+    const others = this.form.locales().filter((locale) => !locale.isDefault).map((locale) => locale.code);
+    return type ? localesMissingTranslations(type.fields, this.store.data(), others, this.form.defaultLocale(), this.blockTypes()) : [];
   });
   protected readonly deviceWidth = computed(() => DEVICES.find((d) => d.id === this.device())?.width ?? 1280);
   protected readonly published = computed(() => Boolean(this.entry()?.publishedPath));
@@ -201,9 +237,12 @@ export class VisualEditorPage implements HasUnsavedChanges {
     const site = this.siteUrl();
     const entry = this.entry();
     if (!site || !entry) return null;
-    if (this.view() === 'live') return entry.publishedPath ? `${site}${sitePath(entry.publishedPath)}` : null;
+    const locales = this.spaceLocales.value();
+    // The page's address in the language shown, when the site puts the language in its addresses.
+    const address = (path: string) => (locales ? localisedPath(sitePath(path), this.form.activeLocale(), locales) : sitePath(path));
+    if (this.view() === 'live') return entry.publishedPath ? `${site}${address(entry.publishedPath)}` : null;
     const token = this.openedWith();
-    return token ? `${site}${sitePath(entry.path)}?novan_preview=${encodeURIComponent(token)}` : null;
+    return token ? `${site}${address(entry.path)}?novan_preview=${encodeURIComponent(token)}` : null;
   });
 
   /** The page type's seo group, edited in the SEO tab. */
@@ -254,7 +293,8 @@ export class VisualEditorPage implements HasUnsavedChanges {
   private readonly draftSchema = computed(() => {
     const type = this.contentType();
     this.form.assets();
-    return type ? buildEntrySchema(type.fields, { blockTypes: this.blockTypes(), draft: true, assets: (id) => this.form.assetInfo(id) }) : null;
+    const locales = this.form.localeSettings();
+    return type ? buildEntrySchema(type.fields, { blockTypes: this.blockTypes(), draft: true, assets: (id) => this.form.assetInfo(id), locales }) : null;
   });
   private readonly draftErrors = computed<Record<string, string[]>>(() => {
     const result = this.draftSchema()?.safeParse(this.store.data());
@@ -265,7 +305,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
     const type = this.contentType();
     this.form.assets();
     if (!type) return {};
-    const schema = buildEntrySchema(type.fields, { blockTypes: this.blockTypes(), assets: (id) => this.form.assetInfo(id) });
+    const schema = buildEntrySchema(type.fields, { blockTypes: this.blockTypes(), assets: (id) => this.form.assetInfo(id), locales: this.form.localeSettings() });
     const result = schema.safeParse(this.store.data());
     return result.success ? {} : errorsFromIssues(result.error.issues);
   });
@@ -281,7 +321,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
     this.form.assets();
     return pageChecks({
       errors: this.publishErrors(),
-      describe: (path) => describePath(path, type?.fields ?? [], data, this.blockTypes()),
+      describe: (path) => describePath(path, type?.fields ?? [], data, this.blockTypes(), (code) => this.form.localeName(code)),
       blockAt: (path) => byPath.find((place) => path === place.path || path.startsWith(`${place.path}.`))?.uid ?? null,
       media: this.media(),
       asset: (id) => this.form.assetInfo(id),
@@ -317,6 +357,8 @@ export class VisualEditorPage implements HasUnsavedChanges {
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
   /** What the site shows: the saved draft when it loads, then each update sent. */
   private shown: EntryData | null = null;
+  /** The language the site shows it in. */
+  private shownIn: string | null = null;
   private previewTimer: ReturnType<typeof setTimeout> | undefined;
   /** Counts preview requests, so only the latest one reaches the site. */
   private previewRequest = 0;
@@ -363,19 +405,21 @@ export class VisualEditorPage implements HasUnsavedChanges {
     });
     effect(() => this.form.readonly.set(!this.canEdit()));
 
-    // Changes go to the site, in the shape it reads, once the editor pauses.
+    // Changes go to the site, in the shape it reads and the language shown, once the editor pauses.
     let readyFor: object | null = null;
     effect(() => {
       const data = this.store.data();
       const ready = this.bridge.ready();
       const entry = this.entry();
+      const locale = this.form.activeLocale();
       if (!ready || !entry || this.typingIn()) return;
-      // The site (re)loaded: it shows the saved draft.
+      // The site (re)loaded: it shows the saved draft, in the language of its address.
       if (ready !== readyFor) {
         readyFor = ready;
         this.shown = untracked(() => entry.data);
+        this.shownIn = untracked(() => (this.spaceLocales.value()?.prefixes ? locale : this.form.defaultLocale()));
       }
-      if (!this.shown || !sameJson(this.shown, data)) untracked(() => this.queuePreview(data));
+      if (!this.shown || !sameJson(this.shown, data) || this.shownIn !== locale) untracked(() => this.queuePreview(data));
     });
 
     // What the editor may change on the page: the selected block's plain text fields, and adding blocks.
@@ -388,7 +432,11 @@ export class VisualEditorPage implements HasUnsavedChanges {
       untracked(() =>
         this.bridge.send({
           type: 'editable',
-          payload: { uid: place?.node._uid ?? null, fields: place ? textFields(place.node, type) : [], insert },
+          payload: {
+            uid: place?.node._uid ?? null,
+            fields: place ? textFields(place.node, type, this.form.activeLocale(), this.form.defaultLocale()) : [],
+            insert,
+          },
         }),
       );
     });
@@ -628,10 +676,13 @@ export class VisualEditorPage implements HasUnsavedChanges {
   /** Text typed on the page: one undo step per field while typing; the site already shows it. */
   private typed({ uid, field, value, done }: { uid: string; field: string; value: string; done: boolean }): void {
     const place = locate(this.store.data(), this.roots(), this.blockTypes(), uid);
-    const editable = place && this.canEdit() && textFields(place.node, this.typeOf(place.node._block)).some((f) => f.field === field);
+    const type = place ? this.typeOf(place.node._block) : undefined;
+    const locale = this.form.activeLocale();
+    const defaultLocale = this.form.defaultLocale();
+    const editable = place && this.canEdit() && textFields(place.node, type, locale, defaultLocale).some((f) => f.field === field);
     if (!place || !editable) return;
     this.typingIn.set(done ? null : uid);
-    this.commit(replaceBlock(this.store.data(), place, { ...place.node, [field]: value }), `${uid}.${field}`);
+    this.commit(replaceBlock(this.store.data(), place, withText(place.node, type, field, value, locale, defaultLocale)), `${uid}.${field}`);
   }
 
   /** Sends the data to the site once the editor pauses, in the shape it reads; a newer change wins. */
@@ -642,10 +693,12 @@ export class VisualEditorPage implements HasUnsavedChanges {
 
   private async sendPreview(data: EntryData): Promise<void> {
     const request = ++this.previewRequest;
+    const locale = this.form.activeLocale();
     try {
-      const page = await firstValueFrom(this.api.previewData(this.spaceId(), this.entryId(), data));
+      const page = await firstValueFrom(this.api.previewData(this.spaceId(), this.entryId(), data, this.form.locale() ?? undefined));
       if (request !== this.previewRequest) return;
       this.shown = data;
+      this.shownIn = locale;
       this.bridge.send({ type: 'update', payload: { data: page.data } });
     } catch {
       // Malformed data (being typed) is not shown; the site keeps the last good version.
@@ -741,13 +794,17 @@ export class VisualEditorPage implements HasUnsavedChanges {
     this.loadError.set(null);
     this.cancelRefresh();
     try {
-      const [entry, types, blockTypes, entries, token] = await Promise.all([
+      const [entry, types, blockTypes, entries, token, locales] = await Promise.all([
         firstValueFrom(this.content.getEntry(spaceId, entryId)),
         firstValueFrom(this.content.listContentTypes(spaceId)),
         firstValueFrom(this.content.listBlockTypes(spaceId)),
         firstValueFrom(this.content.listEntries(spaceId)),
         firstValueFrom(this.api.previewToken(spaceId, entryId)),
+        this.spaceLocales.load(spaceId),
       ]);
+      this.form.locales.set(locales.locales);
+      const asked = untracked(() => this.locale());
+      this.form.locale.set(locales.locales.some((locale) => locale.code === asked && !locale.isDefault) ? (asked as string) : null);
       const type = types.find((t) => t.apiId === entry.contentType) ?? null;
       if (!type) {
         this.loadError.set('The type of this page no longer exists.');
@@ -779,7 +836,9 @@ export class VisualEditorPage implements HasUnsavedChanges {
       const { data } = await firstValueFrom(this.content.getEntry(spaceId, settingsId));
       const share = data['defaultOgImage'] as { assetId?: unknown } | null | undefined;
       const shareImageId = typeof share?.assetId === 'string' ? share.assetId : null;
-      this.seoDefaults.set({ siteName: typeof data['siteName'] === 'string' ? data['siteName'] : null, shareImageId });
+      // Site settings may be translated; the previews use the main language's name.
+      const siteName = firstTranslation(data['siteName'], [this.form.defaultLocale()], this.form.defaultLocale());
+      this.seoDefaults.set({ siteName: typeof siteName === 'string' ? siteName : null, shareImageId });
       if (shareImageId) this.mediaPicker.load([shareImageId]);
     } catch {
       // The previews fall back to the page alone.

@@ -79,8 +79,8 @@ insert into public.folders (id, space_id, environment_id, name, slug)
 select '00000000-0000-4000-8000-00000014a500', space_id, id, 'Blog', 'blog' from public.environments
 where space_id = '00000000-0000-4000-8000-00000014a200' and is_main;
 
-insert into public.entries (id, space_id, environment_id, content_type_id, folder_id, slug, locale)
-select '00000000-0000-4000-8000-00000014a300', e.space_id, e.id, ct.id, '00000000-0000-4000-8000-00000014a500', 'hello', 'en-GB'
+insert into public.entries (id, space_id, environment_id, content_type_id, folder_id, slug)
+select '00000000-0000-4000-8000-00000014a300', e.space_id, e.id, ct.id, '00000000-0000-4000-8000-00000014a500', 'hello'
 from public.environments e
 join public.content_types ct on ct.environment_id = e.id
 where e.space_id = '00000000-0000-4000-8000-00000014a200' and e.is_main;
@@ -93,8 +93,8 @@ set current_version_id = '00000000-0000-4000-8000-00000014a400', published_versi
     status = 'published', published_at = now()
 where id = '00000000-0000-4000-8000-00000014a300';
 
-insert into public.published_content (entry_id, space_id, environment_id, content_type_api_id, full_path, locale, data, published_at)
-select '00000000-0000-4000-8000-00000014a300', space_id, id, 'page', '/blog/hello', 'en-GB', '{"title": "Hello"}', now()
+insert into public.published_content (entry_id, space_id, environment_id, content_type_api_id, full_path, data, published_at)
+select '00000000-0000-4000-8000-00000014a300', space_id, id, 'page', '/blog/hello', '{"title": "Hello"}', now()
 from public.environments where space_id = '00000000-0000-4000-8000-00000014a200' and is_main;
 
 insert into public.redirects (space_id, from_path, to_path)

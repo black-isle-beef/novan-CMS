@@ -26,7 +26,7 @@ export interface NovanProxyOptions extends NovanServerOptions {
 export type NovanProxyHandler = (req: NovanProxyRequest, res: NovanProxyResponse, next?: (error?: unknown) => void) => Promise<void>;
 
 /** The read routes of the Delivery and Preview APIs, and nothing else. */
-const ROUTE = /^\/(delivery|preview)\/(pages|entries|entries\/[0-9a-fA-F-]{36}|singletons\/[a-z][a-zA-Z0-9]{0,63}|sitemap)$/;
+const ROUTE = /^\/(delivery|preview)\/(pages|entries|entries\/[0-9a-fA-F-]{36}|singletons\/[a-z][a-zA-Z0-9]{0,63}|sitemap|locales)$/;
 const PREVIEW_HEADER = 'x-novan-preview';
 /** Upstream headers passed back to the browser. */
 const PASSED_HEADERS = ['content-type', 'etag', 'cache-control', 'cache-tag'];

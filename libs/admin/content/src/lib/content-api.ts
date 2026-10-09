@@ -14,7 +14,9 @@ import type {
   EntryWorkflow,
   Folder,
   ListEntriesQuery,
+  MachineTranslation,
   PendingReview,
+  TranslateEntryRequest,
   UpdateFolderRequest,
 } from '@novan/shared-schemas';
 import type { Observable } from 'rxjs';
@@ -113,6 +115,11 @@ export class ContentApi {
 
   unarchive(spaceId: string, id: string): Observable<Entry> {
     return this.http.post<Entry>(this.url(spaceId, 'entries', id, 'unarchive'), {});
+  }
+
+  /** Fills a language's empty translations by machine, saved as a draft to check (docs/build/16-localisation.md). */
+  translate(spaceId: string, id: string, body: TranslateEntryRequest): Observable<MachineTranslation> {
+    return this.http.post<MachineTranslation>(this.url(spaceId, 'entries', id, 'translate'), body);
   }
 
   /** Pages and entries that point at this one. */

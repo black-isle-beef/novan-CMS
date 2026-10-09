@@ -32,12 +32,21 @@ export const contentTypeSchema = z.object({
 });
 export type ContentType = z.infer<typeof contentTypeSchema>;
 
+/** A content type's fields. A top-level `slug` is the page's address in every locale, so it is never translated. */
+export const contentTypeFieldListSchema = fieldListSchema.superRefine((fields, ctx) => {
+  fields.forEach((field, index) => {
+    if (field.apiId === 'slug' && field.localised) {
+      ctx.addIssue({ code: 'custom', message: 'The slug is the address in every language, so it cannot be translated.', path: [index, 'localised'] });
+    }
+  });
+});
+
 export const createContentTypeRequestSchema = z.strictObject({
   apiId: apiIdSchema,
   name: nameSchema,
   kind: contentTypeKindSchema,
   description: descriptionSchema,
-  fields: fieldListSchema.default([]),
+  fields: contentTypeFieldListSchema.default([]),
 });
 export type CreateContentTypeRequest = z.input<typeof createContentTypeRequestSchema>;
 
@@ -46,7 +55,7 @@ export const updateContentTypeRequestSchema = z
   .strictObject({
     name: nameSchema.optional(),
     description: descriptionSchema,
-    fields: fieldListSchema.optional(),
+    fields: contentTypeFieldListSchema.optional(),
   })
   .refine((body) => Object.keys(body).length > 0, 'Send at least one of name, description or fields.');
 export type UpdateContentTypeRequest = z.input<typeof updateContentTypeRequestSchema>;

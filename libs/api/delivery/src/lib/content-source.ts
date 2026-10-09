@@ -19,7 +19,6 @@ export function contentSource(db: Database, access: ApiTokenAccess) {
         contentType: publishedContent.contentTypeApiId,
         kind: contentTypes.kind,
         path: publishedContent.fullPath,
-        locale: publishedContent.locale,
         updatedAt: publishedContent.publishedAt,
         data: publishedContent.data,
       })
@@ -37,7 +36,6 @@ export function contentSource(db: Database, access: ApiTokenAccess) {
       contentType: contentTypes.apiId,
       kind: contentTypes.kind,
       path: sql<string>`coalesce(${folders.path}, '') || '/' || ${entries.slug}`.as('path'),
-      locale: entries.locale,
       updatedAt: entries.updatedAt,
       data: entryVersions.data,
     })

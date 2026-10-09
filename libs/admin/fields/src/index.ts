@@ -3,3 +3,4 @@ export * from './lib/describe-path';
 export * from './lib/field-form-context';
 export * from './lib/field-form/field-form';
 export * from './lib/field/field';
+export * from './lib/locale-switcher/locale-switcher';

@@ -3,18 +3,18 @@
 /* eslint-disable */
 import {
   pgTable,
-  index,
-  foreignKey,
-  unique,
   pgPolicy,
   check,
   uuid,
   text,
-  jsonb,
   timestamp,
-  integer,
-  boolean,
   uniqueIndex,
+  foreignKey,
+  unique,
+  boolean,
+  jsonb,
+  index,
+  integer,
   type AnyPgColumn,
   bigint,
   real,
@@ -25,175 +25,6 @@ import {
 import type { PgTableExtraConfigValue } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { users } from './auth-schema';
-
-export const contentTypes = pgTable(
-  'content_types',
-  {
-    id: uuid().defaultRandom().primaryKey().notNull(),
-    spaceId: uuid('space_id').notNull(),
-    environmentId: uuid('environment_id').notNull(),
-    apiId: text('api_id').notNull(),
-    name: text().notNull(),
-    kind: text().notNull(),
-    description: text(),
-    fields: jsonb().default([]).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-  },
-  (table): PgTableExtraConfigValue[] => [
-    index('content_types_space_id_idx').using('btree', table.spaceId.asc().nullsLast().op('uuid_ops')),
-    foreignKey({
-      columns: [table.environmentId, table.spaceId],
-      foreignColumns: [environments.id, environments.spaceId],
-      name: 'content_types_environment_id_space_id_fkey',
-    }).onDelete('cascade'),
-    foreignKey({
-      columns: [table.spaceId],
-      foreignColumns: [spaces.id],
-      name: 'content_types_space_id_fkey',
-    }).onDelete('cascade'),
-    unique('content_types_id_space_id_key').on(table.id, table.spaceId),
-    unique('content_types_id_environment_id_key').on(table.id, table.environmentId),
-    unique('content_types_environment_id_api_id_key').on(table.environmentId, table.apiId),
-    pgPolicy('content types: admins, developers and agency staff write', {
-      as: 'permissive',
-      for: 'all',
-      to: ['authenticated'],
-      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(content_types.space_id, '{admin,developer}'::text[]) AS has_space_role))`,
-      withCheck: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(content_types.space_id, '{admin,developer}'::text[]) AS has_space_role))`,
-    }),
-    pgPolicy('content types: members and agency staff read', {
-      as: 'permissive',
-      for: 'select',
-      to: ['authenticated'],
-    }),
-    check('content_types_api_id_check', sql`(api_id ~ '^[a-z][a-zA-Z0-9]*$'::text) AND (length(api_id) <= 64)`),
-    check('content_types_fields_check', sql`jsonb_typeof(fields) = 'array'::text`),
-    check('content_types_kind_check', sql`kind = ANY (ARRAY['page'::text, 'entry'::text, 'singleton'::text])`),
-    check('content_types_name_check', sql`length(TRIM(BOTH FROM name)) > 0`),
-  ],
-);
-
-export const blockTypes = pgTable(
-  'block_types',
-  {
-    id: uuid().defaultRandom().primaryKey().notNull(),
-    spaceId: uuid('space_id').notNull(),
-    environmentId: uuid('environment_id').notNull(),
-    apiId: text('api_id').notNull(),
-    name: text().notNull(),
-    icon: text(),
-    previewImagePath: text('preview_image_path'),
-    fields: jsonb().default([]).notNull(),
-    allowedChildren: text('allowed_children').array().default([]).notNull(),
-    styleOptions: jsonb('style_options').default({}).notNull(),
-    schemaVersion: integer('schema_version').default(1).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-  },
-  (table): PgTableExtraConfigValue[] => [
-    index('block_types_space_id_idx').using('btree', table.spaceId.asc().nullsLast().op('uuid_ops')),
-    foreignKey({
-      columns: [table.environmentId, table.spaceId],
-      foreignColumns: [environments.id, environments.spaceId],
-      name: 'block_types_environment_id_space_id_fkey',
-    }).onDelete('cascade'),
-    foreignKey({
-      columns: [table.spaceId],
-      foreignColumns: [spaces.id],
-      name: 'block_types_space_id_fkey',
-    }).onDelete('cascade'),
-    unique('block_types_id_space_id_key').on(table.id, table.spaceId),
-    unique('block_types_environment_id_api_id_key').on(table.environmentId, table.apiId),
-    pgPolicy('block types: admins, developers and agency staff write', {
-      as: 'permissive',
-      for: 'all',
-      to: ['authenticated'],
-      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(block_types.space_id, '{admin,developer}'::text[]) AS has_space_role))`,
-      withCheck: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(block_types.space_id, '{admin,developer}'::text[]) AS has_space_role))`,
-    }),
-    pgPolicy('block types: members and agency staff read', { as: 'permissive', for: 'select', to: ['authenticated'] }),
-    check('block_types_api_id_check', sql`(api_id ~ '^[a-z][a-zA-Z0-9]*$'::text) AND (length(api_id) <= 64)`),
-    check('block_types_fields_check', sql`jsonb_typeof(fields) = 'array'::text`),
-    check('block_types_icon_check', sql`icon ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text`),
-    check('block_types_name_check', sql`length(TRIM(BOTH FROM name)) > 0`),
-    check('block_types_schema_version_check', sql`schema_version > 0`),
-    check('block_types_style_options_check', sql`jsonb_typeof(style_options) = 'object'::text`),
-  ],
-);
-
-export const spaces = pgTable(
-  'spaces',
-  {
-    id: uuid().defaultRandom().primaryKey().notNull(),
-    organisationId: uuid('organisation_id').notNull(),
-    name: text().notNull(),
-    slug: text().notNull(),
-    defaultLocale: text('default_locale').default('en-GB').notNull(),
-    previewUrl: text('preview_url'),
-    settings: jsonb().default({}).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-    requireApproval: boolean('require_approval').default(false).notNull(),
-  },
-  (table): PgTableExtraConfigValue[] => [
-    index('spaces_organisation_id_idx').using('btree', table.organisationId.asc().nullsLast().op('uuid_ops')),
-    foreignKey({
-      columns: [table.organisationId],
-      foreignColumns: [organisations.id],
-      name: 'spaces_organisation_id_fkey',
-    }).onDelete('restrict'),
-    unique('spaces_slug_key').on(table.slug),
-    pgPolicy('spaces: admins and agency staff update', {
-      as: 'permissive',
-      for: 'update',
-      to: ['authenticated'],
-      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(spaces.id, '{admin}'::text[]) AS has_space_role))`,
-      withCheck: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(spaces.id, '{admin}'::text[]) AS has_space_role))`,
-    }),
-    pgPolicy('spaces: agency staff create', { as: 'permissive', for: 'insert', to: ['authenticated'] }),
-    pgPolicy('spaces: members and agency staff read', { as: 'permissive', for: 'select', to: ['authenticated'] }),
-    check('spaces_name_check', sql`length(TRIM(BOTH FROM name)) > 0`),
-    check('spaces_slug_check', sql`slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text`),
-  ],
-);
-
-export const auditEvents = pgTable(
-  'audit_events',
-  {
-    id: uuid().defaultRandom().primaryKey().notNull(),
-    spaceId: uuid('space_id').notNull(),
-    actorId: uuid('actor_id'),
-    action: text().notNull(),
-    targetType: text('target_type'),
-    targetId: text('target_id'),
-    diff: jsonb(),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-  },
-  (table): PgTableExtraConfigValue[] => [
-    index('audit_events_actor_id_idx').using('btree', table.actorId.asc().nullsLast().op('uuid_ops')),
-    index('audit_events_space_id_created_at_idx').using(
-      'btree',
-      table.spaceId.asc().nullsLast().op('timestamptz_ops'),
-      table.createdAt.desc().nullsFirst().op('timestamptz_ops'),
-    ),
-    foreignKey({
-      columns: [table.actorId],
-      foreignColumns: [users.id],
-      name: 'audit_events_actor_id_fkey',
-    }).onDelete('set null'),
-    foreignKey({
-      columns: [table.spaceId],
-      foreignColumns: [spaces.id],
-      name: 'audit_events_space_id_fkey',
-    }).onDelete('cascade'),
-    pgPolicy('audit events: admins and agency staff read', {
-      as: 'permissive',
-      for: 'select',
-      to: ['authenticated'],
-      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(audit_events.space_id, '{admin}'::text[]) AS has_space_role))`,
-    }),
-  ],
-);
 
 export const organisations = pgTable(
   'organisations',
@@ -314,51 +145,172 @@ export const profiles = pgTable(
   ],
 );
 
-export const folders = pgTable(
-  'folders',
+export const auditEvents = pgTable(
+  'audit_events',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    spaceId: uuid('space_id').notNull(),
+    actorId: uuid('actor_id'),
+    action: text().notNull(),
+    targetType: text('target_type'),
+    targetId: text('target_id'),
+    diff: jsonb(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+  },
+  (table): PgTableExtraConfigValue[] => [
+    index('audit_events_actor_id_idx').using('btree', table.actorId.asc().nullsLast().op('uuid_ops')),
+    index('audit_events_space_id_created_at_idx').using(
+      'btree',
+      table.spaceId.asc().nullsLast().op('timestamptz_ops'),
+      table.createdAt.desc().nullsFirst().op('timestamptz_ops'),
+    ),
+    foreignKey({
+      columns: [table.actorId],
+      foreignColumns: [users.id],
+      name: 'audit_events_actor_id_fkey',
+    }).onDelete('set null'),
+    foreignKey({
+      columns: [table.spaceId],
+      foreignColumns: [spaces.id],
+      name: 'audit_events_space_id_fkey',
+    }).onDelete('cascade'),
+    pgPolicy('audit events: admins and agency staff read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(audit_events.space_id, '{admin}'::text[]) AS has_space_role))`,
+    }),
+  ],
+);
+
+export const spaces = pgTable(
+  'spaces',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    organisationId: uuid('organisation_id').notNull(),
+    name: text().notNull(),
+    slug: text().notNull(),
+    previewUrl: text('preview_url'),
+    settings: jsonb().default({}).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    requireApproval: boolean('require_approval').default(false).notNull(),
+    localePrefixes: boolean('locale_prefixes').default(false).notNull(),
+  },
+  (table): PgTableExtraConfigValue[] => [
+    index('spaces_organisation_id_idx').using('btree', table.organisationId.asc().nullsLast().op('uuid_ops')),
+    foreignKey({
+      columns: [table.organisationId],
+      foreignColumns: [organisations.id],
+      name: 'spaces_organisation_id_fkey',
+    }).onDelete('restrict'),
+    unique('spaces_slug_key').on(table.slug),
+    pgPolicy('spaces: admins and agency staff update', {
+      as: 'permissive',
+      for: 'update',
+      to: ['authenticated'],
+      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(spaces.id, '{admin}'::text[]) AS has_space_role))`,
+      withCheck: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(spaces.id, '{admin}'::text[]) AS has_space_role))`,
+    }),
+    pgPolicy('spaces: agency staff create', { as: 'permissive', for: 'insert', to: ['authenticated'] }),
+    pgPolicy('spaces: members and agency staff read', { as: 'permissive', for: 'select', to: ['authenticated'] }),
+    check('spaces_name_check', sql`length(TRIM(BOTH FROM name)) > 0`),
+    check('spaces_slug_check', sql`slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text`),
+  ],
+);
+
+export const contentTypes = pgTable(
+  'content_types',
   {
     id: uuid().defaultRandom().primaryKey().notNull(),
     spaceId: uuid('space_id').notNull(),
     environmentId: uuid('environment_id').notNull(),
-    parentId: uuid('parent_id'),
+    apiId: text('api_id').notNull(),
     name: text().notNull(),
-    slug: text().notNull(),
-    path: text().default('').notNull(),
+    kind: text().notNull(),
+    description: text(),
+    fields: jsonb().default([]).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
   },
   (table): PgTableExtraConfigValue[] => [
-    index('folders_parent_id_idx').using('btree', table.parentId.asc().nullsLast().op('uuid_ops')),
-    index('folders_space_id_idx').using('btree', table.spaceId.asc().nullsLast().op('uuid_ops')),
+    index('content_types_space_id_idx').using('btree', table.spaceId.asc().nullsLast().op('uuid_ops')),
     foreignKey({
       columns: [table.environmentId, table.spaceId],
       foreignColumns: [environments.id, environments.spaceId],
-      name: 'folders_environment_id_space_id_fkey',
+      name: 'content_types_environment_id_space_id_fkey',
     }).onDelete('cascade'),
-    foreignKey({
-      columns: [table.parentId, table.environmentId],
-      foreignColumns: [table.id, table.environmentId],
-      name: 'folders_parent_id_environment_id_fkey',
-    }),
     foreignKey({
       columns: [table.spaceId],
       foreignColumns: [spaces.id],
-      name: 'folders_space_id_fkey',
+      name: 'content_types_space_id_fkey',
     }).onDelete('cascade'),
-    unique('folders_id_space_id_key').on(table.id, table.spaceId),
-    unique('folders_id_environment_id_key').on(table.id, table.environmentId),
-    unique('folders_environment_id_path_key').on(table.environmentId, table.path),
-    pgPolicy('folders: editors and up delete', {
+    unique('content_types_id_space_id_key').on(table.id, table.spaceId),
+    unique('content_types_id_environment_id_key').on(table.id, table.environmentId),
+    unique('content_types_environment_id_api_id_key').on(table.environmentId, table.apiId),
+    pgPolicy('content types: admins, developers and agency staff write', {
       as: 'permissive',
-      for: 'delete',
+      for: 'all',
       to: ['authenticated'],
-      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(folders.space_id, '{admin,developer,editor}'::text[]) AS has_space_role))`,
+      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(content_types.space_id, '{admin,developer}'::text[]) AS has_space_role))`,
+      withCheck: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(content_types.space_id, '{admin,developer}'::text[]) AS has_space_role))`,
     }),
-    pgPolicy('folders: editors and up update', { as: 'permissive', for: 'update', to: ['authenticated'] }),
-    pgPolicy('folders: authors and up create', { as: 'permissive', for: 'insert', to: ['authenticated'] }),
-    pgPolicy('folders: members and agency staff read', { as: 'permissive', for: 'select', to: ['authenticated'] }),
-    check('folders_name_check', sql`(length(TRIM(BOTH FROM name)) > 0) AND (length(name) <= 120)`),
-    check('folders_slug_check', sql`(slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text) AND (length(slug) <= 100)`),
+    pgPolicy('content types: members and agency staff read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+    }),
+    check('content_types_api_id_check', sql`(api_id ~ '^[a-z][a-zA-Z0-9]*$'::text) AND (length(api_id) <= 64)`),
+    check('content_types_fields_check', sql`jsonb_typeof(fields) = 'array'::text`),
+    check('content_types_kind_check', sql`kind = ANY (ARRAY['page'::text, 'entry'::text, 'singleton'::text])`),
+    check('content_types_name_check', sql`length(TRIM(BOTH FROM name)) > 0`),
+  ],
+);
+
+export const blockTypes = pgTable(
+  'block_types',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    spaceId: uuid('space_id').notNull(),
+    environmentId: uuid('environment_id').notNull(),
+    apiId: text('api_id').notNull(),
+    name: text().notNull(),
+    icon: text(),
+    previewImagePath: text('preview_image_path'),
+    fields: jsonb().default([]).notNull(),
+    allowedChildren: text('allowed_children').array().default([]).notNull(),
+    styleOptions: jsonb('style_options').default({}).notNull(),
+    schemaVersion: integer('schema_version').default(1).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+  },
+  (table): PgTableExtraConfigValue[] => [
+    index('block_types_space_id_idx').using('btree', table.spaceId.asc().nullsLast().op('uuid_ops')),
+    foreignKey({
+      columns: [table.environmentId, table.spaceId],
+      foreignColumns: [environments.id, environments.spaceId],
+      name: 'block_types_environment_id_space_id_fkey',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.spaceId],
+      foreignColumns: [spaces.id],
+      name: 'block_types_space_id_fkey',
+    }).onDelete('cascade'),
+    unique('block_types_id_space_id_key').on(table.id, table.spaceId),
+    unique('block_types_environment_id_api_id_key').on(table.environmentId, table.apiId),
+    pgPolicy('block types: admins, developers and agency staff write', {
+      as: 'permissive',
+      for: 'all',
+      to: ['authenticated'],
+      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(block_types.space_id, '{admin,developer}'::text[]) AS has_space_role))`,
+      withCheck: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(block_types.space_id, '{admin,developer}'::text[]) AS has_space_role))`,
+    }),
+    pgPolicy('block types: members and agency staff read', { as: 'permissive', for: 'select', to: ['authenticated'] }),
+    check('block_types_api_id_check', sql`(api_id ~ '^[a-z][a-zA-Z0-9]*$'::text) AND (length(api_id) <= 64)`),
+    check('block_types_fields_check', sql`jsonb_typeof(fields) = 'array'::text`),
+    check('block_types_icon_check', sql`icon ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text`),
+    check('block_types_name_check', sql`length(TRIM(BOTH FROM name)) > 0`),
+    check('block_types_schema_version_check', sql`schema_version > 0`),
+    check('block_types_style_options_check', sql`jsonb_typeof(style_options) = 'object'::text`),
   ],
 );
 
@@ -371,7 +323,6 @@ export const entries = pgTable(
     contentTypeId: uuid('content_type_id').notNull(),
     folderId: uuid('folder_id'),
     slug: text().notNull(),
-    locale: text().notNull(),
     status: text().default('draft').notNull(),
     currentVersionId: uuid('current_version_id'),
     publishedVersionId: uuid('published_version_id'),
@@ -388,7 +339,6 @@ export const entries = pgTable(
         table.environmentId.asc().nullsLast().op('text_ops'),
         table.folderId.asc().nullsLast().op('uuid_ops'),
         table.slug.asc().nullsLast().op('uuid_ops'),
-        table.locale.asc().nullsLast().op('text_ops'),
       )
       .where(sql`(deleted_at IS NULL)`),
     index('entries_content_type_id_idx').using('btree', table.contentTypeId.asc().nullsLast().op('uuid_ops')),
@@ -444,12 +394,59 @@ export const entries = pgTable(
       'entries_check',
       sql`(status <> 'published'::text) OR ((published_version_id IS NOT NULL) AND (published_at IS NOT NULL))`,
     ),
-    check('entries_locale_check', sql`locale ~ '^[a-z]{2,3}(-[A-Z]{2})?$'::text`),
     check('entries_slug_check', sql`(slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text) AND (length(slug) <= 100)`),
     check(
       'entries_status_check',
       sql`status = ANY (ARRAY['draft'::text, 'in_review'::text, 'scheduled'::text, 'published'::text, 'archived'::text])`,
     ),
+  ],
+);
+
+export const folders = pgTable(
+  'folders',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    spaceId: uuid('space_id').notNull(),
+    environmentId: uuid('environment_id').notNull(),
+    parentId: uuid('parent_id'),
+    name: text().notNull(),
+    slug: text().notNull(),
+    path: text().default('').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+  },
+  (table): PgTableExtraConfigValue[] => [
+    index('folders_parent_id_idx').using('btree', table.parentId.asc().nullsLast().op('uuid_ops')),
+    index('folders_space_id_idx').using('btree', table.spaceId.asc().nullsLast().op('uuid_ops')),
+    foreignKey({
+      columns: [table.environmentId, table.spaceId],
+      foreignColumns: [environments.id, environments.spaceId],
+      name: 'folders_environment_id_space_id_fkey',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.parentId, table.environmentId],
+      foreignColumns: [table.id, table.environmentId],
+      name: 'folders_parent_id_environment_id_fkey',
+    }),
+    foreignKey({
+      columns: [table.spaceId],
+      foreignColumns: [spaces.id],
+      name: 'folders_space_id_fkey',
+    }).onDelete('cascade'),
+    unique('folders_id_space_id_key').on(table.id, table.spaceId),
+    unique('folders_id_environment_id_key').on(table.id, table.environmentId),
+    unique('folders_environment_id_path_key').on(table.environmentId, table.path),
+    pgPolicy('folders: editors and up delete', {
+      as: 'permissive',
+      for: 'delete',
+      to: ['authenticated'],
+      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(folders.space_id, '{admin,developer,editor}'::text[]) AS has_space_role))`,
+    }),
+    pgPolicy('folders: editors and up update', { as: 'permissive', for: 'update', to: ['authenticated'] }),
+    pgPolicy('folders: authors and up create', { as: 'permissive', for: 'insert', to: ['authenticated'] }),
+    pgPolicy('folders: members and agency staff read', { as: 'permissive', for: 'select', to: ['authenticated'] }),
+    check('folders_name_check', sql`(length(TRIM(BOTH FROM name)) > 0) AND (length(name) <= 120)`),
+    check('folders_slug_check', sql`(slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text) AND (length(slug) <= 100)`),
   ],
 );
 
@@ -519,7 +516,6 @@ export const publishedContent = pgTable(
     environmentId: uuid('environment_id').notNull(),
     contentTypeApiId: text('content_type_api_id').notNull(),
     fullPath: text('full_path').notNull(),
-    locale: text().notNull(),
     data: jsonb().notNull(),
     publishedAt: timestamp('published_at', { withTimezone: true, mode: 'string' }).notNull(),
     cacheTags: text('cache_tags').array().default([]).notNull(),
@@ -528,8 +524,7 @@ export const publishedContent = pgTable(
     uniqueIndex('published_content_address_idx').using(
       'btree',
       table.environmentId.asc().nullsLast().op('text_ops'),
-      table.locale.asc().nullsLast().op('text_ops'),
-      table.fullPath.asc().nullsLast().op('uuid_ops'),
+      table.fullPath.asc().nullsLast().op('text_ops'),
     ),
     index('published_content_space_id_idx').using('btree', table.spaceId.asc().nullsLast().op('uuid_ops')),
     foreignKey({
@@ -645,58 +640,6 @@ export const assets = pgTable(
   ],
 );
 
-export const redirects = pgTable(
-  'redirects',
-  {
-    id: uuid().defaultRandom().primaryKey().notNull(),
-    spaceId: uuid('space_id').notNull(),
-    fromPath: text('from_path').notNull(),
-    toPath: text('to_path').notNull(),
-    status: smallint().default(301).notNull(),
-    createdBy: uuid('created_by'),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-  },
-  (table): PgTableExtraConfigValue[] => [
-    index('redirects_created_by_idx').using('btree', table.createdBy.asc().nullsLast().op('uuid_ops')),
-    index('redirects_to_path_idx').using(
-      'btree',
-      table.spaceId.asc().nullsLast().op('text_ops'),
-      table.toPath.asc().nullsLast().op('text_ops'),
-    ),
-    foreignKey({
-      columns: [table.createdBy],
-      foreignColumns: [users.id],
-      name: 'redirects_created_by_fkey',
-    }).onDelete('set null'),
-    foreignKey({
-      columns: [table.spaceId],
-      foreignColumns: [spaces.id],
-      name: 'redirects_space_id_fkey',
-    }).onDelete('cascade'),
-    unique('redirects_space_id_from_path_key').on(table.spaceId, table.fromPath),
-    pgPolicy('redirects: editors and up delete', {
-      as: 'permissive',
-      for: 'delete',
-      to: ['authenticated'],
-      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(redirects.space_id, '{admin,developer,editor}'::text[]) AS has_space_role))`,
-    }),
-    pgPolicy('redirects: editors and up change', { as: 'permissive', for: 'update', to: ['authenticated'] }),
-    pgPolicy('redirects: editors and up add', { as: 'permissive', for: 'insert', to: ['authenticated'] }),
-    pgPolicy('redirects: members and agency staff read', { as: 'permissive', for: 'select', to: ['authenticated'] }),
-    check('redirects_check', sql`from_path <> to_path`),
-    check(
-      'redirects_from_path_check',
-      sql`(from_path ~ '^/[^?#[:space:]]*$'::text) AND ((from_path = '/'::text) OR ("right"(from_path, 1) <> '/'::text)) AND (length(from_path) <= 1024)`,
-    ),
-    check('redirects_status_check', sql`status = ANY (ARRAY[301, 302])`),
-    check(
-      'redirects_to_path_check',
-      sql`((to_path ~ '^/[^[:space:]]*$'::text) OR (to_path ~* '^https?://[^/[:space:]]+\S*$'::text)) AND (length(to_path) <= 2048)`,
-    ),
-  ],
-);
-
 export const apiTokens = pgTable(
   'api_tokens',
   {
@@ -765,6 +708,58 @@ END`,
     check('api_tokens_scope_check', sql`scope = ANY (ARRAY['delivery'::text, 'preview'::text])`),
     check('api_tokens_token_hash_check', sql`token_hash ~ '^[0-9a-f]{64}$'::text`),
     check('api_tokens_token_hint_check', sql`token_hint ~ '^nv_(del|pre)_…[A-Za-z0-9_-]{4}$'::text`),
+  ],
+);
+
+export const redirects = pgTable(
+  'redirects',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    spaceId: uuid('space_id').notNull(),
+    fromPath: text('from_path').notNull(),
+    toPath: text('to_path').notNull(),
+    status: smallint().default(301).notNull(),
+    createdBy: uuid('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+  },
+  (table): PgTableExtraConfigValue[] => [
+    index('redirects_created_by_idx').using('btree', table.createdBy.asc().nullsLast().op('uuid_ops')),
+    index('redirects_to_path_idx').using(
+      'btree',
+      table.spaceId.asc().nullsLast().op('text_ops'),
+      table.toPath.asc().nullsLast().op('text_ops'),
+    ),
+    foreignKey({
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+      name: 'redirects_created_by_fkey',
+    }).onDelete('set null'),
+    foreignKey({
+      columns: [table.spaceId],
+      foreignColumns: [spaces.id],
+      name: 'redirects_space_id_fkey',
+    }).onDelete('cascade'),
+    unique('redirects_space_id_from_path_key').on(table.spaceId, table.fromPath),
+    pgPolicy('redirects: editors and up delete', {
+      as: 'permissive',
+      for: 'delete',
+      to: ['authenticated'],
+      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(redirects.space_id, '{admin,developer,editor}'::text[]) AS has_space_role))`,
+    }),
+    pgPolicy('redirects: editors and up change', { as: 'permissive', for: 'update', to: ['authenticated'] }),
+    pgPolicy('redirects: editors and up add', { as: 'permissive', for: 'insert', to: ['authenticated'] }),
+    pgPolicy('redirects: members and agency staff read', { as: 'permissive', for: 'select', to: ['authenticated'] }),
+    check('redirects_check', sql`from_path <> to_path`),
+    check(
+      'redirects_from_path_check',
+      sql`(from_path ~ '^/[^?#[:space:]]*$'::text) AND ((from_path = '/'::text) OR ("right"(from_path, 1) <> '/'::text)) AND (length(from_path) <= 1024)`,
+    ),
+    check('redirects_status_check', sql`status = ANY (ARRAY[301, 302])`),
+    check(
+      'redirects_to_path_check',
+      sql`((to_path ~ '^/[^[:space:]]*$'::text) OR (to_path ~* '^https?://[^/[:space:]]+\S*$'::text)) AND (length(to_path) <= 2048)`,
+    ),
   ],
 );
 
@@ -966,5 +961,52 @@ export const notFoundHits = pgTable(
     check('not_found_hits_hits_check', sql`hits > 0`),
     check('not_found_hits_last_referrer_check', sql`length(last_referrer) <= 2048`),
     check('not_found_hits_path_check', sql`(path ~ '^/[^?#[:space:]]*$'::text) AND (length(path) <= 1024)`),
+  ],
+);
+
+export const spaceLocales = pgTable(
+  'space_locales',
+  {
+    spaceId: uuid('space_id').notNull(),
+    code: text().notNull(),
+    name: text().notNull(),
+    fallbackCode: text('fallback_code'),
+    isDefault: boolean('is_default').default(false).notNull(),
+    pathPrefix: text('path_prefix').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+  },
+  (table): PgTableExtraConfigValue[] => [
+    foreignKey({
+      columns: [table.spaceId, table.fallbackCode],
+      foreignColumns: [table.spaceId, table.code],
+      name: 'space_locales_space_id_fallback_code_fkey',
+    }).onDelete('set null'),
+    foreignKey({
+      columns: [table.spaceId],
+      foreignColumns: [spaces.id],
+      name: 'space_locales_space_id_fkey',
+    }).onDelete('cascade'),
+    primaryKey({ columns: [table.spaceId, table.code], name: 'space_locales_pkey' }),
+    unique('space_locales_space_id_path_prefix_key').on(table.spaceId, table.pathPrefix),
+    pgPolicy('space locales: admins, developers and agency staff write', {
+      as: 'permissive',
+      for: 'all',
+      to: ['authenticated'],
+      using: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(space_locales.space_id, '{admin,developer}'::text[]) AS has_space_role))`,
+      withCheck: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(space_locales.space_id, '{admin,developer}'::text[]) AS has_space_role))`,
+    }),
+    pgPolicy('space locales: members and agency staff read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+    }),
+    check('space_locales_check', sql`fallback_code IS DISTINCT FROM code`),
+    check('space_locales_check1', sql`(NOT is_default) OR (fallback_code IS NULL)`),
+    check('space_locales_code_check', sql`code ~ '^[a-z]{2,3}(-[A-Z]{2})?$'::text`),
+    check('space_locales_name_check', sql`(length(TRIM(BOTH FROM name)) > 0) AND (length(name) <= 60)`),
+    check(
+      'space_locales_path_prefix_check',
+      sql`(path_prefix ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text) AND (length(path_prefix) <= 20)`,
+    ),
   ],
 );

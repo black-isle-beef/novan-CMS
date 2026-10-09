@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { apiTokens, DbService, spaces } from '@novan/api-db';
+import { apiTokens, DbService } from '@novan/api-db';
 import type { ApiTokenScope } from '@novan/shared-schemas';
 import { and, eq, isNull } from 'drizzle-orm';
 import { hashToken } from './token-secret';
@@ -10,8 +10,6 @@ export interface ApiTokenAccess {
   scope: ApiTokenScope;
   spaceId: string;
   environmentId: string;
-  /** The space's default locale, used when a request names none. */
-  defaultLocale: string;
 }
 
 /** How long a looked-up token is trusted before it is checked again; a revoked token stops within this. */
@@ -57,10 +55,8 @@ export class ApiTokenResolver {
         scope: apiTokens.scope,
         spaceId: apiTokens.spaceId,
         environmentId: apiTokens.environmentId,
-        defaultLocale: spaces.defaultLocale,
       })
       .from(apiTokens)
-      .innerJoin(spaces, eq(spaces.id, apiTokens.spaceId))
       .where(and(eq(apiTokens.tokenHash, hash), isNull(apiTokens.revokedAt)));
     return row ? { ...row, scope: row.scope as ApiTokenScope } : null;
   }

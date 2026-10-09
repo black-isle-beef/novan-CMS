@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DsAlertComponent } from '@black-isle-beef/novan-design-system';
-import { FieldForm, FieldFormContext } from '@novan/admin-fields';
+import { FieldForm, FieldFormContext, LocaleSwitcher } from '@novan/admin-fields';
 import { MediaPicker, MediaPickerDialog } from '@novan/admin-media';
 import { copy, shortcutKeys, Skeleton } from '@novan/admin-shell';
 import { SingletonEditor } from '../singleton-editor';
@@ -13,7 +13,7 @@ import { SingletonEditor } from '../singleton-editor';
  */
 @Component({
   selector: 'nv-site-settings-page',
-  imports: [DsAlertComponent, FieldForm, MediaPickerDialog, RouterLink, Skeleton],
+  imports: [DsAlertComponent, FieldForm, LocaleSwitcher, MediaPickerDialog, RouterLink, Skeleton],
   providers: [FieldFormContext, MediaPicker],
   templateUrl: './site-settings-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

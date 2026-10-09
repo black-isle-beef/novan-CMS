@@ -79,6 +79,23 @@ describe('breadcrumbs', () => {
     expect(trail).toEqual([{ name: 'Start', path: '/' }]);
     expect(novanBreadcrumbJsonLd(trail, 'https://x.test')).toBeNull();
   });
+
+  it('starts from the home page of the locale when its addresses carry a prefix', () => {
+    const alternates = [
+      { locale: 'en-GB', path: '/team/ada' },
+      { locale: 'fr-FR', path: '/fr/team/ada' },
+    ];
+    expect(novanBreadcrumbTrail({ path: '/fr/team/ada', data: { title: 'Ada' }, alternates }, { homeName: 'Accueil' })).toEqual([
+      { name: 'Accueil', path: '/fr' },
+      { name: 'Team', path: '/fr/team' },
+      { name: 'Ada', path: '/fr/team/ada' },
+    ]);
+    const home = [
+      { locale: 'en-GB', path: '/' },
+      { locale: 'fr-FR', path: '/fr' },
+    ];
+    expect(novanBreadcrumbTrail({ path: '/fr', data: {}, alternates: home })).toEqual([{ name: 'Home', path: '/fr' }]);
+  });
 });
 
 describe('applyNovanJsonLd', () => {

@@ -14,6 +14,8 @@ export interface EntryVisitor {
   link?(link: Record<string, unknown>): Mapped;
   /** A block, before its fields and children are mapped; {@link DROP} leaves it (and its children) out. */
   block?(node: BlockNode): BlockNode | typeof DROP;
+  /** A rich text field's document (ProseMirror JSON). */
+  richText?(doc: Record<string, unknown>): Mapped;
 }
 
 /**
@@ -72,6 +74,9 @@ export function mapEntryData(
       case 'link':
         if (!visitor.link || !isObject(value)) return value;
         return many(value, false, (item) => visitor.link?.(item as Record<string, unknown>));
+      case 'richText':
+        if (!visitor.richText || !isObject(value)) return value;
+        return many(value, false, (doc) => visitor.richText?.(doc as Record<string, unknown>));
       case 'group':
         return field.multiple && Array.isArray(value) ? value.map((item) => mapFields(field.fields, item)) : mapFields(field.fields, value);
       case 'blocks':

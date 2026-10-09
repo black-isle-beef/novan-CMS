@@ -16,11 +16,21 @@ Entries, folders and versions (package 06), under `/v1/management/spaces/:spaceI
 | `GET entries/:id/versions` | members | Version history, newest first |
 | `GET versions/:a/diff/:b` | members | JSON diff, blocks matched by `_uid` |
 | `GET/POST folders`, `PATCH/DELETE folders/:id` | members / authors / editors | Folders; renaming or moving one moves everything inside |
+| `POST entries/:id/translate` | authors and up | Machine-translate a locale's empty values into a draft version marked for checking (501 without a translator) |
+
+Locales (package 16), under `/v1/management/spaces/:spaceId/locales`: `GET` (members), `POST`, `PATCH :code`,
+`DELETE :code` (space admins and developers), `PUT prefixes` (space admins). Each answers the space's locales after the
+change, with whether machine translation is set up.
 
 - Every query runs as the caller under RLS (`DbService.userDb`); the guards and RLS (`0006_entries.sql`) apply
   the same roles.
 - Entry data is validated with `buildEntrySchema` from `@novan/shared-schemas`: drafts may be incomplete
   but never malformed; publishing needs every required field (400 `entry_invalid` with field `errors`).
+- Translated fields hold a value per locale (`{ "en-GB": ..., "fr-FR": ... }`, docs/build/16-localisation.md): the
+  default locale's value follows the field's rules, the others may be empty (they fall back), and values in locales
+  the space does not have are dropped on save. Summaries list `missingTranslations`: the locales with a value the
+  default locale has but they do not. Machine translation calls the `Translator` (`TRANSLATOR`, `@novan/api-common`)
+  outside any transaction and saves nothing if the page changed meanwhile.
 - Media items are checked against the space's library (`loadAssets`): the file must be a kind the field
   accepts, still be in the library to publish, and have alt text (on the page or in the library) where the
   field has `requireAlt`. Publishing records the files used in `asset_usages`; unpublishing clears them.

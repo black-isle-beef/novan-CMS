@@ -35,6 +35,7 @@ export class SettingsPage {
         link: [...settings, 'site'],
       },
       { title: 'Navigation', description: 'The menu at the top of every page, and the links in the footer.', link: [...settings, 'navigation'] },
+      { title: 'Languages', description: 'The languages your site is published in, and their addresses.', link: [...settings, 'languages'] },
       { title: 'Redirects', description: 'Send visitors from old addresses to the right page.', link: [...settings, 'redirects'] },
       { title: 'Missing pages', description: 'Addresses where visitors found no page, most visited first.', link: [...settings, 'missing-pages'] },
       { title: copy.team, description: 'Who can sign in, and what they can do.', link: ['/spaces', this.spaceId(), 'members'] },

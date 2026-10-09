@@ -54,6 +54,11 @@
       @for (badge of statusBadges(entry); track badge.label) {
         <ds-badge [variant]="badge.variant">{{ badge.label }}</ds-badge>
       }
+      @if (entry.missingTranslations.length) {
+        <ds-badge variant="neutral">
+          <i class="bi bi-translate me-1" aria-hidden="true"></i>Needs translation: {{ languages(entry.missingTranslations) }}
+        </ds-badge>
+      }
     </li>
   }
 </ul>

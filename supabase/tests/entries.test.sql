@@ -91,11 +91,11 @@ select
   space_id, id, 'Blog', 'blog'
 from tests.envs;
 
-insert into public.entries (id, space_id, environment_id, content_type_id, slug, locale)
+insert into public.entries (id, space_id, environment_id, content_type_id, slug)
 select
   case when space_id = '00000000-0000-4000-8000-00000006a200'
     then '00000000-0000-4000-8000-00000006a300'::uuid else '00000000-0000-4000-8000-00000006b300'::uuid end,
-  space_id, id, page_type_id, 'home', 'en-GB'
+  space_id, id, page_type_id, 'home'
 from tests.envs;
 
 insert into public.entry_versions (id, entry_id, space_id, data, created_by)
@@ -112,33 +112,33 @@ set current_version_id = '00000000-0000-4000-8000-00000006b400', published_versi
   status = 'published', published_at = now()
 where id = '00000000-0000-4000-8000-00000006b300';
 
-insert into public.published_content (entry_id, space_id, environment_id, content_type_api_id, full_path, locale, data, published_at)
-select '00000000-0000-4000-8000-00000006b300', space_id, id, 'page', '/home', 'en-GB', '{"title": "Home"}', now()
+insert into public.published_content (entry_id, space_id, environment_id, content_type_api_id, full_path, data, published_at)
+select '00000000-0000-4000-8000-00000006b300', space_id, id, 'page', '/home', '{"title": "Home"}', now()
 from tests.envs where space_id = '00000000-0000-4000-8000-00000006b200';
 
 -- ---------------------------------------------------------------------------
 -- Constraints
 -- ---------------------------------------------------------------------------
 select throws_ok(
-  $$insert into public.entries (space_id, environment_id, content_type_id, slug, locale)
-    select space_id, id, page_type_id, 'About Us', 'en-GB' from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200'$$,
+  $$insert into public.entries (space_id, environment_id, content_type_id, slug)
+    select space_id, id, page_type_id, 'About Us' from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200'$$,
   '23514', null, 'slugs are lowercase words joined by hyphens'
 );
 select throws_ok(
-  $$insert into public.entries (space_id, environment_id, content_type_id, slug, locale)
-    select space_id, id, page_type_id, 'home', 'en-GB' from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200'$$,
+  $$insert into public.entries (space_id, environment_id, content_type_id, slug)
+    select space_id, id, page_type_id, 'home' from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200'$$,
   '23505', null, 'two live entries cannot share an address in the root folder'
 );
-insert into public.entries (space_id, environment_id, content_type_id, slug, locale, deleted_at)
-select space_id, id, page_type_id, 'old', 'en-GB', now() from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200';
+insert into public.entries (space_id, environment_id, content_type_id, slug, deleted_at)
+select space_id, id, page_type_id, 'old', now() from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200';
 select lives_ok(
-  $$insert into public.entries (space_id, environment_id, content_type_id, slug, locale)
-    select space_id, id, page_type_id, 'old', 'en-GB' from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200'$$,
+  $$insert into public.entries (space_id, environment_id, content_type_id, slug)
+    select space_id, id, page_type_id, 'old' from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200'$$,
   'an entry in the bin does not hold on to its address'
 );
 select throws_ok(
-  $$insert into public.entries (space_id, environment_id, content_type_id, slug, locale)
-    select '00000000-0000-4000-8000-00000006a200', a.id, b.page_type_id, 'stolen', 'en-GB'
+  $$insert into public.entries (space_id, environment_id, content_type_id, slug)
+    select '00000000-0000-4000-8000-00000006a200', a.id, b.page_type_id, 'stolen'
     from tests.envs a, tests.envs b
     where a.space_id = '00000000-0000-4000-8000-00000006a200' and b.space_id = '00000000-0000-4000-8000-00000006b200'$$,
   '23503', null, 'an entry''s content type must be in its environment'
@@ -178,8 +178,8 @@ select is(
   'a subfolder''s path starts with its parent''s'
 );
 
-insert into public.entries (id, space_id, environment_id, content_type_id, folder_id, slug, locale)
-select '00000000-0000-4000-8000-00000006a301', space_id, id, page_type_id, '00000000-0000-4000-8000-00000006a501', 'hello', 'en-GB'
+insert into public.entries (id, space_id, environment_id, content_type_id, folder_id, slug)
+select '00000000-0000-4000-8000-00000006a301', space_id, id, page_type_id, '00000000-0000-4000-8000-00000006a501', 'hello'
 from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200';
 insert into public.entry_versions (id, entry_id, space_id, data)
 values ('00000000-0000-4000-8000-00000006a401', '00000000-0000-4000-8000-00000006a301', '00000000-0000-4000-8000-00000006a200', '{}');
@@ -187,8 +187,8 @@ update public.entries
 set current_version_id = '00000000-0000-4000-8000-00000006a401', published_version_id = '00000000-0000-4000-8000-00000006a401',
   status = 'published', published_at = now()
 where id = '00000000-0000-4000-8000-00000006a301';
-insert into public.published_content (entry_id, space_id, environment_id, content_type_api_id, full_path, locale, data, published_at)
-select '00000000-0000-4000-8000-00000006a301', space_id, id, 'page', '/blog/news/hello', 'en-GB', '{}', now()
+insert into public.published_content (entry_id, space_id, environment_id, content_type_api_id, full_path, data, published_at)
+select '00000000-0000-4000-8000-00000006a301', space_id, id, 'page', '/blog/news/hello', '{}', now()
 from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200';
 
 update public.folders set slug = 'articles' where id = '00000000-0000-4000-8000-00000006a500';
@@ -237,8 +237,8 @@ select is_empty($$select 1 from public.published_content where space_id = '00000
 select isnt_empty($$select 1 from public.entries where space_id = '00000000-0000-4000-8000-00000006a200'$$, 'A reads its own entries');
 
 select throws_ok(
-  $$insert into public.entries (space_id, environment_id, content_type_id, slug, locale)
-    select space_id, id, page_type_id, 'rogue', 'en-GB' from tests.envs where space_id = '00000000-0000-4000-8000-00000006b200'$$,
+  $$insert into public.entries (space_id, environment_id, content_type_id, slug)
+    select space_id, id, page_type_id, 'rogue' from tests.envs where space_id = '00000000-0000-4000-8000-00000006b200'$$,
   '42501', null, 'A cannot add entries to B'
 );
 select throws_ok(
@@ -252,8 +252,8 @@ select throws_ok(
   '42501', null, 'A cannot add folders to B'
 );
 select throws_ok(
-  $$insert into public.published_content (entry_id, space_id, environment_id, content_type_api_id, full_path, locale, data, published_at)
-    select gen_random_uuid(), space_id, id, 'page', '/rogue', 'en-GB', '{}', now() from tests.envs where space_id = '00000000-0000-4000-8000-00000006b200'$$,
+  $$insert into public.published_content (entry_id, space_id, environment_id, content_type_api_id, full_path, data, published_at)
+    select gen_random_uuid(), space_id, id, 'page', '/rogue', '{}', now() from tests.envs where space_id = '00000000-0000-4000-8000-00000006b200'$$,
   '42501', null, 'A cannot publish into B'
 );
 select is_empty($$update public.entries set slug = 'taken' where space_id = '00000000-0000-4000-8000-00000006b200' returning 1$$, 'A cannot update B''s entries');
@@ -267,8 +267,8 @@ select throws_ok(
 -- Author of A writes drafts, but cannot publish, bin or rename folders
 -- ---------------------------------------------------------------------------
 select lives_ok(
-  $$insert into public.entries (id, space_id, environment_id, content_type_id, slug, locale, created_by)
-    select '00000000-0000-4000-8000-00000006a302', space_id, id, page_type_id, 'about', 'en-GB', '00000000-0000-4000-8000-00000006a001'
+  $$insert into public.entries (id, space_id, environment_id, content_type_id, slug, created_by)
+    select '00000000-0000-4000-8000-00000006a302', space_id, id, page_type_id, 'about', '00000000-0000-4000-8000-00000006a001'
     from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200'$$,
   'author adds a draft entry'
 );
@@ -294,8 +294,8 @@ select throws_ok(
   '42501', null, 'author cannot publish'
 );
 select throws_ok(
-  $$insert into public.entries (space_id, environment_id, content_type_id, slug, locale, deleted_at)
-    select space_id, id, page_type_id, 'binned', 'en-GB', now() from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200'$$,
+  $$insert into public.entries (space_id, environment_id, content_type_id, slug, deleted_at)
+    select space_id, id, page_type_id, 'binned', now() from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200'$$,
   '42501', null, 'author cannot create an entry straight into the bin'
 );
 select throws_ok(
@@ -307,8 +307,8 @@ select throws_ok(
   '42501', null, 'author cannot delete an entry for good'
 );
 select throws_ok(
-  $$insert into public.published_content (entry_id, space_id, environment_id, content_type_api_id, full_path, locale, data, published_at)
-    select '00000000-0000-4000-8000-00000006a302', space_id, id, 'page', '/about', 'en-GB', '{}', now()
+  $$insert into public.published_content (entry_id, space_id, environment_id, content_type_api_id, full_path, data, published_at)
+    select '00000000-0000-4000-8000-00000006a302', space_id, id, 'page', '/about', '{}', now()
     from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200'$$,
   '42501', null, 'author cannot write published content'
 );
@@ -372,8 +372,8 @@ select lives_ok(
   'editor publishes'
 );
 select lives_ok(
-  $$insert into public.published_content (entry_id, space_id, environment_id, content_type_api_id, full_path, locale, data, published_at)
-    select '00000000-0000-4000-8000-00000006a302', space_id, id, 'page', '/about', 'en-GB', '{"title": "About us"}', now()
+  $$insert into public.published_content (entry_id, space_id, environment_id, content_type_api_id, full_path, data, published_at)
+    select '00000000-0000-4000-8000-00000006a302', space_id, id, 'page', '/about', '{"title": "About us"}', now()
     from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200'$$,
   'editor writes published content'
 );
@@ -414,8 +414,8 @@ select tests.authenticate_as('00000000-0000-4000-8000-00000006a003');
 
 select isnt_empty($$select 1 from public.entry_versions where space_id = '00000000-0000-4000-8000-00000006a200'$$, 'viewer reads versions');
 select throws_ok(
-  $$insert into public.entries (space_id, environment_id, content_type_id, slug, locale)
-    select space_id, id, page_type_id, 'viewer', 'en-GB' from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200'$$,
+  $$insert into public.entries (space_id, environment_id, content_type_id, slug)
+    select space_id, id, page_type_id, 'viewer' from tests.envs where space_id = '00000000-0000-4000-8000-00000006a200'$$,
   '42501', null, 'viewer cannot add entries'
 );
 select throws_ok(

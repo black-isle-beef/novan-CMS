@@ -1,4 +1,4 @@
-import type { BlockType, FieldDef } from '@novan/shared-schemas';
+import { type BlockType, type FieldDef, isTranslated, LOCALE_CODE_PATTERN } from '@novan/shared-schemas';
 import type { z } from 'zod';
 import { childrenField } from './blocks';
 
@@ -18,13 +18,15 @@ const partLabels: Record<string, string> = {
 
 /**
  * A readable name for the value at a dotted path, using field labels and block names, for the error
- * summary: `body.1.heading` becomes `Content › Hero block 2 › Heading`.
+ * summary: `body.1.heading` becomes `Content › Hero block 2 › Heading`, and one locale's value of a translated field,
+ * `title.fr-FR`, becomes `Title (French)` with `localeName`.
  */
 export function describePath(
   path: string,
   fields: readonly FieldDef[],
   data: unknown,
   blockTypes: readonly BlockType[],
+  localeName: (code: string) => string = (code) => code,
 ): string {
   const parts = path.split('.');
   const labels: string[] = [];
@@ -42,11 +44,17 @@ export function describePath(
       available = undefined;
       continue;
     }
-    labels.push(field.label);
     available = undefined;
     block = undefined;
-
     const next = parts[i + 1];
+    if (isTranslated(field) && next !== undefined && LOCALE_CODE_PATTERN.test(next)) {
+      labels.push(`${field.label} (${localeName(next)})`);
+      i++;
+      value = child(value, next);
+      continue;
+    }
+    labels.push(field.label);
+
     const index = next !== undefined && /^\d+$/.test(next) ? Number(next) : null;
     if (field.type === 'blocks' && index !== null) {
       i++;

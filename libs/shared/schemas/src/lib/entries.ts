@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { apiIdSchema, type EntryData } from './fields';
 import { contentTypeKindSchema } from './content-model';
+import { isLocaleMap, localeCodeSchema } from './locales';
 
 // Folders, entries and versions (docs/build/06-entries-versions.md), served under
 // /v1/management/spaces/:spaceId/environments/:env/{folders,entries,versions}.
@@ -75,9 +76,13 @@ export const entrySummarySchema = z.object({
   slug: z.string(),
   /** Folder path and slug, e.g. `/blog/hello-world`. */
   path: z.string(),
-  locale: z.string(),
-  /** From the current version's `title` or `name`, else the slug. */
+  /** From the current version's `title` or `name` (in the default locale), else the slug. */
   title: z.string(),
+  /**
+   * The space's other locales this is not fully translated into: something filled in in the default locale is empty
+   * in theirs (docs/build/16-localisation.md). Those parts show the fallback's content.
+   */
+  missingTranslations: z.array(z.string()),
   status: entryStatusSchema,
   /** The current version is not the published one. */
   hasUnpublishedChanges: z.boolean(),
@@ -98,11 +103,16 @@ export const entrySchema = entrySummarySchema.extend({
 });
 export type Entry = z.infer<typeof entrySchema>;
 
-/** What lists show for an entry: its `title` or `name` field, else its slug. The API's list query does the same. */
-export function entryTitle(data: EntryData, slug: string): string {
+/**
+ * What lists show for an entry: its `title` or `name` field, else its slug. The API's list query does the same. A
+ * translated title is read in `locale` (by default the first translation filled in), else in any locale.
+ */
+export function entryTitle(data: EntryData, slug: string, locale?: string): string {
   for (const key of ['title', 'name']) {
-    const value = data[key];
-    if (typeof value === 'string' && value.trim()) return value.trim();
+    const stored = data[key];
+    const candidates = isLocaleMap(stored) ? [...(locale ? [stored[locale]] : []), ...Object.values(stored)] : [stored];
+    const value = candidates.find((candidate): candidate is string => typeof candidate === 'string' && candidate.trim() !== '');
+    if (value) return value.trim();
   }
   return slug;
 }
@@ -205,6 +215,32 @@ export const requestChangesRequestSchema = z.strictObject({
   comment: z.string().trim().min(1, 'Say what should change.').max(2000),
 });
 export type RequestChangesRequest = z.input<typeof requestChangesRequestSchema>;
+
+// --- Machine translation (docs/build/16-localisation.md) ----------------------------------------
+
+/**
+ * POST `.../entries/:id/translate`: fills `to`'s empty translations from `from` (the default locale when left out) with
+ * a machine translation, saved as a draft version for a person to check before anyone publishes it.
+ */
+export const translateEntryRequestSchema = z.strictObject({
+  from: localeCodeSchema.optional(),
+  to: localeCodeSchema,
+});
+export type TranslateEntryRequest = z.input<typeof translateEntryRequestSchema>;
+
+export const machineTranslationSchema = z.object({
+  /** The entry with the draft as its current version. */
+  entry: entrySchema,
+  /** The translated values filled in, as dotted paths (`title`, `body.<uid>.heading`). */
+  translated: z.array(z.string()),
+  /** The service that translated them. */
+  provider: z.string(),
+});
+export type MachineTranslation = z.infer<typeof machineTranslationSchema>;
+
+/** The version message a machine-translated draft is saved with. */
+export const machineTranslationMessage = (localeName: string): string =>
+  `Machine-translated draft (${localeName}). Check every translation before publishing.`;
 
 // --- Versions -----------------------------------------------------------------------------------
 

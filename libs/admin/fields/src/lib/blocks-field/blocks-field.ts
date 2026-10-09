@@ -66,7 +66,7 @@ export class BlocksField extends FieldControl<FieldDefOf<'blocks'>> {
   }
 
   protected summary(node: BlockNode): string {
-    return blockSummary(node, this.blockType(node));
+    return blockSummary(node, this.blockType(node), this.locale(), this.context.defaultLocale());
   }
 
   protected blockPath(index: number): string {

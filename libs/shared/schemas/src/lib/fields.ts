@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ANY_LOCALE, isLocaleMap, type LocaleSettings, sharedValue } from './locales';
 
 // Field definitions for content types and block types (docs/build/05-content-modelling.md), and
 // `buildEntrySchema`, the single validator for entry data used by the API on save and by the admin forms.
@@ -70,6 +71,17 @@ function checkRange(
   }
 }
 
+/** Groups and blocks are shared by every locale: the fields inside them are what gets translated. */
+function checkNotTranslated(field: { localised: boolean }, ctx: z.core.$RefinementCtx<unknown>): void {
+  if (field.localised) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Every language shares the layout of this field. Mark the fields inside it as translated instead.',
+      path: ['localised'],
+    });
+  }
+}
+
 function checkUnique(values: readonly string[], ctx: z.core.$RefinementCtx<unknown>, what: string): void {
   const seen = new Set<string>();
   values.forEach((value, index) => {
@@ -84,7 +96,10 @@ const commonProps = {
   label: z.string().trim().min(1).max(120),
   help: z.string().trim().max(500).optional(),
   required: z.boolean().default(false),
-  /** Translated per locale. Values stay plain until locales arrive (package 16). */
+  /**
+   * Translated: one value per locale, `{ "en-GB": ..., "fr-FR": ... }` (docs/build/16-localisation.md). Only value
+   * fields are translated; groups and blocks hold structure all locales share.
+   */
   localised: z.boolean().default(false),
   /** Kept out of editor forms; the value is still validated. */
   hidden: z.boolean().optional(),
@@ -183,7 +198,10 @@ const blocksField = z
     min: nonNegativeInt.optional(),
     max: z.int().min(1).optional(),
   })
-  .superRefine((field, ctx) => checkRange(field, ctx));
+  .superRefine((field, ctx) => {
+    checkRange(field, ctx);
+    checkNotTranslated(field, ctx);
+  });
 
 const jsonField = z.object({
   ...commonProps,
@@ -232,6 +250,7 @@ const groupField = z
   })
   .superRefine((field, ctx) => {
     checkRange(field, ctx);
+    checkNotTranslated(field, ctx);
     if (!field.multiple && (field.min !== undefined || field.max !== undefined)) {
       ctx.addIssue({ code: 'custom', message: 'Minimum and maximum apply only to repeatable groups.', path: ['multiple'] });
     }
@@ -295,6 +314,12 @@ export interface EntrySchemaOptions {
    * Without it (or for unknown assets) only the item's shape is checked.
    */
   assets?: (assetId: string) => MediaAssetInfo | null | undefined;
+  /**
+   * The space's locales. A translated field takes a locale map, `{ "en-GB": ..., "fr-FR": ... }`: to publish, the
+   * default locale's value must be complete (other locales fall back when empty), and values in locales the space
+   * does not have are dropped. Without it, the default is `en-GB` and any locale code is kept.
+   */
+  locales?: LocaleSettings;
 }
 
 /** What entry validation needs to know about an asset in the media library. */
@@ -344,6 +369,11 @@ const jsonValue = z.json();
  * Turns a field list into a Zod validator for entry data. Unknown keys are dropped, so removing a
  * field never makes stored data invalid. Values that are not required may be missing or `null`.
  *
+ * Translated fields take a locale map (see {@link EntrySchemaOptions.locales}); errors in it are reported at
+ * `<field>.<locale>`. A field's translation can be turned on or off without invalidating stored data: a plain value
+ * of a translated field becomes the default locale's, and a locale map of a field no longer translated becomes its
+ * default locale's value.
+ *
  * This is the single validation path for entry data: the API runs it on save and publish, the admin
  * forms run the same schema for inline errors.
  */
@@ -355,6 +385,7 @@ class EntrySchemaBuilder {
   private readonly blockTypes: ReadonlyMap<string, BlockTypeDef> | null;
   private readonly draft: boolean;
   private readonly assets: EntrySchemaOptions['assets'];
+  private readonly locales: LocaleSettings;
   private readonly nodes = new Map<string, z.ZodObject>();
   private readonly unions = new Map<string, z.ZodType<BlockNode>>();
 
@@ -362,6 +393,7 @@ class EntrySchemaBuilder {
     this.blockTypes = options.blockTypes ? new Map(options.blockTypes.map((type) => [type.apiId, type])) : null;
     this.draft = options.draft ?? false;
     this.assets = options.assets;
+    this.locales = options.locales ?? ANY_LOCALE;
   }
 
   /** Whether an empty value is an error here (never in a draft). */
@@ -383,6 +415,34 @@ class EntrySchemaBuilder {
   }
 
   private field(field: FieldDef): z.ZodType {
+    if (field.type === 'group' || field.type === 'blocks') return this.plain(field);
+    if (field.localised) return this.translated(field);
+    if (field.type === 'json') return this.plain(field);
+    const { defaultLocale } = this.locales;
+    return z.preprocess((value) => sharedValue(field, value, defaultLocale), this.plain(field));
+  }
+
+  /**
+   * A translated field: a locale map whose default locale value follows the field's rules (required to publish), and
+   * whose other values may be empty, so the locale falls back. A plain value is the default locale's.
+   */
+  private translated(field: Exclude<FieldDef, { type: 'group' | 'blocks' }>): z.ZodType {
+    const { defaultLocale, codes } = this.locales;
+    const other = field.type === 'boolean' ? z.boolean(typeError('true or false')).nullish() : this.value({ ...field, required: false }).nullish();
+    const known = { [defaultLocale]: this.plain(field) };
+    const map = codes
+      ? z.object({ ...Object.fromEntries(codes.map((code) => [code, other])), ...known })
+      : z.object(known).catchall(other);
+    return z
+      .preprocess((value) => (value === undefined || value === null ? {} : isLocaleMap(value) ? value : { [defaultLocale]: value }), map)
+      .transform((translations) => {
+        const kept = Object.entries(translations).filter(([, value]) => value !== undefined && value !== null);
+        return kept.length ? Object.fromEntries(kept) : undefined;
+      });
+  }
+
+  /** The field's own value, ignoring translation. */
+  private plain(field: FieldDef): z.ZodType {
     if (field.type === 'boolean') {
       const value = z.boolean(typeError('true or false'));
       if (field.default !== undefined) return value.default(field.default);
@@ -686,7 +746,7 @@ function acceptedKinds(kinds: readonly (typeof mediaKinds)[number][]): string {
 /** One media item in entry data, and where it is. */
 export interface MediaRef {
   assetId: string;
-  /** Dotted, with blocks named by `_uid`: `image`, `gallery.2`, `body.<uid>.image`, `seo.ogImage`. */
+  /** Dotted, with blocks named by `_uid`: `image`, `gallery.2`, `body.<uid>.image`, `seo.ogImage`, `hero.fr-FR`. */
   path: string;
   /** The page's own alternative text for the item, when it has one. */
   alt?: string;
@@ -723,22 +783,30 @@ export function mediaRefs(
     }
   };
 
+  const visitMedia = (field: FieldDefOf<'media'>, value: unknown, path: string): void => {
+    const items = field.multiple ? (Array.isArray(value) ? value : []) : [value];
+    items.forEach((item: unknown, index) => {
+      const { assetId, alt } = typeof item === 'object' && item !== null ? (item as { assetId?: unknown; alt?: unknown }) : {};
+      if (typeof assetId !== 'string') return;
+      refs.push({
+        assetId,
+        path: field.multiple ? `${path}.${index}` : path,
+        ...(typeof alt === 'string' && alt.trim() ? { alt } : {}),
+        requireAlt: field.requireAlt,
+      });
+    });
+  };
+
   const visitField = (field: FieldDef, value: unknown, path: string): void => {
     switch (field.type) {
-      case 'media': {
-        const items = field.multiple ? (Array.isArray(value) ? value : []) : [value];
-        items.forEach((item: unknown, index) => {
-          const { assetId, alt } = typeof item === 'object' && item !== null ? (item as { assetId?: unknown; alt?: unknown }) : {};
-          if (typeof assetId !== 'string') return;
-          refs.push({
-            assetId,
-            path: field.multiple ? `${path}.${index}` : path,
-            ...(typeof alt === 'string' && alt.trim() ? { alt } : {}),
-            requireAlt: field.requireAlt,
-          });
-        });
+      case 'media':
+        // A translated field has a file per locale, e.g. `image.fr-FR`.
+        if (field.localised && isLocaleMap(value)) {
+          for (const [locale, translation] of Object.entries(value)) visitMedia(field, translation, `${path}.${locale}`);
+        } else {
+          visitMedia(field, value, path);
+        }
         return;
-      }
       case 'group':
         if (field.multiple) {
           if (Array.isArray(value)) value.forEach((item, index) => visitFields(field.fields, item, `${path}.${index}`));

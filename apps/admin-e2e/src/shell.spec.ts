@@ -162,6 +162,7 @@ test.describe('@shell', () => {
     await expect(page.getByRole('main').getByRole('link')).toHaveText([
       'Site settings',
       'Navigation',
+      'Languages',
       'Redirects',
       'Missing pages',
       'Team',

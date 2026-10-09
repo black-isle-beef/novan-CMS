@@ -18,7 +18,7 @@ const page = (id: string, title: string, updatedAt: string, extra: Partial<Entry
   folderId: null,
   slug: title.toLowerCase(),
   path: `/${title.toLowerCase()}`,
-  locale: 'en-GB',
+  missingTranslations: [],
   title,
   status: 'published',
   hasUnpublishedChanges: false,

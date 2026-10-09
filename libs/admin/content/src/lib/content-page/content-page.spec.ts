@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { SpaceContext } from '@novan/admin-spaces';
+import { SpaceContext, SpaceLocales } from '@novan/admin-spaces';
 import { type ContentType, type EntrySummary, type Folder, fieldListSchema } from '@novan/shared-schemas';
 import { of } from 'rxjs';
 import { ContentApi } from '../content-api';
@@ -18,7 +18,7 @@ const summary = (id: string, title: string, extra: Partial<EntrySummary> = {}): 
   folderId: null,
   slug: title.toLowerCase(),
   path: `/${title.toLowerCase()}`,
-  locale: 'en-GB',
+  missingTranslations: [],
   title,
   status: 'draft',
   hasUnpublishedChanges: false,
@@ -45,7 +45,7 @@ function fakeApi() {
         query.deleted
           ? [summary('d', 'Old', { deletedAt: '2026-10-01' })]
           : [
-              summary('1', 'Home', { status: 'published' }),
+              summary('1', 'Home', { status: 'published', missingTranslations: ['fr-FR'] }),
               summary('2', 'Hello', { folderId: 'f1', path: '/blog/hello', status: 'published', hasUnpublishedChanges: true }),
             ],
       ),
@@ -79,6 +79,7 @@ async function render(role: 'editor' | 'author' | 'viewer', add?: string) {
     providers: [
       provideRouter([]),
       { provide: ContentApi, useValue: api },
+      { provide: SpaceLocales, useValue: { load: () => Promise.resolve({ locales: [], prefixes: false, machineTranslation: false }), locales: () => [{ code: 'fr-FR', name: 'French', fallback: 'en-GB', isDefault: false, prefix: 'fr' }] } },
       {
         provide: SpaceContext,
         useValue: {
@@ -126,6 +127,8 @@ describe('ContentPage', () => {
       ['Home', `/spaces/${spaceId}/content/1`],
     ]);
     expect(el.textContent).toContain('Changes not published');
+    // Pages with translations missing say which languages.
+    expect(el.textContent).toContain('Needs translation: French');
 
     folder.click();
     await new Promise((resolve) => setTimeout(resolve));

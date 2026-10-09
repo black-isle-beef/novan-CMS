@@ -4,7 +4,7 @@ import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ContentApi } from '@novan/admin-content';
 import { MediaApi, Thumbnails } from '@novan/admin-media';
-import { SpaceContext } from '@novan/admin-spaces';
+import { SpaceContext, SpaceLocales } from '@novan/admin-spaces';
 import { type ContentType, type Entry, type EntryData, fieldListSchema } from '@novan/shared-schemas';
 import { of, throwError } from 'rxjs';
 import { SiteSettingsPage } from './site-settings-page';
@@ -40,6 +40,11 @@ async function render(options: { missing?: boolean; publish?: () => ReturnType<t
     providers: [
       provideRouter([]),
       { provide: ContentApi, useValue: content },
+      // One language: translated fields edit their English value.
+      {
+        provide: SpaceLocales,
+        useValue: { load: () => Promise.resolve({ locales: [], prefixes: false, machineTranslation: false }), multilingual: () => false },
+      },
       { provide: MediaApi, useValue: { list: () => of([]) } },
       { provide: Thumbnails, useValue: { urls: () => Promise.resolve(new Map()) } },
       { provide: SpaceContext, useValue: { currentSpaceId: signal(null), canEditCurrent: signal(true), canPublishCurrent: signal(true) } },

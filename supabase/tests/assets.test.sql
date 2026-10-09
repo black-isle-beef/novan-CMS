@@ -77,11 +77,11 @@ insert into public.content_types (space_id, environment_id, api_id, name, kind)
 select space_id, id, 'page', 'Page', 'page' from public.environments
 where space_id in ('00000000-0000-4000-8000-00000007a200', '00000000-0000-4000-8000-00000007b200') and is_main;
 
-insert into public.entries (id, space_id, environment_id, content_type_id, slug, locale)
+insert into public.entries (id, space_id, environment_id, content_type_id, slug)
 select
   case when e.space_id = '00000000-0000-4000-8000-00000007a200'
     then '00000000-0000-4000-8000-00000007a300'::uuid else '00000000-0000-4000-8000-00000007b300'::uuid end,
-  e.space_id, e.id, ct.id, 'home', 'en-GB'
+  e.space_id, e.id, ct.id, 'home'
 from public.environments e
 join public.content_types ct on ct.environment_id = e.id
 where e.space_id in ('00000000-0000-4000-8000-00000007a200', '00000000-0000-4000-8000-00000007b200') and e.is_main;

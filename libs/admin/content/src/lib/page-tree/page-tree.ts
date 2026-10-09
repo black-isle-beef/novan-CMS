@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DsBadgeComponent } from '@black-isle-beef/novan-design-system';
+import { SpaceLocales } from '@novan/admin-spaces';
 import type { EntrySummary, Folder } from '@novan/shared-schemas';
 import { type FolderNode, statusBadges } from '../content-tree';
 
@@ -25,6 +26,13 @@ export class PageTree {
   readonly deleteFolder = output<Folder>();
 
   protected readonly statusBadges = statusBadges;
+  private readonly locales = inject(SpaceLocales);
+
+  /** `French (France), Welsh`: the languages' names, or their codes before the space's languages load. */
+  protected languages(codes: readonly string[]): string {
+    const locales = this.locales.locales();
+    return codes.map((code) => locales.find((locale) => locale.code === code)?.name ?? code).join(', ');
+  }
   /** Folders the user has closed; everything starts open. */
   protected readonly closed = signal<ReadonlySet<string>>(new Set());
 

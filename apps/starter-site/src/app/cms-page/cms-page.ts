@@ -3,10 +3,12 @@ import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import {
   applyNovanJsonLd,
+  applyNovanLang,
   applyNovanSeo,
   novanBreadcrumbJsonLd,
   novanBreadcrumbTrail,
   NovanBlocks,
+  NovanLocale,
   NovanPreview,
 } from '@black-isle-beef/cms-angular';
 import type { SiteContent } from '../site/site-content';
@@ -31,6 +33,7 @@ export class CmsPage {
   readonly site = input<SiteContent | null>(null);
 
   private readonly preview = inject(NovanPreview);
+  private readonly locale = inject(NovanLocale);
 
   /** The page to show: in the visual editor, with the editor's unsaved changes. */
   protected readonly shown = computed<CmsPageState>(() => {
@@ -60,8 +63,10 @@ export class CmsPage {
       if (page) {
         applyNovanSeo(page, { injector: this.injector, siteName, titleTemplate: titled, baseUrl: this.siteUrl, defaultImage: site?.shareImage });
       } else if (state.status === 'not-found') {
+        applyNovanLang(this.locale.current(), { injector: this.injector });
         this.title.setTitle(titled(state.notFound?.title?.trim() || 'Page not found'));
       } else {
+        applyNovanLang(this.locale.current(), { injector: this.injector });
         this.title.setTitle(titled('Page not available'));
       }
     });

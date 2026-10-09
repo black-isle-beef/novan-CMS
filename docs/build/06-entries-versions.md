@@ -14,6 +14,8 @@ Migration `0006_entries.sql`:
 - `entries (id, space_id, environment_id, content_type_id, folder_id, slug, locale, status text check in ('draft','in_review','scheduled','published','archived'), current_version_id, published_version_id, published_at, created_by, updated_at, deleted_at)`; unique `(environment_id, folder_id, slug, locale)` where not deleted.
 - `entry_versions (id, entry_id, space_id, data jsonb, message, created_by, created_at)` — insert-only.
 - `published_content (entry_id pk, space_id, environment_id, content_type_api_id, full_path, locale, data jsonb, published_at, cache_tags text[])` — denormalised copy used by the Delivery API.
+- Package 16 dropped `entries.locale` and `published_content.locale`: one entry holds every locale, with translated
+  values inside its data, and addresses are unique per `(environment_id, folder_id, slug)` (see 16-localisation.md).
 - RLS: members read; `author`+ create/edit drafts; `editor`+ publish (enforced in API too). pgTAP tests.
 
 ## Block tree format

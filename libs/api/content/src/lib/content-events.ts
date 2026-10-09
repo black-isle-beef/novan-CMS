@@ -6,8 +6,7 @@ interface EntryEventBase {
   environmentId: string;
   entryId: string;
   contentType: string;
-  locale: string;
-  /** The published address the event concerns, e.g. `/blog/hello-world`. */
+  /** The published address the event concerns, without a locale prefix, e.g. `/blog/hello-world`. */
   path: string;
   /** Tags to purge from caches (package 08). */
   cacheTags: string[];
@@ -52,7 +51,14 @@ export interface RedirectsChangedEvent {
   actorId: string;
 }
 
-export type ContentEvent = EntryPublishedEvent | EntryUnpublishedEvent | PathsChangedEvent | RedirectsChangedEvent;
+/** The space's locales or locale prefixes changed (package 16): every delivered page may read differently. */
+export interface LocalesChangedEvent {
+  type: 'locales.changed';
+  spaceId: string;
+  actorId: string;
+}
+
+export type ContentEvent = EntryPublishedEvent | EntryUnpublishedEvent | PathsChangedEvent | RedirectsChangedEvent | LocalesChangedEvent;
 export type ContentEventType = ContentEvent['type'];
 
 /**

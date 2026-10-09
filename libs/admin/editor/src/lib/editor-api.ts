@@ -17,9 +17,12 @@ export class EditorApi {
     return this.http.post<SignedPreviewToken>(`${this.base}/${path}`, {});
   }
 
-  /** Unsaved page data as the site gets it (files, references and links filled in), for the bridge's `update`. */
-  previewData(spaceId: string, entryId: string, data: EntryData): Observable<DeliveryEntry> {
+  /**
+   * Unsaved page data as the site gets it in a locale (files, references and links filled in, translations along the
+   * fallbacks), for the bridge's `update`. Without a locale, the space's default.
+   */
+  previewData(spaceId: string, entryId: string, data: EntryData, locale?: string): Observable<DeliveryEntry> {
     const path = [spaceId, 'environments', MAIN_ENVIRONMENT, 'entries', entryId, 'preview-data'].map(encodeURIComponent).join('/');
-    return this.http.post<DeliveryEntry>(`${this.base}/${path}`, { data });
+    return this.http.post<DeliveryEntry>(`${this.base}/${path}`, { data, ...(locale ? { locale } : {}) });
   }
 }

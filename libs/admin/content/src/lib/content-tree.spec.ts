@@ -19,7 +19,7 @@ const entry = (id: string, title: string, folderId: string | null = null, extra:
   folderId,
   slug: title.toLowerCase().replace(/ /g, '-'),
   path: `/${title.toLowerCase().replace(/ /g, '-')}`,
-  locale: 'en-GB',
+  missingTranslations: [],
   title,
   status: 'draft',
   hasUnpublishedChanges: false,

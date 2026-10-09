@@ -18,7 +18,10 @@ import {
   type EntryWorkflow,
   entryWorkflowSchema,
   listEntriesQuerySchema,
+  type MachineTranslation,
+  machineTranslationSchema,
   moveEntryRequestSchema,
+  translateEntryRequestSchema,
   type PendingReview,
   requestChangesRequestSchema,
   updateEntryRequestSchema,
@@ -113,6 +116,25 @@ export class EntriesController {
     @Body(new ZodValidationPipe(workflowMessageRequestSchema)) body: z.output<typeof workflowMessageRequestSchema>,
   ): Promise<Entry> {
     return this.entries.publish(user, space.id, env, id, body.message ?? null);
+  }
+
+  /**
+   * Fills a locale's empty translations with a machine translation, saved as a draft version marked as
+   * machine-translated (docs/build/16-localisation.md). Answers 501 `translation_unavailable` when no translator is
+   * set up, and 409 `entry_changed` when the page changed while it was being translated.
+   */
+  @Post(':id/translate')
+  @HttpCode(200)
+  @ApiResponse(machineTranslationSchema)
+  @RequireRole(...AUTHORS)
+  translate(
+    @CurrentUser() user: AuthUser,
+    @CurrentSpace() space: SpaceAccess,
+    @Param('env') env: string,
+    @Param('id', idPipe) id: string,
+    @Body(new ZodValidationPipe(translateEntryRequestSchema)) body: z.output<typeof translateEntryRequestSchema>,
+  ): Promise<MachineTranslation> {
+    return this.entries.translate(user, space.id, env, id, body);
   }
 
   /** The page's place in the workflow and the actions the caller may take. */

@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { MediaApi, Thumbnails } from '@novan/admin-media';
 import { Confirm, Shortcuts } from '@novan/admin-shell';
-import { SpaceContext } from '@novan/admin-spaces';
+import { SpaceContext, SpaceLocales } from '@novan/admin-spaces';
 import {
   type ContentType,
   type Entry,
@@ -12,7 +12,9 @@ import {
   type EntryVersion,
   type EntryWorkflow,
   fieldListSchema,
+  type ManagedLocales,
   type ReviewRequest,
+  type SpaceLocale,
   type WorkflowAction,
 } from '@novan/shared-schemas';
 import { of, throwError } from 'rxjs';
@@ -46,7 +48,7 @@ const entry = (extra: Partial<Entry> = {}): Entry => ({
   folderId: null,
   slug: 'home',
   path: '/home',
-  locale: 'en-GB',
+  missingTranslations: [],
   title: 'Home',
   status: 'draft',
   hasUnpublishedChanges: false,
@@ -145,13 +147,23 @@ beforeAll(() => {
   };
 });
 
-async function render(role: 'editor' | 'author' | 'viewer' | 'admin', api = fakeApi()) {
+const english: SpaceLocale = { code: 'en-GB', name: 'English', fallback: null, isDefault: true, prefix: 'en' };
+const french: SpaceLocale = { code: 'fr-FR', name: 'French', fallback: 'en-GB', isDefault: false, prefix: 'fr' };
+
+/** The space's languages, as `SpaceLocales` serves them. */
+function fakeLocales(locales: SpaceLocale[] = [english], extra: Partial<ManagedLocales> = {}) {
+  const value: ManagedLocales = { locales, prefixes: false, machineTranslation: false, ...extra };
+  return { load: () => Promise.resolve(value), value: signal(value), locales: signal(locales), multilingual: signal(locales.length > 1) };
+}
+
+async function render(role: 'editor' | 'author' | 'viewer' | 'admin', api = fakeApi(), locales = fakeLocales()) {
   api.state.role = role;
   TestBed.configureTestingModule({
     imports: [EntryEditorPage],
     providers: [
       provideRouter([]),
       { provide: ContentApi, useValue: api },
+      { provide: SpaceLocales, useValue: locales },
       ...mediaStubs,
       {
         provide: SpaceContext,
@@ -199,6 +211,77 @@ async function render(role: 'editor' | 'author' | 'viewer' | 'admin', api = fake
 }
 
 describe('EntryEditorPage', () => {
+  describe('in a space with several languages', () => {
+    const translatedType: ContentType = {
+      ...type,
+      fields: fieldListSchema.parse([
+        { id: 'title', apiId: 'title', label: 'Title', type: 'text', required: true, localised: true },
+        { id: 'slug', apiId: 'slug', label: 'Slug', type: 'text' },
+      ]),
+    };
+    const translatedEntry = entry({ data: { title: { 'en-GB': 'Home' }, slug: 'home' } });
+
+    function multilingualApi() {
+      const api = fakeApi(translatedEntry);
+      api.listContentTypes.mockReturnValue(of([translatedType]));
+      return Object.assign(api, {
+        translate: vi.fn(() =>
+          of({
+            entry: entry({ data: { title: { 'en-GB': 'Home', 'fr-FR': '[fr-FR] Home' }, slug: 'home' }, hasUnpublishedChanges: true }),
+            translated: ['title'],
+            provider: 'Pseudo-translation',
+          }),
+        ),
+      });
+    }
+
+    it('switches language, says what needs translating, and saves each language under the same field', async () => {
+      const { el, fixture, type, click, api } = await render('author', multilingualApi(), fakeLocales([english, french]));
+      const select = el.querySelector<HTMLSelectElement>('#locale-language') as HTMLSelectElement;
+      expect([...select.options].map((o) => o.textContent?.trim())).toEqual(['English (main language)', 'French (needs translation)']);
+
+      select.value = 'fr-FR';
+      select.dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+      expect(el.textContent).toContain('You are editing the French text.');
+      expect(el.querySelector<HTMLInputElement>('#field-slug')?.disabled).toBe(true);
+      await type('Title (French)', 'Accueil');
+      await click('Save draft');
+      expect(api.saveEntry).toHaveBeenCalledWith(spaceId, entryId, { title: { 'en-GB': 'Home', 'fr-FR': 'Accueil' }, slug: 'home' });
+      expect([...select.options].map((o) => o.textContent?.trim())).toEqual(['English (main language)', 'French']);
+    });
+
+    it('shows the main language alongside, read-only, to translate from', async () => {
+      const { el, fixture } = await render('author', multilingualApi(), fakeLocales([english, french]));
+      const select = el.querySelector<HTMLSelectElement>('#locale-language') as HTMLSelectElement;
+      select.value = 'fr-FR';
+      select.dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+      const compare = el.querySelector<HTMLInputElement>('#locale-compare') as HTMLInputElement;
+      compare.checked = true;
+      compare.dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+      expect(el.querySelector<HTMLInputElement>('#field-title-en-GB')?.value).toBe('Home');
+      expect(el.querySelector<HTMLInputElement>('#field-title-en-GB')?.disabled).toBe(true);
+      expect(el.querySelector<HTMLInputElement>('#field-title-fr-FR')?.disabled).toBe(false);
+    });
+
+    it('fills empty translations by machine, as a draft marked for checking', async () => {
+      const api = multilingualApi();
+      const { el, fixture, click } = await render('author', api, fakeLocales([english, french], { machineTranslation: true }));
+      const select = el.querySelector<HTMLSelectElement>('#locale-language') as HTMLSelectElement;
+      select.value = 'fr-FR';
+      select.dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+      await click('Machine-translate empty fields');
+      expect(api.translate).toHaveBeenCalledWith(spaceId, entryId, { to: 'fr-FR' });
+      expect(el.textContent).toContain('Machine-translated into French: check before publishing');
+      expect(el.textContent).toContain('Title');
+      expect(el.querySelector<HTMLInputElement>('#field-title-fr-FR')?.value).toBe('[fr-FR] Home');
+      expect(el.querySelector('#entry-status')?.textContent).toContain('Check every translated field before publishing.');
+    });
+  });
+
   it('shows the form for the content type, with actions for the role', async () => {
     const editor = await render('editor');
     expect(editor.el.querySelector('h1')?.textContent).toBe('Home');
@@ -464,6 +547,7 @@ describe('EntryEditorPage', () => {
         providers: [
           provideRouter([]),
           { provide: ContentApi, useValue: api },
+          { provide: SpaceLocales, useValue: fakeLocales() },
           ...mediaStubs,
           { provide: SpaceContext, useValue: { currentSpaceId: signal(null), currentSpace: signal(null), canEditCurrent: signal(true), canPublishCurrent: signal(false) } },
         ],

@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { defineBlocks } from './blocks';
 import { NOVAN_BRIDGE_LOADER, type NovanCmsConfig, type NovanServerOptions } from './config';
 import { NovanApiError, NovanContentService } from './content.service';
+import { NovanLocale } from './locale-state';
 import { NovanPreview } from './preview';
 import { provideNovanCms, provideNovanCmsServer } from './provide';
 import type { Page } from './types';
@@ -156,17 +157,32 @@ describe('NovanContentService on the server', () => {
     expect(await result).toEqual({ items: [], nextCursor: null });
   });
 
-  it('returns the data of a singleton, and never sends a locale for one entry', async () => {
+  it('returns the data of a singleton, and reads one entry in the locale too', async () => {
     const { content, http } = setup({ platform: 'server' });
 
     const nav = firstValueFrom(content.singleton<{ items: string[] }>('navigation'));
     const entry = firstValueFrom(content.entry(page.id, { include: 2 }));
     await settle();
     http.expectOne(`${API}/v1/delivery/singletons/navigation?locale=en-GB`).flush({ ...page, data: { items: ['Home'] } });
-    http.expectOne(`${API}/v1/delivery/entries/${page.id}?include=2`).flush(page);
+    http.expectOne(`${API}/v1/delivery/entries/${page.id}?locale=en-GB&include=2`).flush(page);
 
     expect(await nav).toEqual({ items: ['Home'] });
     expect(await entry).toEqual(page);
+  });
+
+  it('asks in the locale of the page being shown, unless a call names one', async () => {
+    const { content, http } = setup({ platform: 'server' });
+    TestBed.inject(NovanLocale).current.set('fr-FR');
+
+    const nav = firstValueFrom(content.singleton('navigation'));
+    const welsh = firstValueFrom(content.singleton('navigation', { locale: 'cy-GB' }));
+    const locales = firstValueFrom(content.locales());
+    await settle();
+    http.expectOne(`${API}/v1/delivery/singletons/navigation?locale=fr-FR`).flush({ ...page, data: {} });
+    http.expectOne(`${API}/v1/delivery/singletons/navigation?locale=cy-GB`).flush({ ...page, data: {} });
+    http.expectOne(`${API}/v1/delivery/locales`).flush({ locales: [], prefixes: true });
+    await Promise.all([nav, welsh]);
+    expect(await locales).toEqual({ locales: [], prefixes: true });
   });
 
   it('refuses to run without server settings or a public token', async () => {
