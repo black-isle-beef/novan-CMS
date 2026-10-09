@@ -13,6 +13,8 @@ export const cacheTag = {
   /** Entry lists not filtered by type: any publish can change them. */
   entries: (environmentId: string): string => `entries:${environmentId}`,
   sitemap: (environmentId: string): string => `sitemap:${environmentId}`,
+  /** The space's redirects, and the redirects sites answered with (package 14). */
+  redirects: (spaceId: string): string => `redirects:${spaceId}`,
   /** Responses that embed the file's URL, and the file itself on the image route. */
   asset: (assetId: string): string => `asset:${assetId}`,
 };

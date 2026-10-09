@@ -32,5 +32,10 @@
       (input)="set($event)"
     />
   }
+  @if (field().max; as max) {
+    <div class="form-text text-end" [id]="countId()" [class.text-danger]="length() > max">
+      {{ length() }} of {{ max }} characters@if (length() > max) {: {{ length() - max }} too many}
+    </div>
+  }
   <nv-field-messages [help]="field().help" [hint]="hint()" [helpId]="helpId()" [errors]="errors()" [errorId]="errorId()" />
 </div>

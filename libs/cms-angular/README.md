@@ -71,25 +71,36 @@ export const config = mergeApplicationConfig(appConfig, {
 ```
 
 **3. The proxy** in the site's server lets the browser read content after the first page. It passes only
-the read routes of the Delivery and Preview APIs:
+the read routes of the Delivery and Preview APIs. The same server applies the CMS's redirects before rendering and
+reports addresses with no page (see Redirects and missing pages):
 
 ```ts
 // examples/server.ts
 import { AngularNodeAppEngine, createNodeRequestHandler, writeResponseToNodeResponse } from '@angular/ssr/node';
-import { createNovanProxy } from '@black-isle-beef/cms-angular/server';
+import { createNovanNotFoundReporter, createNovanProxy, createNovanRedirects } from '@black-isle-beef/cms-angular/server';
 import express from 'express';
 import { novanServerOptions } from './novan.server';
 
 const app = express();
 const angularApp = new AngularNodeAppEngine();
+const redirects = createNovanRedirects(novanServerOptions);
+const reportNotFound = createNovanNotFoundReporter(novanServerOptions);
 
 // The browser reads content through here after the first page; the proxy adds the token.
 app.use('/_novan', createNovanProxy(novanServerOptions));
 
+// Old addresses redirect before anything renders: the CMS's redirects, and pages whose address changed.
+app.use((req, res, next) => void redirects.handle(req, res, next));
+
 app.use((req, res, next) => {
   angularApp
     .handle(req)
-    .then((response) => (response ? writeResponseToNodeResponse(response, res) : next()))
+    .then((response) => {
+      if (!response) return next();
+      // Editors see addresses with no page among the top 404s, and can redirect them.
+      if (response.status === 404) void reportNotFound(req.path, req.get('referer'));
+      return writeResponseToNodeResponse(response, res);
+    })
     .catch(next);
 });
 
@@ -151,14 +162,26 @@ export const routes: Routes = [
 ```
 
 The page component renders the blocks and sets the SEO tags. `applyNovanSeo` sets the title, meta
-description, canonical link, robots `noindex` and Open Graph tags from the page's `title` and `seo` fields.
+description, canonical link, robots `noindex` and Open Graph tags from the page's `title` and `seo` fields; pass
+`defaultImage` (the site settings' sharing image) for pages without one of their own. `applyNovanJsonLd` writes
+structured data for search engines into the head (see Structured data).
 `NovanPreview.withLiveData` shows the visual editor's unsaved changes (see Preview); elsewhere it returns the
 page unchanged:
 
 ```ts
 // examples/cms-page.ts
 import { ChangeDetectionStrategy, Component, computed, effect, inject, Injector, input } from '@angular/core';
-import { applyNovanSeo, NovanBlocks, NovanPreview, type Page } from '@black-isle-beef/cms-angular';
+import {
+  applyNovanJsonLd,
+  applyNovanSeo,
+  novanBreadcrumbJsonLd,
+  novanBreadcrumbTrail,
+  NovanBlocks,
+  NovanPreview,
+  type Page,
+} from '@black-isle-beef/cms-angular';
+
+const baseUrl = 'https://www.example.com';
 
 @Component({
   selector: 'site-cms-page',
@@ -186,10 +209,38 @@ export class CmsPage {
   protected readonly shown = computed(() => this.preview.withLiveData(this.page()));
 
   constructor() {
-    effect(() => applyNovanSeo(this.shown(), { injector: this.injector, baseUrl: 'https://www.example.com' }));
+    effect(() => {
+      const page = this.shown();
+      applyNovanSeo(page, { injector: this.injector, baseUrl });
+      const trail = page ? novanBreadcrumbTrail(page) : [];
+      applyNovanJsonLd('breadcrumbs', novanBreadcrumbJsonLd(trail, baseUrl), { injector: this.injector });
+    });
   }
 }
 ```
+
+### Structured data
+
+Search engines read JSON-LD from the HTML the server sends. The SDK builds two kinds, and `applyNovanJsonLd(key, data)`
+writes each into the head as one `<script type="application/ld+json">` per key (null removes it):
+
+- `novanOrganizationJsonLd(siteSettings, baseUrl)`: an `Organization` from the `siteSettings` singleton (name,
+  logo, email, phone, address and social profiles as `sameAs`). Typed as `NovanSiteSettings`.
+- `novanBreadcrumbJsonLd(trail, baseUrl)`: a `BreadcrumbList`. `novanBreadcrumbTrail(page)` gives the trail from the
+  home page through each folder to the page; folders are named from their slug unless `names` maps their path to a
+  name.
+
+## Redirects and missing pages
+
+`createNovanRedirects(options)` (`@black-isle-beef/cms-angular/server`) applies the CMS's redirects in the site's
+server before Angular renders: those editors add, and the 301s the CMS makes when a published page's address changes.
+It reads `GET /v1/delivery/redirects` and keeps the list for `maxAgeMs` (default 5 seconds); a redirect answer
+carries the API's `Cache-Tag`s, so the CDN keeps it until a redirect changes. Paths match with or without a trailing
+slash, and a redirect without a query of its own keeps the request's.
+
+`createNovanNotFoundReporter(options)` returns a function to call when the server answers 404: it posts the path and
+referrer to `POST /v1/delivery/not-found`, so editors see the most visited missing addresses and can redirect them.
+It never throws. Both take the server options (`apiUrl` and `deliveryToken`) and run only on the server.
 
 ## Blocks
 

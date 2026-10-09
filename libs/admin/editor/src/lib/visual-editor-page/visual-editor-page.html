@@ -208,6 +208,44 @@
       </div>
 
       <div class="col-xl-4">
+        <!-- Arrow keys move between the tabs (role="tablist" pattern). -->
+        <div class="nav nav-tabs mb-3" role="tablist" aria-label="Side panel">
+          @for (tab of panelTabs; track tab.id) {
+            <button
+              type="button"
+              role="tab"
+              class="nav-link"
+              [id]="'nv-panel-tab-' + tab.id"
+              [class.active]="panelTab() === tab.id"
+              [attr.aria-selected]="panelTab() === tab.id"
+              [attr.aria-controls]="'nv-panel-' + tab.id"
+              [tabindex]="panelTab() === tab.id ? 0 : -1"
+              (click)="showTab(tab.id)"
+              (keydown)="tabKey($event)"
+            >
+              {{ tab.label }}
+            </button>
+          }
+        </div>
+
+        <div id="nv-panel-seo" role="tabpanel" aria-labelledby="nv-panel-tab-seo" [hidden]="panelTab() !== 'seo'">
+          <section class="mb-4" aria-labelledby="nv-seo-heading">
+            <h2 id="nv-seo-heading" class="h5">Search and sharing</h2>
+            @if (panelTab() === 'seo') {
+              <nv-seo-panel
+                [field]="seoField()"
+                [value]="store.data()['seo']"
+                [pageTitle]="title()"
+                [path]="sitePathOf(e.path)"
+                [siteUrl]="siteUrl()"
+                [defaults]="seoDefaults()"
+                (valueChange)="changeSeo($event)"
+              />
+            }
+          </section>
+        </div>
+
+        <div id="nv-panel-blocks" role="tabpanel" aria-labelledby="nv-panel-tab-blocks" [hidden]="panelTab() !== 'blocks'">
         <aside class="nv-editor-panel mb-4" id="nv-editor-panel" aria-labelledby="nv-editor-panel-heading">
           <h2 id="nv-editor-panel-heading" class="h5">Block</h2>
           <!-- Selection can happen inside the frame; announce it here. -->
@@ -236,14 +274,7 @@
           }
         </aside>
 
-        @if (canEdit()) {
-          <section class="mb-4" aria-labelledby="nv-checklist-heading">
-            <h2 id="nv-checklist-heading" class="h5" tabindex="-1">Before publishing</h2>
-            <nv-publish-checklist [items]="checks()" (goTo)="select($event)" />
-          </section>
-        }
-
-        <section aria-labelledby="nv-outline-heading">
+        <section class="mb-4" aria-labelledby="nv-outline-heading">
           <h2 id="nv-outline-heading" class="h5" tabindex="-1">Blocks on this page</h2>
           <nv-block-outline
             [lists]="outline()"
@@ -255,6 +286,15 @@
             (add)="openPicker($event)"
           />
         </section>
+        </div>
+
+        <!-- Outside the tabs: publishing focuses it, whichever tab is open. -->
+        @if (canEdit()) {
+          <section aria-labelledby="nv-checklist-heading">
+            <h2 id="nv-checklist-heading" class="h5" tabindex="-1">Before publishing</h2>
+            <nv-publish-checklist [items]="checks()" (goTo)="select($event)" />
+          </section>
+        }
       </div>
     </div>
   }

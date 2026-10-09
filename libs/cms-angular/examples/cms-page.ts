@@ -1,5 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, Injector, input } from '@angular/core';
-import { applyNovanSeo, NovanBlocks, NovanPreview, type Page } from '@black-isle-beef/cms-angular';
+import {
+  applyNovanJsonLd,
+  applyNovanSeo,
+  novanBreadcrumbJsonLd,
+  novanBreadcrumbTrail,
+  NovanBlocks,
+  NovanPreview,
+  type Page,
+} from '@black-isle-beef/cms-angular';
+
+const baseUrl = 'https://www.example.com';
 
 @Component({
   selector: 'site-cms-page',
@@ -27,6 +37,11 @@ export class CmsPage {
   protected readonly shown = computed(() => this.preview.withLiveData(this.page()));
 
   constructor() {
-    effect(() => applyNovanSeo(this.shown(), { injector: this.injector, baseUrl: 'https://www.example.com' }));
+    effect(() => {
+      const page = this.shown();
+      applyNovanSeo(page, { injector: this.injector, baseUrl });
+      const trail = page ? novanBreadcrumbTrail(page) : [];
+      applyNovanJsonLd('breadcrumbs', novanBreadcrumbJsonLd(trail, baseUrl), { injector: this.injector });
+    });
   }
 }

@@ -46,7 +46,7 @@ docs/build/       these instructions
 
 - Every tenant table has `space_id uuid not null` (or reaches a space through a parent with one) and **row-level security enabled**.
 - RLS policies check membership through JWT claims set by the custom access token hook (package 03). Never trust a `space_id` sent by the client without checking membership.
-- The API runs user requests inside a transaction that sets `role authenticated` and `request.jwt.claims`, so RLS applies to API traffic too. The `service_role` connection is used only by delivery reads (always filtered by the space resolved from the API token) and background jobs.
+- The API runs user requests inside a transaction that sets `role authenticated` and `request.jwt.claims`, so RLS applies to API traffic too. The `service_role` connection is used only by delivery reads (always filtered by the space resolved from the API token), the Delivery API's not-found reports (`record_not_found`, for the token's space, package 14) and background jobs.
 - The Supabase service-role key exists only in the API's server environment. Never in the admin, the SDK or a client site.
 - Every new table ships with a pgTAP test proving a member of space A cannot read or write space B.
 

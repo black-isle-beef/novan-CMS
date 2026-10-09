@@ -26,7 +26,33 @@ export interface EntryUnpublishedEvent extends EntryEventBase {
   type: 'entry.unpublished';
 }
 
-export type ContentEvent = EntryPublishedEvent | EntryUnpublishedEvent;
+/**
+ * Published addresses changed without a publish: a published page was moved to another folder, or a folder above
+ * published pages was renamed or moved. The database redirected each old address to its new one (0012_seo_site.sql).
+ */
+export interface PathsChangedEvent {
+  type: 'paths.changed';
+  spaceId: string;
+  environmentId: string;
+  /** The published entries whose address changed. */
+  entryIds: string[];
+  /** Their tags (package 08): the pages embed their own path. */
+  cacheTags: string[];
+  /** Old and new addresses as stored, e.g. `/blog/hello`. */
+  paths: string[];
+  actorId: string;
+}
+
+/** A person added, changed, imported or deleted redirects (package 14). */
+export interface RedirectsChangedEvent {
+  type: 'redirects.changed';
+  spaceId: string;
+  /** The addresses redirected from, before and after the change. */
+  paths: string[];
+  actorId: string;
+}
+
+export type ContentEvent = EntryPublishedEvent | EntryUnpublishedEvent | PathsChangedEvent | RedirectsChangedEvent;
 export type ContentEventType = ContentEvent['type'];
 
 /**

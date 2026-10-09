@@ -54,6 +54,7 @@ describe('CachePurge', () => {
       `type:${environmentId}:article`,
       `entries:${environmentId}`,
       `sitemap:${environmentId}`,
+      `redirects:${spaceId}`,
       `overflow:${spaceId}`,
     ]);
     expect(purgeUrls).not.toHaveBeenCalled();
@@ -102,8 +103,8 @@ describe('CachePurge', () => {
     await purge.contentChanged({ ...published, cacheTags: Array.from({ length: 40 }, (_, i) => `entry:${i}`) });
     expect(purgeTags).toHaveBeenCalledTimes(2);
     expect(purgeTags.mock.calls[0][0]).toHaveLength(30);
-    // 40 entry tags plus the lists, sitemap and overflow tags.
-    expect(purgeTags.mock.calls[1][0]).toHaveLength(13);
+    // 40 entry tags plus the lists, sitemap, redirects and overflow tags.
+    expect(purgeTags.mock.calls[1][0]).toHaveLength(14);
   });
 
   it('never throws, even when both purges fail', async () => {
@@ -111,6 +112,31 @@ describe('CachePurge', () => {
     purgeTags.mockRejectedValue(new Error('down'));
     purgeUrls.mockRejectedValue(new Error('still down'));
     await expect(purge.contentChanged(published)).resolves.toBeUndefined();
+  });
+
+  it('purges moved pages, their old and new addresses, the sitemap and the redirects', async () => {
+    const { purge, purgeTags, purgeUrls } = setup({ settings: { domains: ['https://example.com'] } });
+    await purge.contentChanged({
+      type: 'paths.changed',
+      spaceId,
+      environmentId,
+      entryIds: [entryId],
+      cacheTags: [`entry:${entryId}`],
+      paths: ['/blog/hello', '/news/hello'],
+      actorId: 'user-1',
+    });
+    expect(purgeTags).toHaveBeenCalledExactlyOnceWith([
+      `entry:${entryId}`,
+      `entries:${environmentId}`,
+      `sitemap:${environmentId}`,
+      `redirects:${spaceId}`,
+      `overflow:${spaceId}`,
+    ]);
+
+    purgeTags.mockRejectedValue(new Error('down'));
+    await purge.contentChanged({ type: 'redirects.changed', spaceId, paths: ['/old'], actorId: 'user-1' });
+    expect(purgeTags).toHaveBeenLastCalledWith([`redirects:${spaceId}`, `overflow:${spaceId}`]);
+    expect(purgeUrls).toHaveBeenCalledExactlyOnceWith(['https://example.com/old']);
   });
 
   it('purges every response of a revoked token', async () => {

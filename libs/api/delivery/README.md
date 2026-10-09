@@ -8,7 +8,9 @@ The Delivery and Preview APIs client sites read content from, and the API tokens
 | `GET /v1/delivery/entries` | delivery token | `type`, `locale`, `fields.<field>[eq\|in\|lt\|gt]`, `sort`, `limit` ≤ 100, `cursor`, `select`, `include` 0–3 |
 | `GET /v1/delivery/entries/:id` | delivery token | One published entry |
 | `GET /v1/delivery/singletons/:apiId` | delivery token | A singleton's content (site settings, navigation) |
-| `GET /v1/delivery/sitemap` | delivery token | Every published page's path and `updatedAt` |
+| `GET /v1/delivery/sitemap` | delivery token | Every published page's path and `updatedAt`, except pages with `seo.noindex` |
+| `GET /v1/delivery/redirects` | delivery token | The space's redirects, for the site's server to apply (package 14) |
+| `POST /v1/delivery/not-found` | delivery token | A site reports an address with no page: one row per address and day (202); 60 a minute per token |
 | `GET /v1/preview/...` | preview token | The same routes and shapes, reading current drafts |
 | `GET/POST api-tokens`, `POST api-tokens/:id/revoke` | admins, developers | Under `/v1/management/spaces/:spaceId`; the secret is returned once, on create |
 
@@ -25,7 +27,10 @@ The Delivery and Preview APIs client sites read content from, and the API tokens
   `ETag` and `Vary: Authorization`. Preview: `private, no-store`. Errors: `no-store`.
 - `CachePurge` purges by tag on `entry.published`/`entry.unpublished` and `MediaEvents`, falling back to the
   page's URL on the space's `settings.domains`; it does nothing without `CLOUDFLARE_ZONE_ID`.
-- Rate limits per token (`@nestjs/throttler`, in memory): delivery 50/s, preview 10/s, 429 `rate_limited`.
+- Rate limits per token (`@nestjs/throttler`, in memory): delivery 50/s, preview 10/s, not-found reports 60/min
+  (`NOT_FOUND_RATE_LIMIT`), 429 `rate_limited`.
+- `CachePurge` also purges `redirects:<space>` on publishing, `paths.changed` (a published page moved, or a folder above
+  it renamed) and `redirects.changed` (redirects managed in `@novan/api-site`).
 
 Run `nx test api-delivery` (purge, tokens, walker) and `nx test api` (HTTP and database, including the
 cross-space token test); `nx e2e api-e2e` publishes through the API and checks the purge a fake Cloudflare

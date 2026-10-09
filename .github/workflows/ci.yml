@@ -146,6 +146,56 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  # Lighthouse CI on the starter site's seeded pages (docs/build/14-seo-site-features.md): performance >= 90,
+  # accessibility and SEO 100 (lighthouserc.json). The production build runs against the API and seeded database.
+  lighthouse:
+    needs: database
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: lighthouse
+      - name: Supabase CLI version from package-lock.json
+        id: supabase-version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/supabase'].version")" >> "$GITHUB_OUTPUT"
+      - uses: supabase/setup-cli@v3
+        with:
+          version: ${{ steps.supabase-version.outputs.version }}
+      # The API needs Postgres, Auth (JWT secret) and Storage behind the gateway (the seeded images).
+      - name: Start Supabase
+        run: supabase start -x realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      - name: Write .env.local
+        run: |
+          supabase status -o json | jq -r '
+            "DATABASE_URL=\(.DB_URL)",
+            "SUPABASE_URL=\(.API_URL)",
+            "SUPABASE_ANON_KEY=\(.ANON_KEY)",
+            "SUPABASE_SERVICE_ROLE_KEY=\(.SERVICE_ROLE_KEY)",
+            "SUPABASE_JWT_SECRET=\(.JWT_SECRET)",
+            "API_PORT=3000"
+          ' > .env.local
+      - run: npx nx run-many -t build -p api starter-site
+      - name: Start the API
+        run: |
+          node dist/apps/api/main.js > api.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3000/health > /dev/null && exit 0; sleep 1; done
+          cat api.log; exit 1
+      # Serves the production build on port 4000 with the seeded tokens and asserts the thresholds.
+      - name: Lighthouse CI
+        run: npx lhci autorun
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-${{ github.run_id }}
+          path: dist/.lighthouseci/
+          retention-days: 14
+          if-no-files-found: ignore
+
   secrets:
     runs-on: ubuntu-latest
     timeout-minutes: 10

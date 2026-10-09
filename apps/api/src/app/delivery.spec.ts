@@ -510,7 +510,7 @@ describe('delivery and preview APIs', () => {
         expect(res.headers['cache-tag']).toBeUndefined();
       });
 
-      it('publishing purges the entry, its type, the lists and the sitemap', async () => {
+      it('publishing purges the entry, its type, the lists, the sitemap and the redirects', async () => {
         cloudflare.purgeTags.mockClear();
         const editA = manage(spaceA, editorA);
         await editA.patch(`/environments/main/entries/${about.id}`, { data: { title: 'About us', slug: 'about' } });
@@ -522,6 +522,7 @@ describe('delivery and preview APIs', () => {
           `type:${row.env}:page`,
           `entries:${row.env}`,
           `sitemap:${row.env}`,
+          `redirects:${spaceA}`,
           `overflow:${spaceA}`,
         ]);
         expect((await delivery('/pages?path=/about')).body.data.title).toBe('About us');

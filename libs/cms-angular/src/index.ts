@@ -31,3 +31,11 @@ export { novanImage, type NovanImageOptions } from './lib/image';
 export { isSafeHref, novanLinkHref } from './lib/links';
 export { novanPagePath, novanPageResolver } from './lib/page.resolver';
 export { applyNovanSeo, type NovanSeoOptions } from './lib/seo';
+export {
+  applyNovanJsonLd,
+  novanBreadcrumbJsonLd,
+  novanBreadcrumbTrail,
+  novanOrganizationJsonLd,
+  type NovanBreadcrumb,
+  type NovanJsonLd,
+} from './lib/structured-data';

@@ -16,8 +16,12 @@ The visual editor, `/spaces/:spaceId/pages/:entryId/edit` (docs/build/12-visual-
   `BlockOutline` lists, selects and reorders blocks, `BlockPicker` adds them.
 - `EditorPresence` shows who else has the page open and holds a soft lock while someone edits (Supabase Realtime
   presence on private channels; see `supabase/migrations/0010_editor_presence.sql`).
+- The side panel has two tabs (`role="tablist"`, arrow keys move between them): **Blocks** (the selected block and
+  the outline) and **SEO** (`SeoPanel`, docs/build/14-seo-site-features.md): the page's `seo` group with character
+  counts, a search-result preview and a social card preview, falling back to the page title and the site's sharing
+  image from site settings. Selecting a block switches back to Blocks.
 - The pre-publish checklist (`pageChecks`, `PublishChecklist`) comes from `@novan/admin-content`, shared with the
-  form view's publish dialog.
+  form view's publish dialog. It sits below the tabs, so publishing can focus it whichever tab is open.
 - Changes reach the site through `POST .../entries/:id/preview-data` (the delivered shape) 150 ms after the last
   one; drafts autosave every 5 s.
 

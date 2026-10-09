@@ -1,6 +1,6 @@
 # libs/api
 
-NestJS feature libraries for `apps/api`, one per feature (`auth`, `spaces`, `content`, `media`, `delivery`, ...).
+NestJS feature libraries for `apps/api`, one per feature (`auth`, `spaces`, `content`, `media`, `site`, `delivery`, ...).
 They are generated here by the build package that introduces the feature (see `docs/build/`), for example:
 
 ```bash

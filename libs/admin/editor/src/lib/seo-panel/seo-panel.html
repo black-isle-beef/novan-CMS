@@ -1,0 +1,47 @@
+@if (group(); as seo) {
+  <nv-field-form [fields]="seo.fields" path="seo" [value]="formValue()" (valueChange)="valueChange.emit($event)" />
+
+  <h3 class="h6 mt-4">In search results</h3>
+  @if (hidden()) {
+    <p class="small text-body-secondary">Hidden from search engines: this page will not appear in results.</p>
+  } @else {
+    <figure class="nv-seo-result mb-2" aria-describedby="nv-seo-result-note">
+      <p class="nv-seo-result-address small mb-1">{{ address() }}</p>
+      <p class="nv-seo-result-title mb-1" [title]="title()">{{ shortTitle() }}</p>
+      @if (shortDescription(); as text) {
+        <p class="small mb-0">{{ text }}</p>
+      } @else {
+        <p class="small text-body-secondary fst-italic mb-0">No search description: search engines will choose some text from the page.</p>
+      }
+    </figure>
+    <p id="nv-seo-result-note" class="small text-body-secondary">
+      A preview. Search engines decide the final wording, and may shorten long titles and descriptions.
+    </p>
+  }
+  @if (canonical(); as address) {
+    <p class="small text-body-secondary">Search engines are told this page copies {{ address }}.</p>
+  }
+
+  <h3 class="h6 mt-4">When shared</h3>
+  <figure class="nv-seo-card mb-2">
+    @if (image(); as picture) {
+      <img class="nv-seo-card-image" [src]="picture.url" alt="{{ picture.alt }}" />
+    } @else {
+      <div class="nv-seo-card-image d-flex align-items-center justify-content-center text-body-secondary small p-3">
+        No sharing image: social media may show none, or pick one from the page.
+      </div>
+    }
+    <figcaption class="p-2">
+      <span class="d-block small text-body-secondary">{{ host() }}</span>
+      <span class="d-block fw-semibold">{{ shortTitle() }}</span>
+      @if (shortDescription(); as text) {
+        <span class="d-block small">{{ text }}</span>
+      }
+    </figcaption>
+  </figure>
+  @if (image()?.fromSite) {
+    <p class="small text-body-secondary">The site's sharing image, from Site settings. Choose one above for this page.</p>
+  }
+} @else {
+  <ds-alert variant="info">This type of page has no search settings. A developer can add them in Schema.</ds-alert>
+}

@@ -3,7 +3,10 @@ import type { FieldDefOf } from '@novan/shared-schemas';
 import { FieldControl } from '../field-control';
 import { FieldMessages } from '../field-messages/field-messages';
 
-/** A single line of text, or several when the field is multiline. */
+/**
+ * A single line of text, or several when the field is multiline. A field with a maximum length counts the characters
+ * as they are typed (search titles and descriptions, say); the count is part of the field's description.
+ */
 @Component({
   selector: 'nv-text-field',
   imports: [FieldMessages],
@@ -12,6 +15,18 @@ import { FieldMessages } from '../field-messages/field-messages';
 })
 export class TextField extends FieldControl<FieldDefOf<'text'>> {
   protected readonly text = computed(() => (typeof this.value() === 'string' ? (this.value() as string) : ''));
+  /** Characters as people count them (an emoji is one), as the schema checks `max`. */
+  protected readonly length = computed(() => [...this.text()].length);
+  protected readonly countId = computed(() => `${this.id()}-count`);
+
+  protected override readonly describedBy = computed(() => {
+    const ids = [
+      ...(this.field().help || this.hint() ? [this.helpId()] : []),
+      ...(this.field().max !== undefined ? [this.countId()] : []),
+      ...(this.invalid() ? [this.errorId()] : []),
+    ];
+    return ids.length ? ids.join(' ') : null;
+  });
 
   protected override readonly hint = computed(() => {
     const { min, max } = this.field();

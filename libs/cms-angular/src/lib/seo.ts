@@ -1,6 +1,6 @@
 import { DOCUMENT, inject, Injector } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
-import type { Page, PageData } from './types';
+import type { NovanAsset, Page, PageData } from './types';
 
 export interface NovanSeoOptions {
   /** Needed outside an injection context, e.g. in a subscription. */
@@ -11,11 +11,14 @@ export interface NovanSeoOptions {
   titleTemplate?: (title: string) => string;
   /** `og:site_name`. */
   siteName?: string;
+  /** Shared when the page has no `seo.ogImage`: the site's sharing image (`siteSettings.defaultOgImage`). */
+  defaultImage?: NovanAsset | null;
 }
 
 /**
  * Sets the page's `<title>`, meta description, canonical link, robots `noindex` and Open Graph tags from its
- * `title` and `seo` fields. Tags a page leaves empty are removed, so nothing lingers from the previous page.
+ * `title` and `seo` fields, falling back to the site's sharing image for `og:image`. Tags a page leaves empty
+ * are removed, so nothing lingers from the previous page.
  */
 export function applyNovanSeo(page: Page<PageData> | null | undefined, options: NovanSeoOptions = {}): void {
   const injector = options.injector ?? inject(Injector);
@@ -29,7 +32,7 @@ export function applyNovanSeo(page: Page<PageData> | null | undefined, options: 
   const description = text(seo.metaDescription);
   const base = (options.baseUrl ?? document.location?.origin ?? '').replace(/\/+$/, '');
   const canonical = absoluteHttpUrl(seo.canonical) ?? (base ? `${base}${page.path === '/' ? '/' : page.path}` : null);
-  const image = seo.ogImage && absoluteHttpUrl(seo.ogImage.url) ? seo.ogImage : null;
+  const image = [seo.ogImage, options.defaultImage].find((asset): asset is NovanAsset => !!asset && absoluteHttpUrl(asset.url) !== null) ?? null;
 
   title.setTitle(options.titleTemplate ? options.titleTemplate(pageTitle) : pageTitle);
   setName(meta, 'description', description);

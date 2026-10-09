@@ -22,7 +22,16 @@ export const novanServerOptions: NovanServerOptions = {
   verifyPreview: createNovanPreviewVerifier({ apiUrl, previewToken }),
 };
 
-/** The site's public address (`SITE_URL`), for sitemap.xml and robots.txt; the request's own origin when unset. */
+/**
+ * How long the server reuses the CMS's redirects before asking again, in milliseconds (`NOVAN_REDIRECTS_MAX_AGE_MS`,
+ * default 5000): a new redirect, or a page whose address changed, works within this time.
+ */
+export function redirectsMaxAge(): number {
+  const value = Number(process.env['NOVAN_REDIRECTS_MAX_AGE_MS']);
+  return Number.isInteger(value) && value >= 0 ? value : 5000;
+}
+
+/** The site's public address (`SITE_URL`), for sitemap.xml, robots.txt, canonical links and structured data; the request's own origin when unset. */
 export function siteUrl(requestOrigin: string): string {
   return (process.env['SITE_URL'] || requestOrigin).replace(/\/+$/, '');
 }

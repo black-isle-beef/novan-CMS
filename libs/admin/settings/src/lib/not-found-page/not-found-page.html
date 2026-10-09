@@ -1,0 +1,63 @@
+<nav aria-label="Breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'settings']">{{ copy.settings }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Missing pages</li>
+  </ol>
+</nav>
+
+<h1 class="mb-1">Missing pages</h1>
+<p class="lead text-body-secondary mb-4">
+  Addresses on your site where visitors found no page (“page not found”, or 404). Redirect the ones that matter to the
+  right page.
+</p>
+
+<div class="mb-3 col-sm-6 col-lg-3">
+  <label for="not-found-days" class="form-label">Show the last</label>
+  <select id="not-found-days" class="form-select" (change)="setDays($event)">
+    @for (period of periods; track period) {
+      <option [value]="period" [selected]="days() === period">{{ period }} days</option>
+    }
+  </select>
+</div>
+
+@if (loading()) {
+  <nv-skeleton label="Loading the missing pages" [lines]="6" />
+} @else if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (rows().length) {
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <caption class="visually-hidden">Missing pages in the last {{ days() }} days, most visited first</caption>
+      <thead>
+        <tr>
+          <th scope="col">Address</th>
+          <th scope="col" class="text-end">Visits</th>
+          <th scope="col">Last visit</th>
+          <th scope="col">Came from</th>
+          @if (canRedirect()) {
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.path) {
+          <tr>
+            <td class="text-break"><code>{{ row.path }}</code></td>
+            <td class="text-end">{{ row.hits }}</td>
+            <td>{{ when(row.lastSeenAt) }}</td>
+            <td>{{ referrer(row.lastReferrer) ?? '—' }}</td>
+            @if (canRedirect()) {
+              <td>
+                <a class="btn btn-sm btn-secondary" [routerLink]="['/spaces', spaceId(), 'settings', 'redirects']" [queryParams]="{ from: row.path }">
+                  Redirect it<span class="visually-hidden">: {{ row.path }}</span>
+                </a>
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else {
+  <p class="text-body-secondary">No missing pages in the last {{ days() }} days.</p>
+}

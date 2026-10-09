@@ -159,7 +159,15 @@ test.describe('@shell', () => {
     await page.getByRole('link', { name: 'Demo site' }).click();
     await spaceMenu(page).getByRole('link', { name: 'Settings', exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
-    await expect(page.getByRole('main').getByRole('link')).toHaveText(['Site settings', 'Team', 'API tokens', 'Space settings']);
+    await expect(page.getByRole('main').getByRole('link')).toHaveText([
+      'Site settings',
+      'Navigation',
+      'Redirects',
+      'Missing pages',
+      'Team',
+      'API tokens',
+      'Space settings',
+    ]);
     await expectNoAxeViolations(page);
 
     await page.getByRole('main').getByRole('link', { name: 'Space settings' }).click();

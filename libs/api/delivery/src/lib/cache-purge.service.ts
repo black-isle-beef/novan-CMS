@@ -42,17 +42,28 @@ export class CachePurge implements OnModuleInit, OnModuleDestroy {
   }
 
   contentChanged(event: ContentEvent): Promise<void> {
-    const tags = [
-      ...event.cacheTags,
-      cacheTag.entries(event.environmentId),
-      cacheTag.sitemap(event.environmentId),
-      overflowTag(event.spaceId),
-    ];
-    return this.purge(`${event.type} ${event.entryId}`, tags, async () => {
+    const urls = (paths: string[]) => async () => {
       const domains = await this.domains(event.spaceId);
-      const paths = event.path ? [publicPath(event.path), '/sitemap.xml'] : ['/sitemap.xml'];
       return domains.flatMap((origin) => paths.map((path) => `${origin}${path}`));
-    });
+    };
+    // Publishing and moving can change addresses, and with them the space's redirects (0012_seo_site.sql).
+    const redirects = [cacheTag.redirects(event.spaceId), overflowTag(event.spaceId)];
+    switch (event.type) {
+      case 'redirects.changed':
+        return this.purge(`${event.type} ${event.spaceId}`, redirects, urls(event.paths));
+      case 'paths.changed':
+        return this.purge(
+          `${event.type} ${event.entryIds.join(',')}`,
+          [...event.cacheTags, cacheTag.entries(event.environmentId), cacheTag.sitemap(event.environmentId), ...redirects],
+          urls([...new Set([...event.paths.map(publicPath), '/sitemap.xml'])]),
+        );
+      default:
+        return this.purge(
+          `${event.type} ${event.entryId}`,
+          [...event.cacheTags, cacheTag.entries(event.environmentId), cacheTag.sitemap(event.environmentId), ...redirects],
+          urls(event.path ? [publicPath(event.path), '/sitemap.xml'] : ['/sitemap.xml']),
+        );
+    }
   }
 
   mediaChanged(event: MediaEvent): Promise<void> {

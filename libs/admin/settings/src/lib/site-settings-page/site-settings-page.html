@@ -1,0 +1,79 @@
+<nav aria-label="Breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'settings']">{{ copy.settings }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ copy.siteSettings }}</li>
+  </ol>
+</nav>
+
+<h1 class="mb-1">{{ copy.siteSettings }}</h1>
+<p class="lead text-body-secondary mb-4">Your site’s name and look in browsers, search results and social media, and how to get in touch.</p>
+
+@if (loading()) {
+  <nv-skeleton label="Loading the site settings" [lines]="8" />
+} @else if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (missing()) {
+  <ds-alert variant="info" title="Not set up for this site yet">Ask your developer to add site settings to this site.</ds-alert>
+} @else if (type(); as settings) {
+  <div class="col-lg-8">
+    <div id="site-settings-status" class="mb-3">
+      @if (status(); as message) {
+        <ds-alert variant="success">{{ message }}</ds-alert>
+      }
+    </div>
+    @if (problem(); as message) {
+      <div id="site-settings-problem" tabindex="-1" class="mb-3">
+        <ds-alert variant="danger">{{ message }}</ds-alert>
+      </div>
+    }
+    @if (summary().length) {
+      <div id="site-settings-errors" class="alert alert-danger" tabindex="-1" role="alert" aria-labelledby="site-settings-errors-title">
+        <h2 id="site-settings-errors-title" class="h6">Fix these first</h2>
+        <ul class="mb-0">
+          @for (item of summary(); track $index) {
+            <li><a [href]="item.href">{{ item.text }}</a></li>
+          }
+        </ul>
+      </div>
+    }
+    @if (!canEdit()) {
+      <ds-alert variant="info" class="mb-3">You can look at the site settings, but your role cannot change them.</ds-alert>
+    }
+
+    <div>
+      <nv-field-form [fields]="settings.fields" [value]="data()" (valueChange)="setData($event)" />
+
+      @if (canEdit()) {
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          @if (canPublish()) {
+            <button type="button" class="btn btn-primary" [disabled]="busy() !== null" [attr.aria-busy]="busy() === 'publishing'" (click)="publish()">
+              {{ copy.publishChanges }}
+            </button>
+          }
+          <button
+            type="button"
+            class="btn btn-secondary"
+            [disabled]="busy() !== null"
+            [attr.aria-busy]="busy() === 'saving'"
+            [attr.aria-keyshortcuts]="shortcutKeys.save"
+            (click)="save()"
+          >
+            {{ copy.saveDraft }}
+          </button>
+          <span class="small text-body-secondary ms-2">
+            @if (dirty()) {
+              {{ copy.unsavedChanges }}
+            } @else if (live()) {
+              The site shows these settings.
+            } @else {
+              Saved, but not published yet.
+            }
+          </span>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Opened by the image fields to choose files from the library. -->
+<nv-media-picker />

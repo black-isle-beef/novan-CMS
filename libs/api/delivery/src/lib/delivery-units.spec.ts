@@ -40,9 +40,13 @@ describe('cacheTagHeader', () => {
 
 describe('rateLimitsFromEnv', () => {
   it('defaults to 50 a second for delivery and 10 for preview, and takes positive whole overrides', () => {
-    expect(rateLimitsFromEnv({})).toEqual({ delivery: 50, preview: 10 });
-    expect(rateLimitsFromEnv({ DELIVERY_RATE_LIMIT: '5000', PREVIEW_RATE_LIMIT: 'lots' })).toEqual({ delivery: 5000, preview: 10 });
-    expect(rateLimitsFromEnv({ DELIVERY_RATE_LIMIT: '-1' })).toEqual({ delivery: 50, preview: 10 });
+    expect(rateLimitsFromEnv({})).toEqual({ delivery: 50, preview: 10, notFound: 60 });
+    expect(rateLimitsFromEnv({ DELIVERY_RATE_LIMIT: '5000', PREVIEW_RATE_LIMIT: 'lots', NOT_FOUND_RATE_LIMIT: '5' })).toEqual({
+      delivery: 5000,
+      preview: 10,
+      notFound: 5,
+    });
+    expect(rateLimitsFromEnv({ DELIVERY_RATE_LIMIT: '-1' })).toEqual({ delivery: 50, preview: 10, notFound: 60 });
   });
 });
 

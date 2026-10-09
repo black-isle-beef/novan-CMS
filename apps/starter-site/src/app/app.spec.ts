@@ -41,7 +41,12 @@ const singletons: Record<string, unknown> = {
     ],
     footerGroups: [{ title: 'More', links: [{ label: 'Email', link: { type: 'email', email: 'hi@example.com' } }] }],
   },
-  siteSettings: { siteName: 'Test site', organisationName: 'Test Ltd' },
+  siteSettings: {
+    siteName: 'Test site',
+    organisationName: 'Test Ltd',
+    contact: { email: 'hello@test.example', address: '1 Test Street\nTestville' },
+    socialLinks: [{ network: 'linkedin', url: 'https://www.linkedin.com/company/test' }],
+  },
   notFound: { title: 'Lost?', body: [{ _uid: uid(31), _block: 'cta', heading: 'Try the home page' }] },
 };
 
@@ -77,6 +82,25 @@ describe('starter site routes', () => {
     expect(root.querySelector('ds-footer')?.textContent).toContain('Test Ltd');
     expect(root.querySelector('ds-footer a[href="mailto:hi@example.com"]')?.textContent).toBe('Email');
     expect(root.querySelector('ds-header a[aria-current="page"]')?.textContent?.trim()).toBe('About');
+  });
+
+  it('shows the contact details and social links in the footer', async () => {
+    setup();
+    const harness = await RouterTestingHarness.create('/about');
+    const footer = (harness.routeNativeElement?.ownerDocument.body ?? document.body).querySelector('ds-footer');
+
+    expect([...(footer?.querySelectorAll('address span') ?? [])].map((line) => line.textContent)).toEqual(['1 Test Street', 'Testville']);
+    expect(footer?.querySelector('address a[href="mailto:hello@test.example"]')).not.toBeNull();
+    expect(footer?.querySelector('ul[aria-label="Social media"] a')?.getAttribute('href')).toBe('https://www.linkedin.com/company/test');
+  });
+
+  it('describes the organisation and the trail to the page to search engines', async () => {
+    setup();
+    await RouterTestingHarness.create('/about');
+    const data = (id: string) => JSON.parse(document.getElementById(id)?.textContent ?? 'null');
+
+    expect(data('novan-ld-organisation')).toMatchObject({ '@type': 'Organization', name: 'Test Ltd', email: 'hello@test.example' });
+    expect(data('novan-ld-breadcrumbs').itemListElement.map((item: { name: string }) => item.name)).toEqual(['Test site', 'About']);
   });
 
   it('shows the page title as the main heading when the page has no hero', async () => {

@@ -52,19 +52,19 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: /gate-1\.spec\.ts/,
+      testIgnore: /(gate-1|seo-publish)\.spec\.ts/,
     },
 
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
-      testIgnore: /gate-1\.spec\.ts/,
+      testIgnore: /(gate-1|seo-publish)\.spec\.ts/,
     },
 
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
-      testIgnore: /gate-1\.spec\.ts/,
+      testIgnore: /(gate-1|seo-publish)\.spec\.ts/,
     },
 
     // Gate 1 publishes a change to seeded content, so it runs once, after the other tests have read it.
@@ -72,6 +72,14 @@ export default defineConfig({
       name: 'gate-1',
       use: { ...devices['Desktop Chrome'] },
       testMatch: /gate-1\.spec\.ts/,
+      dependencies: ['chromium', 'firefox', 'webkit'],
+    },
+
+    // SEO journeys that publish (a new slug, new pages), likewise once and after the read-only tests.
+    {
+      name: 'seo-publish',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /seo-publish\.spec\.ts/,
       dependencies: ['chromium', 'firefox', 'webkit'],
     },
 

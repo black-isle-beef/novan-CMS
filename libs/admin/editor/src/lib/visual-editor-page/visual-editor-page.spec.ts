@@ -55,6 +55,7 @@ const entryId = '00000000-0000-4000-8000-000000000301';
 const SITE = 'https://www.example.com';
 const HERO = '00000000-0000-4000-8000-000000000901';
 const CTA = '00000000-0000-4000-8000-000000000902';
+const SETTINGS = '00000000-0000-4000-8000-000000000712';
 
 const pageType: ContentType = {
   id: 't',
@@ -142,6 +143,9 @@ interface Options {
   role?: 'editor' | 'author' | 'viewer';
   /** The tokens the API hands out in turn, made when asked for; then it fails. */
   tokens?: (() => SignedPreviewToken)[];
+  type?: ContentType;
+  /** The space's site settings, for the SEO tab's previews. */
+  settings?: EntryData;
 }
 
 // jsdom has no modal dialogs.
@@ -155,7 +159,7 @@ beforeAll(() => {
   };
 });
 
-async function render({ page = entry(), previewUrl = `${SITE}/`, role = 'editor', tokens = [() => token('first')] }: Options = {}) {
+async function render({ page = entry(), previewUrl = `${SITE}/`, role = 'editor', tokens = [() => token('first')], type = pageType, settings }: Options = {}) {
   const presence = fakePresence();
   const previewToken = vi.fn(() => {
     const next = tokens.shift();
@@ -163,10 +167,10 @@ async function render({ page = entry(), previewUrl = `${SITE}/`, role = 'editor'
   });
   const previewData = vi.fn((_s: string, _e: string, data: EntryData) => of({ id: entryId, contentType: 'page', path: '/', locale: 'en-GB', updatedAt: '', data: { ...data, delivered: true } }));
   const content = {
-    getEntry: vi.fn(() => of(page)),
-    listContentTypes: vi.fn(() => of([pageType])),
+    getEntry: vi.fn((_s: string, id: string) => (id === SETTINGS ? of(entry({ id: SETTINGS, contentType: 'siteSettings', data: settings ?? {} })) : of(page))),
+    listContentTypes: vi.fn(() => of([type])),
     listBlockTypes: vi.fn(() => of(blockTypes)),
-    listEntries: vi.fn(() => of([])),
+    listEntries: vi.fn(() => of(settings ? [{ ...entry({ id: SETTINGS, contentType: 'siteSettings' }), title: 'Site settings' }] : [])),
     saveEntry: vi.fn((_s: string, _id: string, data: EntryData) => of(entry({ data }))),
     autosaveEntry: vi.fn((_s: string, _id: string, data: EntryData) => of(entry({ data }))),
     publish: vi.fn(() => of(entry({ status: 'published', publishedPath: '/home', publishedVersionId: 'v' }))),
@@ -317,6 +321,70 @@ describe('VisualEditorPage', () => {
       await settle(fixture);
       expect(previewData).toHaveBeenCalledTimes(1);
       expect(sent('update')).toEqual([{ type: 'update', payload: { data: { ...startData(), title: 'Two', delivered: true } } }]);
+    });
+  });
+
+  describe('the SEO tab', () => {
+    const seoType: ContentType = {
+      ...pageType,
+      fields: fieldListSchema.parse([
+        ...pageType.fields,
+        {
+          id: 'seo',
+          apiId: 'seo',
+          label: 'SEO',
+          type: 'group',
+          fields: [{ id: 'metaTitle', apiId: 'metaTitle', label: 'Search title', type: 'text', max: 60 }],
+        },
+      ]),
+    };
+    const tab = (el: HTMLElement, name: string) => [...el.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((t) => t.textContent?.trim() === name);
+
+    it('shows the search settings and previews, with the site name from site settings', async () => {
+      const { fixture, el } = await render({ type: seoType, settings: { siteName: 'Example' } });
+      expect(tab(el, 'Blocks')?.getAttribute('aria-selected')).toBe('true');
+      expect(el.querySelector<HTMLElement>('#nv-panel-seo')?.hidden).toBe(true);
+
+      tab(el, 'SEO')?.click();
+      await settle(fixture);
+
+      expect(tab(el, 'SEO')?.getAttribute('aria-selected')).toBe('true');
+      expect(el.querySelector<HTMLElement>('#nv-panel-blocks')?.hidden).toBe(true);
+      expect(el.querySelector('.nv-seo-result-title')?.textContent?.trim()).toBe('Home | Example');
+      expect(el.querySelector('.nv-seo-result-address')?.textContent?.trim()).toBe('www.example.com');
+    });
+
+    it('changes the page as one undoable step per field, and the preview follows', async () => {
+      const { fixture, el, store, button } = await render({ type: seoType });
+      tab(el, 'SEO')?.click();
+      await settle(fixture);
+
+      const input = el.querySelector<HTMLInputElement>('#field-seo-metaTitle');
+      for (const value of ['W', 'We', 'Welcome']) {
+        input!.value = value;
+        input!.dispatchEvent(new Event('input'));
+      }
+      await settle(fixture);
+
+      expect(store.data()['seo']).toEqual({ metaTitle: 'Welcome' });
+      expect(el.querySelector('.nv-seo-result-title')?.textContent?.trim()).toBe('Welcome');
+      button('Undo')?.click();
+      await settle(fixture);
+      expect(store.data()['seo']).toBeUndefined();
+    });
+
+    it('moves between tabs with the arrow keys, and back to the blocks when one is selected', async () => {
+      const { fixture, el, bridge } = await render({ type: seoType });
+      tab(el, 'Blocks')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      await settle(fixture);
+      expect(tab(el, 'SEO')?.getAttribute('aria-selected')).toBe('true');
+      expect(tab(el, 'SEO')?.tabIndex).toBe(0);
+      expect(tab(el, 'Blocks')?.tabIndex).toBe(-1);
+
+      bridge.listener?.select(HERO);
+      await settle(fixture);
+      expect(tab(el, 'Blocks')?.getAttribute('aria-selected')).toBe('true');
+      expect(el.querySelector('aside')?.textContent).toContain('Hero banner');
     });
   });
 

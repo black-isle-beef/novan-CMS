@@ -1,0 +1,189 @@
+<nav aria-label="Breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'settings']">{{ copy.settings }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Redirects</li>
+  </ol>
+</nav>
+
+<h1 id="redirects-heading" class="mb-1" tabindex="-1">Redirects</h1>
+<p class="lead text-body-secondary mb-4">
+  Send visitors and search engines from old addresses to the right page. When a published page’s address changes, a
+  redirect from the old one is added for you.
+</p>
+
+@if (loading()) {
+  <nv-skeleton label="Loading the redirects" [lines]="6" />
+} @else if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else {
+  @if (canChange()) {
+    <section class="col-lg-8 mb-5" aria-labelledby="redirect-form-heading">
+      <h2 id="redirect-form-heading" class="h4">{{ editing() ? 'Change a redirect' : 'Add a redirect' }}</h2>
+      @if (problem(); as message) {
+        <ds-alert variant="danger" class="mb-3">{{ message }}</ds-alert>
+      }
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="mb-3">
+          <label for="redirect-from" class="form-label">Old address</label>
+          <input
+            id="redirect-from"
+            type="text"
+            class="form-control"
+            formControlName="fromPath"
+            spellcheck="false"
+            autocomplete="off"
+            required
+            aria-describedby="redirect-from-hint"
+            [class.is-invalid]="invalid('fromPath')"
+            [attr.aria-invalid]="invalid('fromPath') || null"
+          />
+          <div id="redirect-from-hint" [class]="invalid('fromPath') ? 'invalid-feedback' : 'form-text'">
+            {{ serverErrors()['fromPath']?.join(' ') || 'An address on this site starting with /, for example /old-page. A whole address copied from the old site works too.' }}
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="redirect-to" class="form-label">Goes to</label>
+          <input
+            id="redirect-to"
+            type="text"
+            class="form-control"
+            formControlName="toPath"
+            spellcheck="false"
+            autocomplete="off"
+            required
+            aria-describedby="redirect-to-hint"
+            [class.is-invalid]="invalid('toPath')"
+            [attr.aria-invalid]="invalid('toPath') || null"
+          />
+          <div id="redirect-to-hint" [class]="invalid('toPath') ? 'invalid-feedback' : 'form-text'">
+            {{ serverErrors()['toPath']?.join(' ') || 'A page on this site, like /about, or a full web address starting with https://.' }}
+          </div>
+        </div>
+        <fieldset class="mb-3">
+          <legend class="form-label fs-6">Kind of redirect</legend>
+          <div class="form-check">
+            <input id="redirect-status-301" class="form-check-input" type="radio" formControlName="status" [value]="301" />
+            <label for="redirect-status-301" class="form-check-label">Permanent (301): the page has moved for good</label>
+          </div>
+          <div class="form-check">
+            <input id="redirect-status-302" class="form-check-input" type="radio" formControlName="status" [value]="302" />
+            <label for="redirect-status-302" class="form-check-label">Temporary (302): it will come back</label>
+          </div>
+        </fieldset>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-primary" [disabled]="busy()" [attr.aria-busy]="busy()">
+            {{ editing() ? 'Save changes' : 'Add redirect' }}
+          </button>
+          @if (editing()) {
+            <button type="button" class="btn btn-secondary" (click)="cancelEdit()">Cancel</button>
+          }
+        </div>
+      </form>
+    </section>
+  }
+
+  <section class="mb-5" aria-labelledby="redirects-list-heading">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+      <h2 id="redirects-list-heading" class="h4 mb-0">All redirects ({{ redirects().length }})</h2>
+      <div>
+        <label for="redirects-search" class="form-label small mb-1">Find an address</label>
+        <input id="redirects-search" type="search" class="form-control" [value]="search()" (input)="setSearch($event)" />
+      </div>
+    </div>
+    @if (shown().length) {
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <caption class="visually-hidden">Redirects, by old address</caption>
+          <thead>
+            <tr>
+              <th scope="col">Old address</th>
+              <th scope="col">Goes to</th>
+              <th scope="col">Kind</th>
+              <th scope="col">Added by</th>
+              @if (canChange()) {
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (redirect of shown(); track redirect.id) {
+              <tr>
+                <td><code>{{ redirect.fromPath }}</code></td>
+                <td class="text-break"><code>{{ redirect.toPath }}</code></td>
+                <td>{{ redirect.status === 301 ? 'Permanent' : 'Temporary' }}</td>
+                <td>{{ redirect.automatic ? 'Automatic, when the page moved' : (redirect.createdByName ?? 'Someone no longer here') }}</td>
+                @if (canChange()) {
+                  <td class="text-nowrap">
+                    <button type="button" class="btn btn-sm btn-secondary me-1" (click)="edit(redirect)">
+                      Change<span class="visually-hidden"> the redirect from {{ redirect.fromPath }}</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger" (click)="remove(redirect)">
+                      Delete<span class="visually-hidden"> the redirect from {{ redirect.fromPath }}</span>
+                    </button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (search()) {
+      <p class="text-body-secondary" role="status">No redirect matches “{{ search() }}”.</p>
+    } @else {
+      <p class="text-body-secondary">No redirects yet.</p>
+    }
+  </section>
+
+  <section class="col-lg-8" aria-labelledby="redirects-csv-heading">
+    <h2 id="redirects-csv-heading" class="h4">Import and export</h2>
+    <p>
+      A CSV file with one redirect per line: the old address, where it goes, and optionally 301 or 302. A first line of
+      column names is fine. Old addresses that already redirect are changed.
+    </p>
+    @if (redirects().length) {
+      <button type="button" class="btn btn-secondary mb-3" (click)="exportCsv()">
+        <i class="bi bi-download me-1" aria-hidden="true"></i>Download all redirects as CSV
+      </button>
+    }
+    @if (canChange()) {
+      <div class="mb-3">
+        <label for="redirects-file" class="form-label">Import a CSV file</label>
+        <input id="redirects-file" type="file" class="form-control" accept=".csv,text/csv" aria-describedby="redirects-file-hint" (change)="readCsv($event)" />
+        <div id="redirects-file-hint" class="form-text">Up to {{ maxImport }} redirects. You see what will be imported first.</div>
+      </div>
+      @if (importProblem(); as message) {
+        <ds-alert variant="danger" class="mb-3">{{ message }}</ds-alert>
+      }
+      @if (importResult(); as message) {
+        <div id="redirects-import-result" tabindex="-1" role="status" class="mb-3">
+          <ds-alert variant="success">{{ message }}</ds-alert>
+        </div>
+      }
+      @if (parsed(); as preview) {
+        <div id="redirects-import-preview" class="border rounded p-3 mb-3" tabindex="-1" aria-labelledby="redirects-import-preview-heading" role="region">
+          <h3 id="redirects-import-preview-heading" class="h6">{{ preview.file }}</h3>
+          <p class="mb-2">{{ preview.redirects.length }} {{ preview.redirects.length === 1 ? 'redirect' : 'redirects' }} ready to import.</p>
+          @if (preview.problems.length) {
+            <p class="mb-1">{{ preview.problems.length }} {{ preview.problems.length === 1 ? 'line' : 'lines' }} could not be used and will be left out:</p>
+            <ul class="small mb-2">
+              @for (line of preview.problems.slice(0, 20); track line.line) {
+                <li>Line {{ line.line }}: {{ line.message }}</li>
+              }
+              @if (preview.problems.length > 20) {
+                <li>And {{ preview.problems.length - 20 }} more.</li>
+              }
+            </ul>
+          }
+          <div class="d-flex flex-wrap gap-2">
+            @if (preview.redirects.length) {
+              <button type="button" class="btn btn-primary" [disabled]="busy()" [attr.aria-busy]="busy()" (click)="import()">
+                Import {{ preview.redirects.length }} {{ preview.redirects.length === 1 ? 'redirect' : 'redirects' }}
+              </button>
+            }
+            <button type="button" class="btn btn-secondary" (click)="cancelImport()">Cancel</button>
+          </div>
+        </div>
+      }
+    }
+  </section>
+}

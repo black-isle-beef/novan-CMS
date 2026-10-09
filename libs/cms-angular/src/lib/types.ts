@@ -72,11 +72,41 @@ export interface ProseMirrorNode {
   content?: ProseMirrorNode[];
 }
 
-/** The `seo` group of the `page` type (package 14 adds the canonical override and image). */
+/** The `seo` group of the `page` type. */
 export interface NovanSeoFields {
   metaTitle?: string | null;
   metaDescription?: string | null;
+  /** A full address, only when the page copies another. */
   canonical?: string | null;
   ogImage?: NovanAsset | null;
   noindex?: boolean | null;
+}
+
+/** The `siteSettings` singleton of a starter-kit site (docs/build/14-seo-site-features.md). */
+export interface NovanSiteSettings {
+  siteName?: string | null;
+  organisationName?: string | null;
+  logo?: NovanAsset | null;
+  favicon?: NovanAsset | null;
+  /** Shared when a page has no `seo.ogImage` of its own. */
+  defaultOgImage?: NovanAsset | null;
+  contact?: { email?: string | null; phone?: string | null; address?: string | null } | null;
+  socialLinks?: { network?: string | null; url?: string | null }[] | null;
+  /** A Google Analytics 4 measurement ID, e.g. `G-ABC123`. */
+  analyticsId?: string | null;
+  [field: string]: unknown;
+}
+
+/** One redirect, as `GET /v1/delivery/redirects` sends it. */
+export interface NovanRedirect {
+  /** An address on the site: a path without a query or trailing slash. */
+  from: string;
+  /** Another path on the site, or a whole http(s) URL. */
+  to: string;
+  status: 301 | 302;
+}
+
+/** Every redirect of the token's space. */
+export interface NovanRedirects {
+  items: NovanRedirect[];
 }
