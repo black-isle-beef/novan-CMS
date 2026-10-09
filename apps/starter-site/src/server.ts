@@ -12,6 +12,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowedHosts, novanServerOptions, redirectsMaxAge, siteUrl } from './novan.server';
 import { CMS_PAGE_CACHE_CONTROL, NO_STORE, withCachePolicy } from './server/cache-policy';
+import { withoutFontPreloads } from './server/font-preloads';
 import { robotsTxt, sitemapXml } from './server/sitemap';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
@@ -88,7 +89,7 @@ app.use('/**', (req, res, next) => {
       if (!response) return next();
       // `req.path` is relative to this route's mount, so the address comes from `originalUrl`.
       if (response.status === 404 && !(PREVIEW_PARAM in req.query)) void reportNotFound(req.originalUrl.split('?')[0], req.get('referer'));
-      return writeResponseToNodeResponse(withCachePolicy(response), res);
+      return withoutFontPreloads(withCachePolicy(response)).then((page) => writeResponseToNodeResponse(page, res));
     })
     .catch(next);
 });

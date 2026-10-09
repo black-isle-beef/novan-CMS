@@ -1,4 +1,5 @@
 import { CMS_PAGE_CACHE_CONTROL, withCachePolicy } from './cache-policy';
+import { withoutFontPreloads } from './font-preloads';
 import { robotsTxt, sitemapXml } from './sitemap';
 
 describe('withCachePolicy', () => {
@@ -68,5 +69,34 @@ describe('robotsTxt', () => {
     expect(robotsTxt('https://www.example.com/', '/_novan')).toBe(
       'User-agent: *\nDisallow: /_novan/\n\nSitemap: https://www.example.com/sitemap.xml\n',
     );
+  });
+});
+
+describe('withoutFontPreloads', () => {
+  const head =
+    '<link rel="icon" href="favicon.ico">' +
+    '<link rel="preload" as="font" crossorigin="anonymous" href="/media/inter-latin-400-normal.woff2">' +
+    '<link rel="preload" href="/media/bootstrap-icons.woff2" as="font" crossorigin="anonymous">' +
+    '<link rel="preload" href="hero.jpg" as="image">' +
+    '<link rel="stylesheet" href="styles.css" media="print" data-beasties-media="all">';
+
+  it('takes out the font preloads and keeps every other link', async () => {
+    const response = await withoutFontPreloads(
+      new Response(`<head>${head}</head>`, { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': '999', 'Cache-Tag': 'space:s' } }),
+    );
+
+    expect(await response.text()).toBe(
+      '<head><link rel="icon" href="favicon.ico"><link rel="preload" href="hero.jpg" as="image">' +
+        '<link rel="stylesheet" href="styles.css" media="print" data-beasties-media="all"></head>',
+    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get('Cache-Tag')).toBe('space:s');
+    expect(response.headers.has('Content-Length')).toBe(false);
+  });
+
+  it('leaves responses other than pages alone', async () => {
+    const json = new Response(head, { headers: { 'Content-Type': 'application/json' } });
+
+    expect(await withoutFontPreloads(json)).toBe(json);
   });
 });

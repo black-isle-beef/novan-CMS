@@ -61,7 +61,12 @@ Every client site ships with sound SEO defaults and the everyday site features e
   Missing pages ("Redirect it" opens Redirects with the address filled in). The navigation editor arranges items with
   buttons (move up and down, into the item above and back out), not drag and drop.
 - **Lighthouse CI** (`lighthouserc.json`, CI job `lighthouse`): the production build on port 4000 with the seeded
-  tokens, three runs per page (`/`, `/about`, `/contact`), median scores asserted.
+  tokens, three runs per page (`/`, `/about`, `/contact`), median scores asserted. To get there the starter site
+  serves the design system's fonts itself (`$ds-enable-web-fonts: false` plus `@fontsource/inter` and
+  `@fontsource/montserrat-alternates`, Latin only): the design system's Google Fonts `@import` led the inlined
+  critical CSS and held back every first paint. Its server also drops the font preloads the critical CSS step adds
+  (`withoutFontPreloads`), so a page fetches only the fonts it uses. The rest of the gap is the design system's full
+  Bootstrap Icons font (134 KB), loaded by any page with icons, and is for the design system to fix.
 
 ## Out of scope
 

@@ -13,8 +13,8 @@ export function startAnalytics(document: Document, measurementId: string): void 
   if (!window || !/^G-[A-Z0-9]{4,16}$/.test(measurementId) || document.getElementById('novan-analytics')) return;
 
   window.dataLayer = window.dataLayer ?? [];
-  // gtag.js reads the `arguments` objects it is given, not arrays.
-  // eslint-disable-next-line prefer-rest-params
+  // gtag.js reads the `arguments` objects it is given, not arrays; the parameter list only types the calls.
+  // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-unused-vars
   const gtag = function (..._args: unknown[]) { window.dataLayer?.push(arguments); };
   gtag('consent', 'default', { ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied' });
   gtag('js', new Date());
