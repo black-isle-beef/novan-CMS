@@ -73,6 +73,41 @@
   border-radius: var(--bs-border-radius);
 }
 
+// The SEO tab's previews (docs/build/14-seo-site-features.md): the page as a search result, and as a shared card.
+.nv-seo-result,
+.nv-seo-card {
+  border: var(--bs-border-width) solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+}
+
+.nv-seo-result {
+  padding: 0.75rem;
+}
+
+.nv-seo-result-address {
+  overflow-wrap: anywhere;
+  color: var(--bs-secondary-color);
+}
+
+.nv-seo-result-title {
+  overflow-wrap: anywhere;
+  color: var(--ds-color-brand-primary);
+  font-size: 1.125rem;
+}
+
+.nv-seo-card {
+  overflow: hidden;
+}
+
+// Social networks show sharing images at about 1.91 : 1.
+.nv-seo-card-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.91 / 1;
+  object-fit: cover;
+  background-color: var(--ds-color-surface-muted);
+}
+
 @media (forced-colors: active) {
   .nv-editor-stage {
     border-color: CanvasText;

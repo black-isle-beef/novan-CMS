@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiResponse, ZodValidationPipe } from '@novan/api-common';
 import {
   apiIdSchema,
@@ -7,7 +7,9 @@ import {
   deliveryEntryQuerySchema,
   deliveryEntrySchema,
   deliveryPageQuerySchema,
+  deliveryRedirectsSchema,
   deliverySingletonQuerySchema,
+  notFoundReportSchema,
   sitemapQuerySchema,
   sitemapSchema,
 } from '@novan/shared-schemas';
@@ -16,7 +18,8 @@ import type { ApiTokenAccess } from './api-token-resolver';
 import { ApiTokenGuard, RequireTokenScope, TokenAccess } from './api-token.guard';
 import { CacheHeadersInterceptor } from './cache-headers.interceptor';
 import { ContentReader, type Delivered } from './content-reader.service';
-import { ApiTokenThrottlerGuard } from './rate-limit';
+import { ApiTokenThrottlerGuard, NotFoundReports } from './rate-limit';
+import { SiteReader } from './site-reader.service';
 
 const idPipe = new ZodValidationPipe(z.uuid('Expected an id (UUID).'));
 const apiIdPipe = new ZodValidationPipe(apiIdSchema);
@@ -26,7 +29,10 @@ const apiIdPipe = new ZodValidationPipe(apiIdSchema);
  * token decides which space and environment, and whether drafts are read.
  */
 abstract class ContentApiController {
-  constructor(protected readonly reader: ContentReader) {}
+  constructor(
+    protected readonly reader: ContentReader,
+    protected readonly site: SiteReader,
+  ) {}
 
   /** One page by its full path (`/` is the top-level `home` page) and locale. */
   @Get('pages')
@@ -78,6 +84,13 @@ abstract class ContentApiController {
   ): Promise<Delivered<unknown>> {
     return this.reader.sitemap(access, query);
   }
+
+  /** The space's redirects, for the site's server to apply before rendering (package 14). */
+  @Get('redirects')
+  @ApiResponse(deliveryRedirectsSchema)
+  redirects(@TokenAccess() access: ApiTokenAccess): Promise<Delivered<unknown>> {
+    return this.site.redirects(access);
+  }
 }
 
 /** Published content for client sites, cached by the CDN and purged on publish. Takes `nv_del_` tokens. */
@@ -87,8 +100,30 @@ abstract class ContentApiController {
 @UseInterceptors(CacheHeadersInterceptor)
 export class DeliveryController extends ContentApiController {
   // Declared here too: Nest reads constructor parameters from the class it instantiates.
-  constructor(reader: ContentReader) {
-    super(reader);
+  constructor(reader: ContentReader, site: SiteReader) {
+    super(reader, site);
+  }
+}
+
+/**
+ * Where a client site's server reports an address with no page (package 14). Recorded once per address and day,
+ * counting visits; limited per token to a few a second on top of the Delivery API's own limit. Never cached.
+ */
+@Controller('v1/delivery')
+@RequireTokenScope('delivery')
+@UseGuards(ApiTokenGuard, ApiTokenThrottlerGuard)
+export class NotFoundReportsController {
+  constructor(private readonly site: SiteReader) {}
+
+  @Post('not-found')
+  @HttpCode(202)
+  @ApiResponse(null, { status: 202 })
+  @NotFoundReports()
+  async notFound(
+    @TokenAccess() access: ApiTokenAccess,
+    @Body(new ZodValidationPipe(notFoundReportSchema)) report: z.output<typeof notFoundReportSchema>,
+  ): Promise<void> {
+    await this.site.recordNotFound(access, { path: report.path, referrer: report.referrer ?? null });
   }
 }
 
@@ -98,7 +133,7 @@ export class DeliveryController extends ContentApiController {
 @UseGuards(ApiTokenGuard, ApiTokenThrottlerGuard)
 @UseInterceptors(CacheHeadersInterceptor)
 export class PreviewController extends ContentApiController {
-  constructor(reader: ContentReader) {
-    super(reader);
+  constructor(reader: ContentReader, site: SiteReader) {
+    super(reader, site);
   }
 }

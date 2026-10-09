@@ -1,5 +1,11 @@
 <ds-header [navItems]="navItems()">
-  <a dsBrand class="fw-semibold text-decoration-none" routerLink="/">{{ siteName() }}</a>
+  <a dsBrand class="fw-semibold text-decoration-none" routerLink="/">
+    @if (logo(); as image) {
+      <img class="d-block" [src]="image.src" [attr.width]="image.width" [height]="image.height" alt="{{ siteName() }}" />
+    } @else {
+      {{ siteName() }}
+    }
+  </a>
 </ds-header>
 
 <!-- `#ds-main-content` is the target of the header's "Skip to main content" link. -->
@@ -7,4 +13,30 @@
   <router-outlet />
 </main>
 
-<ds-footer [linkGroups]="footerGroups()" [organizationName]="organisationName()" />
+@let details = contact();
+<ds-footer [linkGroups]="footerGroups()" [organizationName]="organisationName()">
+  @if (details.email || details.phone || details.address.length || social().length) {
+    <div dsFooterLegal class="d-flex flex-column flex-md-row gap-3 gap-md-6">
+      @if (details.email || details.phone || details.address.length) {
+        <address class="mb-0">
+          @for (line of details.address; track $index) {
+            <span class="d-block">{{ line }}</span>
+          }
+          @if (details.email) {
+            <a class="d-block" [href]="'mailto:' + details.email">{{ details.email }}</a>
+          }
+          @if (details.tel) {
+            <a class="d-block" [href]="details.tel">{{ details.phone }}</a>
+          }
+        </address>
+      }
+      @if (social().length) {
+        <ul class="list-unstyled d-flex flex-wrap gap-3 mb-0" aria-label="Social media">
+          @for (profile of social(); track profile.href) {
+            <li><a [href]="profile.href" rel="me noopener">{{ profile.label }}</a></li>
+          }
+        </ul>
+      }
+    </div>
+  }
+</ds-footer>

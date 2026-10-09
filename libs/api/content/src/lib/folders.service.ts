@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { badRequest, conflict, notFound } from '@novan/api-common';
 import type { AuthUser } from '@novan/api-auth';
-import { DbService, type DbTransaction, entries, folders, recordAudit } from '@novan/api-db';
+import { DbService, type DbTransaction, entries, folders, publishedContent, recordAudit } from '@novan/api-db';
 import type { createFolderRequestSchema, Folder, updateFolderRequestSchema } from '@novan/shared-schemas';
-import { and, asc, count, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, asc, count, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import { contentProblem } from './content-errors';
+import { type ContentEvent, ContentEvents } from './content-events';
 import { environmentId } from './entry-model';
 
 type CreateBody = z.output<typeof createFolderRequestSchema>;
@@ -14,11 +15,15 @@ type FolderRow = typeof folders.$inferSelect;
 
 /**
  * Folders of an environment, which give pages their addresses. A folder's `path` is kept by the database:
- * renaming or moving one renames everything below it, published addresses included.
+ * renaming or moving one renames everything below it, published addresses included (and the database redirects the
+ * old addresses, 0012_seo_site.sql).
  */
 @Injectable()
 export class FoldersService {
-  constructor(private readonly db: DbService) {}
+  constructor(
+    private readonly db: DbService,
+    private readonly events: ContentEvents,
+  ) {}
 
   list(user: AuthUser, spaceId: string, env: string): Promise<Folder[]> {
     return this.db.userDb(user.claims, async (tx) => {
@@ -54,11 +59,17 @@ export class FoldersService {
 
   /** Renames or moves a folder; the pages inside move with it, published or not. */
   async update(user: AuthUser, spaceId: string, env: string, id: string, body: UpdateBody): Promise<Folder> {
+    let event: ContentEvent | null = null;
     try {
-      return await this.db.userDb(user.claims, async (tx) => {
+      const result = await this.db.userDb(user.claims, async (tx) => {
         const envId = await environmentId(tx, spaceId, env);
         const current = await findFolder(tx, envId, id);
         if (body.parentId) await findFolder(tx, envId, body.parentId, 'parent');
+        const below = sql`starts_with(${publishedContent.fullPath}, ${current.path + '/'})`;
+        const published = await tx
+          .select({ entryId: publishedContent.entryId, fullPath: publishedContent.fullPath, cacheTags: publishedContent.cacheTags })
+          .from(publishedContent)
+          .where(and(eq(publishedContent.environmentId, envId), below));
 
         const [row] = await tx
           .update(folders)
@@ -77,8 +88,21 @@ export class FoldersService {
           targetId: id,
           diff: { environment: env, changed: Object.keys(body), ...(row.path !== current.path ? { from: current.path, to: row.path } : {}) },
         });
+        if (row.path !== current.path && published.length) {
+          event = {
+            type: 'paths.changed',
+            spaceId,
+            environmentId: envId,
+            entryIds: published.map((page) => page.entryId),
+            cacheTags: published.flatMap((page) => page.cacheTags),
+            paths: published.flatMap((page) => [page.fullPath, row.path + page.fullPath.slice(current.path.length)]),
+            actorId: user.id,
+          };
+        }
         return toFolder(row);
       });
+      if (event) this.events.emit(event);
+      return result;
     } catch (error) {
       throw contentProblem(error);
     }

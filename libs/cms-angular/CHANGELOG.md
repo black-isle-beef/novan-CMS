@@ -2,6 +2,18 @@
 
 All notable changes to `@black-isle-beef/cms-angular`. The package follows [semantic versioning](https://semver.org).
 
+## 0.5.0
+
+SEO and site features (docs/build/14-seo-site-features.md).
+
+- `createNovanRedirects` (`@black-isle-beef/cms-angular/server`): applies the CMS's redirects
+  (`GET /v1/delivery/redirects`) in the site's server before rendering, cached briefly in memory and at the edge.
+- `createNovanNotFoundReporter`: reports addresses with no page to `POST /v1/delivery/not-found`.
+- Structured data: `novanOrganizationJsonLd`, `novanBreadcrumbTrail`, `novanBreadcrumbJsonLd` and
+  `applyNovanJsonLd`.
+- `applyNovanSeo` takes `defaultImage`, the site's sharing image, for pages without `seo.ogImage`.
+- Types: `NovanSiteSettings`, `NovanRedirect`, `NovanRedirects`; `NovanSeoFields` documents `canonical` and
+  `ogImage`, which the seeded `page` type now has.
 ## 0.4.0
 
 Editing on the page (docs/build/12-visual-editor.md, 12b).

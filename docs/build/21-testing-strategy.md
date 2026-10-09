@@ -9,7 +9,7 @@ Every package's Verify section draws on these layers. When in doubt, test at the
 | API integration | Nest testing module + Supertest against local Supabase | `apps/api/src/**/*.int.spec.ts`, `apps/api-e2e` | Endpoints end to end with real Postgres: auth, permissions, validation, delivery caching headers | Every PR |
 | Component | Vitest + Angular TestBed + axe | `libs/admin/*`, `libs/blocks`, `libs/cms-angular` | Forms, editor panels, blocks, accessibility of each component | Every PR |
 | E2E | Playwright + `@axe-core/playwright` | `apps/admin-e2e`, `apps/starter-site-e2e` | User journeys tagged `@auth @schema @content @media @editor @workflow @seo @forms @i18n` | Every PR (affected), full suite nightly |
-| Performance | autocannon (API), Lighthouse CI (sites) | `tools/perf`, `lighthouserc.json` | Delivery p95 < 100 ms, Lighthouse perf ≥ 90 | Nightly + before release |
+| Performance | autocannon (API); production build budgets and the `angular-performance-optimizer` skill (sites) | `tools/perf`, each app's `project.json` | Delivery p95 < 100 ms; site bundles within budget | Nightly + before release (budgets on every build) |
 | Smoke | Playwright `@smoke` subset | `apps/admin-e2e` | Sign in, open editor, publish, page live | After every deploy |
 
 ## Rules

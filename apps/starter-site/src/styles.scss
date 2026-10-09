@@ -1,4 +1,15 @@
-// Novan design system: tokens, Bootstrap 5, Bootstrap Icons and component styles.
-@use '@black-isle-beef/novan-design-system/styles/styles';
+// Novan design system: tokens, Bootstrap 5, Bootstrap Icons and component styles. Its web fonts are served by the
+// site (below), not imported from Google Fonts: that import would hold back the first paint of every page.
+@use '@black-isle-beef/novan-design-system/styles/styles' with (
+  $ds-enable-web-fonts: false
+);
+// Inter (body) and Montserrat Alternates (headings), the weights the design system uses, Latin only.
+@use '@fontsource/inter/latin-400';
+@use '@fontsource/inter/latin-500';
+@use '@fontsource/inter/latin-600';
+@use '@fontsource/inter/latin-700';
+@use '@fontsource/montserrat-alternates/latin-500' as montserrat-alternates-500;
+@use '@fontsource/montserrat-alternates/latin-600' as montserrat-alternates-600;
+@use '@fontsource/montserrat-alternates/latin-700' as montserrat-alternates-700;
 // The CMS blocks (libs/blocks/src/styles, on the build's stylePreprocessorOptions.includePaths).
 @use 'novan-blocks';

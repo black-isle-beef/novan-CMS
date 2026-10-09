@@ -109,8 +109,15 @@ select e.space_id, e.id, 'page', 'Page', 'page', 'A web page built from blocks.'
    "type": "group", "required": false, "localised": true, "multiple": false, "fields": [
     {"id": "metaTitle", "apiId": "metaTitle", "label": "Search title", "help": "Leave empty to use the page title.",
      "type": "text", "required": false, "localised": true, "multiline": false, "max": 60},
-    {"id": "metaDescription", "apiId": "metaDescription", "label": "Search description", "type": "text",
+    {"id": "metaDescription", "apiId": "metaDescription", "label": "Search description",
+     "help": "One or two sentences on what the page offers. Leave empty to let search engines choose.", "type": "text",
      "required": false, "localised": true, "multiline": true, "max": 160},
+    {"id": "ogImage", "apiId": "ogImage", "label": "Sharing image",
+     "help": "Shown when the page is shared on social media. Leave empty to use the site's sharing image.",
+     "type": "media", "required": false, "localised": false, "accept": ["image"], "multiple": false, "requireAlt": true},
+    {"id": "canonical", "apiId": "canonical", "label": "Canonical address",
+     "help": "Only when this page copies another: the full address of the original. Leave empty otherwise.",
+     "type": "text", "required": false, "localised": false, "multiline": false, "max": 2048, "pattern": "https?://\\S+"},
     {"id": "noindex", "apiId": "noindex", "label": "Hide from search engines", "type": "boolean",
      "required": false, "localised": false, "default": false}
   ]},
@@ -249,12 +256,44 @@ cross join (
         ]}
       ]}
     ]$json$::jsonb),
-    ('siteSettings', 'Site settings', 'The site''s name and who runs it.', $json$[
+    ('siteSettings', 'Site settings', 'The site''s name, look in browsers and search results, and how to get in touch.', $json$[
       {"id": "siteName", "apiId": "siteName", "label": "Site name", "help": "Shown in the header and in browser tabs.",
        "type": "text", "required": true, "localised": true, "multiline": false, "max": 60},
       {"id": "organisationName", "apiId": "organisationName", "label": "Organisation name",
-       "help": "Shown in the copyright line.", "type": "text", "required": true, "localised": false,
-       "multiline": false, "max": 120}
+       "help": "Shown in the copyright line, and to search engines as who runs the site.", "type": "text", "required": true,
+       "localised": false, "multiline": false, "max": 120},
+      {"id": "logo", "apiId": "logo", "label": "Logo", "help": "Shown in the header instead of the site name. An SVG or a wide PNG works best.",
+       "type": "media", "required": false, "localised": false, "accept": ["image"], "multiple": false, "requireAlt": false},
+      {"id": "favicon", "apiId": "favicon", "label": "Browser tab icon",
+       "help": "A square image, at least 48 by 48 pixels: a PNG or an SVG.", "type": "media", "required": false,
+       "localised": false, "accept": ["image"], "multiple": false, "requireAlt": false},
+      {"id": "defaultOgImage", "apiId": "defaultOgImage", "label": "Sharing image",
+       "help": "Shown when a page without its own sharing image is shared on social media. 1200 by 630 pixels works best.",
+       "type": "media", "required": false, "localised": false, "accept": ["image"], "multiple": false, "requireAlt": true},
+      {"id": "contact", "apiId": "contact", "label": "Contact details", "help": "Shown in the footer, and to search engines.",
+       "type": "group", "required": false, "localised": false, "multiple": false, "fields": [
+        {"id": "email", "apiId": "email", "label": "Email address", "type": "text", "required": false, "localised": false,
+         "multiline": false, "max": 254, "pattern": "[^@\\s]+@[^@\\s]+\\.[^@\\s]+"},
+        {"id": "phone", "apiId": "phone", "label": "Phone number", "type": "text", "required": false, "localised": false,
+         "multiline": false, "max": 40, "pattern": "\\+?[0-9 ()-]{6,40}"},
+        {"id": "address", "apiId": "address", "label": "Postal address", "type": "text", "required": false,
+         "localised": false, "multiline": true, "max": 300}
+      ]},
+      {"id": "socialLinks", "apiId": "socialLinks", "label": "Social media", "help": "Your profiles, shown in the footer.",
+       "type": "group", "required": false, "localised": false, "multiple": true, "max": 10, "fields": [
+        {"id": "network", "apiId": "network", "label": "Network", "type": "select", "required": true, "localised": false,
+         "multiple": false, "options": [
+          {"value": "facebook", "label": "Facebook"}, {"value": "instagram", "label": "Instagram"},
+          {"value": "linkedin", "label": "LinkedIn"}, {"value": "x", "label": "X"},
+          {"value": "youtube", "label": "YouTube"}, {"value": "tiktok", "label": "TikTok"},
+          {"value": "other", "label": "Other"}
+        ]},
+        {"id": "url", "apiId": "url", "label": "Profile address", "type": "text", "required": true, "localised": false,
+         "multiline": false, "max": 2048, "pattern": "https://\\S+"}
+      ]},
+      {"id": "analyticsId", "apiId": "analyticsId", "label": "Google Analytics measurement ID",
+       "help": "Starts G-, for example G-ABC123XYZ. Leave empty for no analytics.", "type": "text", "required": false,
+       "localised": false, "multiline": false, "max": 20, "pattern": "G-[A-Z0-9]{4,16}"}
     ]$json$::jsonb),
     ('notFound', 'Page not found', 'What people see at an address with no page.', $json$[
       {"id": "title", "apiId": "title", "label": "Title", "type": "text", "required": true, "localised": true,
@@ -422,7 +461,10 @@ select pg_temp.seed_published_entry('00000000-0000-4000-8000-000000000711', 'nav
 
 select pg_temp.seed_published_entry('00000000-0000-4000-8000-000000000712', 'siteSettings', 'site-settings', $json${
   "siteName": "Novan demo site",
-  "organisationName": "Novan Web Services"
+  "organisationName": "Novan Web Services",
+  "defaultOgImage": {"assetId": "00000000-0000-4000-8000-000000000501"},
+  "contact": {"email": "hello@example.com"},
+  "socialLinks": [{"network": "linkedin", "url": "https://www.linkedin.com/company/example"}]
 }$json$::jsonb);
 
 select pg_temp.seed_published_entry('00000000-0000-4000-8000-000000000713', 'notFound', 'not-found', $json${
@@ -447,7 +489,13 @@ values
   ('00000000-0000-4000-8000-000000000501', '00000000-0000-4000-8000-000000000701', '00000000-0000-4000-8000-000000000200',
    'body.00000000-0000-4000-8000-000000000901.image'),
   ('00000000-0000-4000-8000-000000000502', '00000000-0000-4000-8000-000000000702', '00000000-0000-4000-8000-000000000200',
-   'body.00000000-0000-4000-8000-000000000913.image');
+   'body.00000000-0000-4000-8000-000000000913.image'),
+  ('00000000-0000-4000-8000-000000000501', '00000000-0000-4000-8000-000000000712', '00000000-0000-4000-8000-000000000200',
+   'defaultOgImage');
+
+-- A redirect from an address the demo site used to have (package 14).
+insert into public.redirects (space_id, from_path, to_path, status, created_by)
+values ('00000000-0000-4000-8000-000000000200', '/about-us', '/about', 301, '00000000-0000-4000-8000-000000000001');
 
 -- The starter site's delivery and preview tokens, for local development only (NOVAN_DELIVERY_TOKEN and
 -- NOVAN_PREVIEW_TOKEN in .env.example). They are fixed, public values so `npm run db:reset` leaves the site and

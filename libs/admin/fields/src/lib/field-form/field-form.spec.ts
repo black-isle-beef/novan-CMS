@@ -43,9 +43,9 @@ describe('FieldForm', () => {
     expect(el.querySelector('label')?.textContent).toContain('(required)');
     expect(input('Summary').tagName).toBe('TEXTAREA');
     expect(el.textContent).not.toContain('Secret');
-    // The rule is part of the control's description.
-    const help = el.querySelector(`#${input('Title').getAttribute('aria-describedby')}`);
-    expect(help?.textContent?.trim()).toBe('Up to 80 characters.');
+    // The rule, and the count of characters so far, are part of the control's description.
+    const described = (input('Title').getAttribute('aria-describedby') ?? '').split(' ').map((id) => el.querySelector(`#${id}`)?.textContent?.trim());
+    expect(described).toEqual(['Up to 80 characters.', '5 of 80 characters']);
 
     await type('Title', 'Changed');
     expect(value()).toEqual({ title: 'Changed', _uid: 'kept' });

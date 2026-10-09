@@ -304,6 +304,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"not_found_hits": {
+                  Row: {
+                    "day": string,"hits": number,"last_referrer": string | null,"last_seen_at": string,"path": string,"space_id": string
+                  }
+                  Insert: {
+                    "day": string,"hits"?: number,"last_referrer"?: string | null,"last_seen_at"?: string,"path": string,"space_id": string
+                  }
+                  Update: {
+                    "day"?: string,"hits"?: number,"last_referrer"?: string | null,"last_seen_at"?: string,"path"?: string,"space_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "not_found_hits_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"organisations": {
                   Row: {
                     "created_at": string,"id": string,"name": string,"plan": string
@@ -361,6 +380,25 @@ isOneToOne: false
       referencedColumns: ["id","space_id"]
     },{
       foreignKeyName: "published_content_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"redirects": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"from_path": string,"id": string,"space_id": string,"status": number,"to_path": string,"updated_at": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"from_path": string,"id"?: string,"space_id": string,"status"?: number,"to_path": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"from_path"?: string,"id"?: string,"space_id"?: string,"status"?: number,"to_path"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "redirects_space_id_fkey"
       columns: ["space_id"]
 isOneToOne: false
       referencedRelation: "spaces"
@@ -465,6 +503,12 @@ isOneToOne: false
                            },
 "onboarding_steps":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
+                           },
+"record_not_found":
+{ Args: { "missed_path": string,"referrer"?: string,"space": string }; Returns: undefined
+                           },
+"site_path":
+{ Args: { "full_path": string }; Returns: string
                            },
 "space_requires_approval":
 { Args: { "space": string }; Returns: boolean

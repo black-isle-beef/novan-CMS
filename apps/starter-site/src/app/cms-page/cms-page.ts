@@ -1,13 +1,22 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, Injector, input } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
-import { applyNovanSeo, NovanBlocks, NovanPreview } from '@black-isle-beef/cms-angular';
+import {
+  applyNovanJsonLd,
+  applyNovanSeo,
+  novanBreadcrumbJsonLd,
+  novanBreadcrumbTrail,
+  NovanBlocks,
+  NovanPreview,
+} from '@black-isle-beef/cms-angular';
 import type { SiteContent } from '../site/site-content';
+import { SITE_URL } from '../site/site-url';
 import type { CmsPageState } from './cms-page.resolver';
 
 /**
  * Every address on the site: a CMS page rendered from its blocks, the CMS's "page not found" content (or a
- * built-in one), or a short apology when the content could not be loaded.
+ * built-in one), or a short apology when the content could not be loaded. A page sets its SEO tags (the site's
+ * sharing image when it has none) and `BreadcrumbList` structured data.
  */
 @Component({
   selector: 'site-cms-page',
@@ -37,14 +46,19 @@ export class CmsPage {
 
   private readonly injector = inject(Injector);
   private readonly title = inject(Title);
+  private readonly siteUrl = inject(SITE_URL);
 
   constructor() {
     effect(() => {
       const state = this.shown();
-      const siteName = this.site()?.siteName;
+      const site = this.site();
+      const siteName = site?.siteName;
       const titled = (text: string) => (siteName && text !== siteName ? `${text} | ${siteName}` : text);
-      if (state.status === 'found') {
-        applyNovanSeo(state.page, { injector: this.injector, siteName, titleTemplate: titled });
+      const page = state.status === 'found' ? state.page : null;
+      const trail = page ? novanBreadcrumbJsonLd(novanBreadcrumbTrail(page, { homeName: siteName }), this.siteUrl) : null;
+      applyNovanJsonLd('breadcrumbs', trail, { injector: this.injector });
+      if (page) {
+        applyNovanSeo(page, { injector: this.injector, siteName, titleTemplate: titled, baseUrl: this.siteUrl, defaultImage: site?.shareImage });
       } else if (state.status === 'not-found') {
         this.title.setTitle(titled(state.notFound?.title?.trim() || 'Page not found'));
       } else {

@@ -1,0 +1,184 @@
+<nav aria-label="Breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'settings']">{{ copy.settings }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Navigation</li>
+  </ol>
+</nav>
+
+<h1 class="mb-1">Navigation</h1>
+<p class="lead text-body-secondary mb-4">The menu at the top of every page, and the links in the footer.</p>
+
+@if (loading()) {
+  <nv-skeleton label="Loading the navigation" [lines]="8" />
+} @else if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (missing()) {
+  <ds-alert variant="info" title="Not set up for this site yet">Ask your developer to add navigation to this site.</ds-alert>
+} @else {
+  <div class="col-lg-8">
+    <div id="navigation-status" class="mb-3">
+      @if (status(); as message) {
+        <ds-alert variant="success">{{ message }}</ds-alert>
+      }
+    </div>
+    @if (problem(); as message) {
+      <div id="navigation-problem" tabindex="-1" class="mb-3">
+        <ds-alert variant="danger">{{ message }}</ds-alert>
+      </div>
+    }
+    @if (summary().length) {
+      <div id="navigation-errors" class="alert alert-danger" tabindex="-1" role="alert" aria-labelledby="navigation-errors-title">
+        <h2 id="navigation-errors-title" class="h6">Fix these first</h2>
+        <ul class="mb-0">
+          @for (item of summary(); track $index) {
+            <li><a [href]="item.href">{{ item.text }}</a></li>
+          }
+        </ul>
+      </div>
+    }
+    @if (!canEdit()) {
+      <ds-alert variant="info" class="mb-3">You can look at the navigation, but your role cannot change it.</ds-alert>
+    }
+    <div class="visually-hidden" role="status">{{ announcement() }}</div>
+
+    @for (tree of trees(); track tree.field.id) {
+      @let names = words(tree);
+      <section class="mb-5" [attr.aria-labelledby]="'nav-' + tree.field.apiId + '-heading'">
+        <h2 class="h4" [id]="'nav-' + tree.field.apiId + '-heading'">{{ tree.field.label }}</h2>
+        @if (tree.field.help) {
+          <p class="text-body-secondary">{{ tree.field.help }}</p>
+        }
+        <div [id]="'field-' + tree.field.apiId" tabindex="-1">
+          @if (items(tree).length) {
+            <ol class="list-unstyled mb-3">
+              @for (item of items(tree); track $index; let i = $index, first = $first, last = $last) {
+                @let itemName = name(item, tree.nameKey, i + 1);
+                <li class="border rounded p-3 mb-3">
+                  <fieldset>
+                    <legend class="fs-6 fw-semibold">{{ names.Item }} {{ i + 1 }}</legend>
+                    @for (field of ownFields(tree); track field.id) {
+                      <nv-field
+                        [field]="field"
+                        [path]="path(tree.field.apiId, i, field.apiId)"
+                        [value]="item[field.apiId]"
+                        (valueChange)="setField([tree.field.apiId], i, field, $event)"
+                      />
+                    }
+                  </fieldset>
+
+                  @if (canEdit()) {
+                    @let id = buttonId(tree, i);
+                    <div class="d-flex flex-wrap gap-1 mb-2" role="group" [attr.aria-label]="'Arrange ' + itemName">
+                      <button type="button" class="btn btn-sm btn-secondary" [id]="id + '-up'" [disabled]="first" (click)="move(tree, i, -1)">
+                        <i class="bi bi-arrow-up" aria-hidden="true"></i><span class="visually-hidden">Move {{ itemName }} up</span>
+                      </button>
+                      <button type="button" class="btn btn-sm btn-secondary" [id]="id + '-down'" [disabled]="last" (click)="move(tree, i, 1)">
+                        <i class="bi bi-arrow-down" aria-hidden="true"></i><span class="visually-hidden">Move {{ itemName }} down</span>
+                      </button>
+                      @if (tree.nests && !first && !children(tree, i).length) {
+                        <button type="button" class="btn btn-sm btn-secondary" [id]="id + '-into'" (click)="nest(tree, i)">
+                          Make it a {{ names.child }} of {{ name(items(tree)[i - 1], tree.nameKey, i) }}
+                        </button>
+                      }
+                      <button type="button" class="btn btn-sm btn-danger" [id]="id + '-remove'" (click)="remove(tree, i)">
+                        Remove<span class="visually-hidden"> {{ itemName }}</span>
+                      </button>
+                    </div>
+                  }
+
+                  @if (tree.children; as childField) {
+                    <div class="ms-md-4" [id]="listId(tree, i)" tabindex="-1">
+                      @if (children(tree, i).length) {
+                        <h3 class="h6 mt-2">{{ childField.label }} of {{ itemName }}</h3>
+                        <ol class="list-unstyled mb-2">
+                          @for (child of children(tree, i); track $index; let c = $index, firstChild = $first, lastChild = $last) {
+                            @let childName = name(child, tree.childNameKey, c + 1);
+                            <li class="border-start border-3 ps-3 mb-3">
+                              <fieldset>
+                                <legend class="fs-6">{{ names.Child }} {{ c + 1 }}</legend>
+                                @for (field of childField.fields; track field.id) {
+                                  <nv-field
+                                    [field]="field"
+                                    [path]="path(tree.field.apiId, i, childField.apiId, c, field.apiId)"
+                                    [value]="child[field.apiId]"
+                                    (valueChange)="setField([tree.field.apiId, i, childField.apiId], c, field, $event)"
+                                  />
+                                }
+                              </fieldset>
+                              @if (canEdit()) {
+                                @let childId = buttonId(tree, c, i);
+                                <div class="d-flex flex-wrap gap-1" role="group" [attr.aria-label]="'Arrange ' + childName">
+                                  <button type="button" class="btn btn-sm btn-secondary" [id]="childId + '-up'" [disabled]="firstChild" (click)="move(tree, c, -1, i)">
+                                    <i class="bi bi-arrow-up" aria-hidden="true"></i><span class="visually-hidden">Move {{ childName }} up</span>
+                                  </button>
+                                  <button type="button" class="btn btn-sm btn-secondary" [id]="childId + '-down'" [disabled]="lastChild" (click)="move(tree, c, 1, i)">
+                                    <i class="bi bi-arrow-down" aria-hidden="true"></i><span class="visually-hidden">Move {{ childName }} down</span>
+                                  </button>
+                                  @if (tree.nests && canAdd(tree)) {
+                                    <button type="button" class="btn btn-sm btn-secondary" [id]="childId + '-out'" (click)="unnest(tree, i, c)">
+                                      Make it a {{ names.item }}
+                                    </button>
+                                  }
+                                  <button type="button" class="btn btn-sm btn-danger" [id]="childId + '-remove'" (click)="remove(tree, c, i)">
+                                    Remove<span class="visually-hidden"> {{ childName }}</span>
+                                  </button>
+                                </div>
+                              }
+                            </li>
+                          }
+                        </ol>
+                      }
+                      @if (canAdd(tree, i)) {
+                        <button type="button" class="btn btn-sm btn-secondary" [id]="tree.field.apiId + '-add-' + i" (click)="add(tree, i)">
+                          <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add a {{ names.child }}<span class="visually-hidden"> to {{ itemName }}</span>
+                        </button>
+                      }
+                    </div>
+                  }
+                </li>
+              }
+            </ol>
+          } @else {
+            <p class="text-body-secondary">Nothing here yet.</p>
+          }
+        </div>
+        @if (canAdd(tree)) {
+          <button type="button" class="btn btn-secondary" [id]="tree.field.apiId + '-add'" (click)="add(tree)">
+            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add a {{ names.item }}
+          </button>
+        } @else if (canEdit() && tree.field.max) {
+          <p class="small text-body-secondary">This has the most it can hold ({{ tree.field.max }}).</p>
+        }
+      </section>
+    }
+
+    @if (canEdit()) {
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        @if (canPublish()) {
+          <button type="button" class="btn btn-primary" [disabled]="busy() !== null" [attr.aria-busy]="busy() === 'publishing'" (click)="publish()">
+            {{ copy.publishChanges }}
+          </button>
+        }
+        <button
+          type="button"
+          class="btn btn-secondary"
+          [disabled]="busy() !== null"
+          [attr.aria-busy]="busy() === 'saving'"
+          [attr.aria-keyshortcuts]="shortcutKeys.save"
+          (click)="save()"
+        >
+          {{ copy.saveDraft }}
+        </button>
+        <span class="small text-body-secondary ms-2">
+          @if (dirty()) {
+            {{ copy.unsavedChanges }}
+          } @else if (live()) {
+            The site shows this navigation.
+          } @else {
+            Saved, but not published yet.
+          }
+        </span>
+      </div>
+    }
+  </div>
+}

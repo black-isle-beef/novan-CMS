@@ -47,7 +47,7 @@ import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, ne, or, type SQL
 import type { z } from 'zod';
 import { canPublish } from './content-access';
 import { contentProblem } from './content-errors';
-import { type ContentEvent, ContentEvents } from './content-events';
+import { type ContentEvent, ContentEvents, type EntryUnpublishedEvent } from './content-events';
 import { allowedActions, refusal, storedStatus, type WorkflowActor, workflowState } from './workflow';
 import { type NotifiedPage, WorkflowNotifier } from './workflow-notifier';
 import {
@@ -656,10 +656,14 @@ export class EntriesService {
     }
   }
 
-  /** Moves the entry to another folder. A published entry's address moves straight away, so that needs an editor. */
+  /**
+   * Moves the entry to another folder. A published entry's address moves straight away, so that needs an editor; the
+   * database redirects its old address to the new one (0012_seo_site.sql).
+   */
   async move(user: AuthUser, space: SpaceAccess, env: string, id: string, body: MoveBody): Promise<Entry> {
+    let event: ContentEvent | null = null;
     try {
-      return await this.db.userDb(user.claims, async (tx) => {
+      const result = await this.db.userDb(user.claims, async (tx) => {
         const envId = await environmentId(tx, space.id, env);
         const entry = await liveEntry(tx, envId, id);
         if (entry.publishedVersionId && !canPublish(user, space)) {
@@ -673,12 +677,21 @@ export class EntriesService {
         let path: string | null = null;
         if (entry.publishedVersionId) {
           const [published] = await tx
-            .select({ fullPath: publishedContent.fullPath })
+            .select({ fullPath: publishedContent.fullPath, cacheTags: publishedContent.cacheTags })
             .from(publishedContent)
             .where(eq(publishedContent.entryId, entry.id));
           // The published slug can differ from a newer draft's, so keep it.
           path = entryPath(target, lastSegment(published.fullPath));
           await tx.update(publishedContent).set({ fullPath: path }).where(eq(publishedContent.entryId, entry.id));
+          event = {
+            type: 'paths.changed',
+            spaceId: space.id,
+            environmentId: envId,
+            entryIds: [entry.id],
+            cacheTags: published.cacheTags,
+            paths: [published.fullPath, path],
+            actorId: user.id,
+          };
         }
         await recordAudit(tx, {
           spaceId: space.id,
@@ -690,6 +703,8 @@ export class EntriesService {
         });
         return readEntry(tx, envId, id);
       });
+      this.emit(event);
+      return result;
     } catch (error) {
       throw contentProblem(error);
     }
@@ -871,7 +886,7 @@ async function recordUsages(tx: DbTransaction, entry: EntryRow, refs: readonly M
  * Removes the published copy and its record of files used, and marks the entry as a draft; returns the
  * event to announce after commit.
  */
-async function takeOffline(tx: DbTransaction, model: EntryModel, entry: EntryRow, user: AuthUser): Promise<ContentEvent> {
+async function takeOffline(tx: DbTransaction, model: EntryModel, entry: EntryRow, user: AuthUser): Promise<EntryUnpublishedEvent> {
   const [removed] = await tx
     .delete(publishedContent)
     .where(eq(publishedContent.entryId, entry.id))

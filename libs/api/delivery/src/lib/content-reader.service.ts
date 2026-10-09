@@ -186,13 +186,22 @@ export class ContentReader {
     return items[0];
   }
 
-  /** Every page's address and when it last changed, for a site's sitemap.xml. */
+  /**
+   * Every page's address and when it last changed, for a site's sitemap.xml. Pages hidden from search engines
+   * (`seo.noindex`, docs/build/14-seo-site-features.md) are left out.
+   */
   async sitemap(access: ApiTokenAccess, query: SitemapQuery): Promise<Delivered<Sitemap>> {
     const src = this.source(access);
     const rows = await this.db.serviceDb
       .select({ path: src.path, locale: src.locale, updatedAt: isoTimestamp(src.updatedAt) })
       .from(src)
-      .where(and(eq(src.kind, 'page'), query.locale ? eq(src.locale, query.locale) : undefined))
+      .where(
+        and(
+          eq(src.kind, 'page'),
+          query.locale ? eq(src.locale, query.locale) : undefined,
+          sql`(${src.data} #> '{seo,noindex}') is distinct from 'true'::jsonb`,
+        ),
+      )
       .orderBy(asc(src.path), asc(src.locale))
       .limit(SITEMAP_LIMIT);
     return {

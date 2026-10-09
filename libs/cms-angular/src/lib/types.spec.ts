@@ -1,7 +1,14 @@
 // A type-only import in a test, never part of the published build.
 // eslint-disable-next-line @nx/enforce-module-boundaries
-import type { BlockNode, DeliveryAsset, DeliveryEntriesPage, DeliveryEntry, ProseMirrorNode as SchemaNode } from '@novan/shared-schemas';
-import type { NovanAsset, NovanBlockNode, NovanEntry, Paged, ProseMirrorNode } from './types';
+import type {
+  BlockNode,
+  DeliveryAsset,
+  DeliveryEntriesPage,
+  DeliveryEntry,
+  DeliveryRedirects,
+  ProseMirrorNode as SchemaNode,
+} from '@novan/shared-schemas';
+import type { NovanAsset, NovanBlockNode, NovanEntry, NovanRedirects, Paged, ProseMirrorNode } from './types';
 
 // The SDK is published on its own, so it copies the delivered shapes instead of importing
 // @novan/shared-schemas. These assignments stop the copies drifting: they fail to compile if the API's
@@ -17,5 +24,6 @@ describe('SDK types', () => {
     expect(check<Same<NovanAsset, DeliveryAsset>>()).toBe(true);
     expect(check<Same<NovanBlockNode, BlockNode>>()).toBe(true);
     expect(check<Same<ProseMirrorNode, SchemaNode>>()).toBe(true);
+    expect(check<Same<NovanRedirects, DeliveryRedirects>>()).toBe(true);
   });
 });

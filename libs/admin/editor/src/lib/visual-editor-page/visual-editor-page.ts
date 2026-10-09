@@ -60,11 +60,22 @@ import { EditorApi } from '../editor-api';
 import { EditorStore } from '../editor-store';
 import { getIn } from '../patches';
 import { PreviewBridge } from '../preview-bridge';
+import { type SeoDefaults, SeoPanel } from '../seo-panel/seo-panel';
 import { EditorPresence } from '../presence/editor-presence';
 import { initials, LOCK_TTL_MS } from '../presence/presence';
 
 export type Device = 'mobile' | 'tablet' | 'desktop';
 export type View = 'draft' | 'live';
+export type PanelTab = 'blocks' | 'seo';
+
+/** The side panel's tabs, in order. */
+export const PANEL_TABS: readonly { id: PanelTab; label: string }[] = [
+  { id: 'blocks', label: 'Blocks' },
+  { id: 'seo', label: 'SEO' },
+];
+
+/** The singleton the SEO previews fall back to: the site's name and sharing image (supabase/seed.sql). */
+const SITE_SETTINGS_TYPE = 'siteSettings';
 
 /** The screen sizes the preview can take, in CSS pixels. */
 export const DEVICES: readonly { id: Device; label: string; width: number; icon: string }[] = [
@@ -95,7 +106,7 @@ const clock = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
  */
 @Component({
   selector: 'nv-visual-editor-page',
-  imports: [BlockOutline, BlockPanel, BlockPicker, DsAlertComponent, MediaPickerDialog, PageWorkflow, PublishChecklist, RouterLink, Skeleton],
+  imports: [BlockOutline, BlockPanel, BlockPicker, DsAlertComponent, MediaPickerDialog, PageWorkflow, PublishChecklist, RouterLink, SeoPanel, Skeleton],
   providers: [PreviewBridge, EditorStore, EditorPresence, FieldFormContext, MediaPicker],
   templateUrl: './visual-editor-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -113,6 +124,8 @@ export class VisualEditorPage implements HasUnsavedChanges {
   protected readonly presence = inject(EditorPresence);
   protected readonly copy = copy;
   protected readonly devices = DEVICES;
+  protected readonly panelTabs = PANEL_TABS;
+  protected readonly sitePathOf = sitePath;
   protected readonly shortcutKeys = shortcutKeys;
 
   /** Route parameters (component input binding). */
@@ -127,6 +140,10 @@ export class VisualEditorPage implements HasUnsavedChanges {
   protected readonly blockTypes = signal<BlockType[]>([]);
 
   protected readonly device = signal<Device>('desktop');
+  /** The side panel's open tab: the selected block and the outline, or the page's search and sharing settings. */
+  protected readonly panelTab = signal<PanelTab>('blocks');
+  /** What the SEO previews fall back to, from site settings. */
+  protected readonly seoDefaults = signal<SeoDefaults>({ siteName: null, shareImageId: null });
   protected readonly view = signal<View>('draft');
   private readonly token = signal<SignedPreviewToken | null>(null);
   /** The token the frame was opened with; a refresh goes through the bridge and leaves the address alone. */
@@ -188,6 +205,9 @@ export class VisualEditorPage implements HasUnsavedChanges {
     const token = this.openedWith();
     return token ? `${site}${sitePath(entry.path)}?novan_preview=${encodeURIComponent(token)}` : null;
   });
+
+  /** The page type's seo group, edited in the SEO tab. */
+  protected readonly seoField = computed(() => this.contentType()?.fields.find((field) => field.apiId === 'seo'));
 
   // --- Blocks ---
 
@@ -398,7 +418,10 @@ export class VisualEditorPage implements HasUnsavedChanges {
     });
 
     this.bridge.listener = {
-      select: (uid) => this.store.selected.set(uid),
+      select: (uid) => {
+        this.panelTab.set('blocks');
+        this.store.selected.set(uid);
+      },
       insert: (uid, position) => {
         const place = locate(this.store.data(), this.roots(), this.blockTypes(), uid);
         if (place && this.canEdit()) this.openPicker({ list: place.list, index: position === 'before' ? place.index : place.index + 1 });
@@ -444,8 +467,42 @@ export class VisualEditorPage implements HasUnsavedChanges {
 
   // --- Blocks ---
 
+  // --- Side panel ---
+
+  protected showTab(tab: PanelTab): void {
+    this.panelTab.set(tab);
+  }
+
+  /** Left and right arrows, Home and End move between the tabs and open the one reached. */
+  protected tabKey(event: KeyboardEvent): void {
+    const index = PANEL_TABS.findIndex((tab) => tab.id === this.panelTab());
+    const last = PANEL_TABS.length - 1;
+    const next =
+      event.key === 'ArrowRight' ? (index + 1) % PANEL_TABS.length
+      : event.key === 'ArrowLeft' ? (index + last) % PANEL_TABS.length
+      : event.key === 'Home' ? 0
+      : event.key === 'End' ? last
+      : -1;
+    if (next < 0) return;
+    event.preventDefault();
+    this.panelTab.set(PANEL_TABS[next].id);
+    this.focus(`nv-panel-tab-${PANEL_TABS[next].id}`);
+  }
+
+  /** The SEO tab's fields: one undo step per field while typing. */
+  protected changeSeo(value: Record<string, unknown>): void {
+    const data = this.store.data();
+    const before = (data['seo'] ?? {}) as Record<string, unknown>;
+    const keys = Object.keys(value).filter((key) => !sameJson(value[key], before[key]));
+    if (!keys.length) return;
+    this.commit({ ...data, seo: value }, `seo.${keys.sort().join(',')}`);
+  }
+
+  // --- Blocks ---
+
   /** Selects a block from the outline: outlined and scrolled to on the page. */
   protected select(uid: string): void {
+    this.panelTab.set('blocks');
     this.store.selected.set(uid);
     this.bridge.send({ type: 'select', payload: { uid } });
     this.bridge.send({ type: 'scrollTo', payload: { uid } });
@@ -707,10 +764,25 @@ export class VisualEditorPage implements HasUnsavedChanges {
       this.useToken(token);
       this.openedWith.set(token.token);
       void this.presence.start(spaceId, entryId);
+      void this.loadSeoDefaults(spaceId, entries.find((e) => e.contentType === SITE_SETTINGS_TYPE)?.id ?? null);
     } catch (error) {
       this.loadError.set(problemMessage(error));
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  /** The site's name and sharing image, for the SEO previews. Without site settings the previews simply show less. */
+  private async loadSeoDefaults(spaceId: string, settingsId: string | null): Promise<void> {
+    if (!settingsId) return;
+    try {
+      const { data } = await firstValueFrom(this.content.getEntry(spaceId, settingsId));
+      const share = data['defaultOgImage'] as { assetId?: unknown } | null | undefined;
+      const shareImageId = typeof share?.assetId === 'string' ? share.assetId : null;
+      this.seoDefaults.set({ siteName: typeof data['siteName'] === 'string' ? data['siteName'] : null, shareImageId });
+      if (shareImageId) this.mediaPicker.load([shareImageId]);
+    } catch {
+      // The previews fall back to the page alone.
     }
   }
 

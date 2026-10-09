@@ -84,6 +84,13 @@ describe('applyNovanSeo', () => {
     });
   });
 
+  it("shares the site's image when the page has none of its own", () => {
+    const site = { id: 's', url: 'https://api.example.com/v1/assets/s/site.jpg?v=2', filename: 'site.jpg', mime: 'image/jpeg', width: 1200, height: 630, alt: 'Our office', focal: null };
+    apply(page({ title: 'About' }), { baseUrl: 'https://www.example.com', defaultImage: site });
+
+    expect(head()).toMatchObject({ ogImage: site.url, ogImageAlt: 'Our office', twitterCard: 'summary_large_image' });
+  });
+
   it('ignores an unsafe canonical override', () => {
     apply(page({ title: 'X', seo: { canonical: 'javascript:alert(1)' } }), { baseUrl: 'https://www.example.com' });
     expect(head()['canonical']).toBe('https://www.example.com/about');
