@@ -15,7 +15,8 @@ Every client site ships with sound SEO defaults and the everyday site features e
 5. Navigation editor: tree editor for the `navigation` singleton (links to pages or external URLs), used by `ds-header`/`ds-footer`.
 6. Site settings singleton screen: logo, favicon, contact details, social links, default OG image, analytics ID.
 7. Structured data: `Organization` and `BreadcrumbList` JSON-LD from the SDK.
-8. Lighthouse CI on the starter site in CI: performance ≥ 90, accessibility = 100, SEO = 100 on the seeded pages.
+8. ~~Lighthouse CI on the starter site in CI: performance ≥ 90, accessibility = 100, SEO = 100 on the seeded pages.~~
+   Dropped: see "Performance and SEO checks" below.
 
 ## Decisions made during this package
 
@@ -60,14 +61,15 @@ Every client site ships with sound SEO defaults and the everyday site features e
   Save draft for authors and up, Publish changes for editors and up), Redirects (with CSV import and export) and
   Missing pages ("Redirect it" opens Redirects with the address filled in). The navigation editor arranges items with
   buttons (move up and down, into the item above and back out), not drag and drop.
-- **Lighthouse CI** (`lighthouserc.json`, CI job `lighthouse`): the production build on port 4000 with the seeded
-  tokens, three runs per page (`/`, `/about`, `/contact`), median scores asserted. To get there the starter site
-  serves the design system's fonts itself (`$ds-enable-web-fonts: false` plus `@fontsource/inter` and
-  `@fontsource/montserrat-alternates`, Latin only): the design system's Google Fonts `@import` led the inlined
-  critical CSS and held back every first paint. Its server also drops the font preloads the critical CSS step adds
-  (`withoutFontPreloads`), so a page fetches only the fonts it uses. The rest of the gap is the design system's full
-  Bootstrap Icons font (134 KB), loaded by any page with icons, and is for the design system to fix.
-
+- **Performance and SEO checks** (replaces task 8, at the owner's decision on 2026-10-09): there is no Lighthouse CI.
+  Its simulated mobile score varied by up to 0.1 between runs of the same build. Client-site performance is audited
+  with the `angular-performance-optimizer` skill and held by the production build's `budgets`; SEO is audited with
+  the `angular-site-seo-architect` skill and tested by the `@seo` e2e tests; accessibility by axe in every e2e run.
+- **Fonts:** the starter site serves the design system's fonts itself (`$ds-enable-web-fonts: false` plus
+  `@fontsource/inter` and `@fontsource/montserrat-alternates`, Latin only): the design system's Google Fonts
+  `@import` led the inlined critical CSS and held back every first paint. Its server also drops the font preloads the
+  critical CSS step adds (`withoutFontPreloads`), so a page fetches only the fonts it uses. The design system's full
+  Bootstrap Icons font (134 KB), loaded by any page with icons, is for the design system to fix.
 ## Out of scope
 
 Multilingual hreflang (16).
@@ -77,10 +79,8 @@ Multilingual hreflang (16).
 ```bash
 npx nx test api starter-site cms-angular
 npx nx e2e starter-site-e2e --grep @seo   # meta tags, canonical, redirect 301, sitemap includes new page, robots honours noindex
-npx lhci autorun
 ```
 
 ## Definition of done
 
 - [x] Changing a page slug creates a working 301
-- [ ] Lighthouse thresholds enforced in CI

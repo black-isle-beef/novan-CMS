@@ -1,4 +1,4 @@
-﻿# Angular specific
+# Angular specific
 /dist/
 /out-tsc/
 /tmp/
@@ -38,6 +38,3 @@ yarn-error.log*
 __screenshots__/
 
 vitest.config.*.timestamp*
-
-# Lighthouse CI's working folder (reports go to dist/.lighthouseci)
-/.lighthouseci/

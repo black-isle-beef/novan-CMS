@@ -21,7 +21,7 @@ Every PR is linted, unit-tested, database-tested, audited and e2e-tested automat
 
 ## Out of scope
 
-Deployment jobs (20), Lighthouse budgets (14).
+Deployment jobs (20).
 
 ## Verify
 
