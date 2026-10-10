@@ -279,6 +279,19 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"job_dead_letters": {
+                  Row: {
+                    "attempts": number,"enqueued_at": string,"error": string,"failed_at": string,"id": string,"message": NonNullable<Json>,"msg_id": number,"queue": string
+                  }
+                  Insert: {
+                    "attempts": number,"enqueued_at": string,"error": string,"failed_at"?: string,"id"?: string,"message": NonNullable<Json>,"msg_id": number,"queue": string
+                  }
+                  Update: {
+                    "attempts"?: number,"enqueued_at"?: string,"error"?: string,"failed_at"?: string,"id"?: string,"message"?: NonNullable<Json>,"msg_id"?: number,"queue"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"members": {
                   Row: {
                     "created_at": string,"invited_by": string | null,"role_id": string,"space_id": string,"user_id": string
@@ -455,6 +468,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"scheduled_actions": {
+                  Row: {
+                    "action": string,"created_at": string,"created_by": string | null,"entry_id": string | null,"error": string | null,"finished_at": string | null,"id": string,"release_id": string | null,"run_at": string,"space_id": string,"status": string
+                  }
+                  Insert: {
+                    "action": string,"created_at"?: string,"created_by"?: string | null,"entry_id"?: string | null,"error"?: string | null,"finished_at"?: string | null,"id"?: string,"release_id"?: string | null,"run_at": string,"space_id": string,"status"?: string
+                  }
+                  Update: {
+                    "action"?: string,"created_at"?: string,"created_by"?: string | null,"entry_id"?: string | null,"error"?: string | null,"finished_at"?: string | null,"id"?: string,"release_id"?: string | null,"run_at"?: string,"space_id"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "scheduled_actions_entry_id_space_id_fkey"
+      columns: ["entry_id","space_id"]
+isOneToOne: false
+      referencedRelation: "entries"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "scheduled_actions_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"space_locales": {
                   Row: {
                     "code": string,"created_at": string,"fallback_code": string | null,"is_default": boolean,"name": string,"path_prefix": string,"space_id": string
@@ -519,6 +557,9 @@ isOneToOne: false
                            },
 "editor_topic_space":
 { Args: { "topic": string }; Returns: string
+                           },
+"enqueue_due_scheduled_actions":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "has_space_role":
 { Args: { "roles": (string)[],"space": string }; Returns: boolean

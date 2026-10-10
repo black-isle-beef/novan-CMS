@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { JWT_VERIFIER_CONFIG } from '@novan/api-auth';
 import { DbService, entryVersions, spaces } from '@novan/api-db';
 import { CloudflareClient } from '@novan/api-delivery';
+import { JobWorker } from '@novan/api-jobs';
 import type {
   CreatedApiToken,
   DeliveryEntriesPage,
@@ -72,6 +73,12 @@ describe.skipIf(!hasDatabase)('localisation', () => {
     delete: (path: string) => request(server()).delete(`/v1/management/spaces/${space}${path}`).auth(user, { type: 'bearer' }),
   });
   const delivery = (path: string) => request(server()).get(`/v1/delivery${path}`).auth(token.token, { type: 'bearer' });
+  /** Runs the space's queued purge jobs, as the worker would. */
+  const runPurges = async (): Promise<void> => {
+    while (await app.get(JobWorker).runOnce('purge', { spaceId: space })) {
+      // until none are left
+    }
+  };
 
   async function publish(body: object): Promise<Entry> {
     const created = await as(editor).post('/environments/main/entries', body);
@@ -150,6 +157,7 @@ describe.skipIf(!hasDatabase)('localisation', () => {
     });
 
     it('a developer adds locales; the prefix defaults to the language', async () => {
+      await runPurges();
       cloudflare.purgeTags.mockClear();
       const fr = await as(developer).post('/locales', { code: 'fr-FR', name: 'French (France)', fallback: 'en-GB' });
       expect(fr.status, JSON.stringify(fr.body)).toBe(201);
@@ -161,6 +169,7 @@ describe.skipIf(!hasDatabase)('localisation', () => {
         ['cy-GB', null, 'cym'],
       ]);
       // Every page of the space may read differently now.
+      await runPurges();
       expect(cloudflare.purgeTags).toHaveBeenCalledWith(expect.arrayContaining([`space:${space}`]));
     });
 

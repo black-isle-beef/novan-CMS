@@ -1,6 +1,7 @@
-import { ContentEvents, type EntryPublishedEvent, type EntryUnpublishedEvent } from '@novan/api-content';
+import type { EntryPublishedEvent, EntryUnpublishedEvent } from '@novan/api-content';
 import { type DbService, spaceLocales } from '@novan/api-db';
-import { MediaEvents } from '@novan/api-media';
+import { type JobContext, JobHandlers } from '@novan/api-jobs';
+import type { MediaEvent } from '@novan/api-media';
 import { CachePurge } from './cache-purge.service';
 import { CloudflareClient, CloudflarePurgeError } from './cloudflare-client';
 
@@ -45,12 +46,13 @@ function dbWith(settings: unknown, locales: { locales: object[]; prefixes: boole
 
 function setup(options: { enabled?: boolean; settings?: unknown; locales?: { locales: object[]; prefixes: boolean } } = {}) {
   const cloudflare = mockCloudflare(options.enabled);
-  const content = new ContentEvents();
-  const media = new MediaEvents();
-  const purge = new CachePurge(cloudflare.client, content, media, dbWith(options.settings ?? {}, options.locales ?? { locales: [english], prefixes: false }));
+  const jobs = new JobHandlers();
+  const purge = new CachePurge(cloudflare.client, dbWith(options.settings ?? {}, options.locales ?? { locales: [english], prefixes: false }), jobs);
   purge.onModuleInit();
-  return { ...cloudflare, content, media, purge };
+  return { ...cloudflare, jobs, purge };
 }
+
+const context: JobContext = { queue: 'purge', msgId: '1', attempt: 1, final: false, enqueuedAt: '2026-10-04T09:00:00Z' };
 
 describe('CachePurge', () => {
   it('purges the entry, its type, the unfiltered lists and the sitemap on publish', async () => {
@@ -76,12 +78,15 @@ describe('CachePurge', () => {
     expect(purgeTags.mock.calls[0][0]).toContain(`sitemap:${environmentId}`);
   });
 
-  it('listens to the content and media buses', async () => {
-    const { content, media, purgeTags } = setup();
-    content.emit(published);
-    media.emit({ type: 'asset.replaced', spaceId, assetId: 'asset-1', cacheTags: ['asset:asset-1'], actorId: 'user-1' });
-    await vi.waitFor(() => expect(purgeTags).toHaveBeenCalledTimes(2));
+  it('runs the content, media and token jobs of the purge queue', async () => {
+    const { jobs, purgeTags } = setup();
+    const event: MediaEvent = { type: 'asset.replaced', spaceId, assetId: 'asset-1', cacheTags: ['asset:asset-1'], actorId: 'user-1' };
+    await jobs.find('purge', 'content-changed')?.({ type: 'content-changed', spaceId, event: published }, context);
+    await jobs.find('purge', 'media-changed')?.({ type: 'media-changed', spaceId, event }, context);
+    await jobs.find('purge', 'token-revoked')?.({ type: 'token-revoked', spaceId, tokenId: 'token-1' }, context);
+    expect(purgeTags).toHaveBeenCalledTimes(3);
     expect(purgeTags).toHaveBeenCalledWith(['asset:asset-1', `overflow:${spaceId}`]);
+    expect(purgeTags).toHaveBeenLastCalledWith(['token:token-1']);
   });
 
   it("falls back to the page's URLs on the space's domains when purge by tag is refused", async () => {
@@ -127,11 +132,14 @@ describe('CachePurge', () => {
     expect(purgeTags.mock.calls[1][0]).toHaveLength(14);
   });
 
-  it('never throws, even when both purges fail', async () => {
+  it('throws when both purges fail, or there is nothing to fall back to, so the worker retries', async () => {
     const { purge, purgeTags, purgeUrls } = setup({ settings: { domains: ['https://example.com'] } });
     purgeTags.mockRejectedValue(new Error('down'));
     purgeUrls.mockRejectedValue(new Error('still down'));
-    await expect(purge.contentChanged(published)).resolves.toBeUndefined();
+    await expect(purge.contentChanged(published)).rejects.toThrow('still down');
+    await expect(purge.mediaChanged({ type: 'asset.deleted', spaceId, assetId: 'a', cacheTags: ['asset:a'], actorId: 'u' })).rejects.toThrow(
+      'no URLs to fall back to',
+    );
   });
 
   it('purges moved pages, their old and new addresses, the sitemap and the redirects', async () => {

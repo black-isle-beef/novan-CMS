@@ -34,7 +34,8 @@
       "dependsOn": ["build"],
       "options": {
         "buildTarget": "api:build",
-        "runBuildTargetDependencies": false
+        "runBuildTargetDependencies": false,
+        "args": ["--with-worker"]
       },
       "configurations": {
         "development": {

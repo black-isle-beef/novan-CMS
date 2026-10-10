@@ -98,6 +98,24 @@ export function refusal(action: WorkflowAction, entry: WorkflowEntry, actor: Wor
   return { code: 'insufficient_role', detail: 'Your role cannot do this.' };
 }
 
+/**
+ * Why `actor` may not schedule `action` for later, or null when they may (docs/build/17-scheduling-releases-webhooks.md).
+ * Only who is asking is checked now, as for publishing: what the page is like then (complete, live) is checked when it
+ * runs, so a page can be scheduled to go live and to come down again while it is still a draft.
+ */
+export function scheduleRefusal(
+  action: 'publish' | 'unpublish',
+  entry: WorkflowEntry,
+  actor: WorkflowActor,
+): { code: string; detail: string } | null {
+  if (entry.state === 'archived') return { code: 'workflow_state', detail: stateDetail(action, entry.state) };
+  const approval = action === 'publish' && entry.requireApproval;
+  if (has(actor, approval ? APPROVERS : EDITORS)) return null;
+  return approval
+    ? { code: 'approval_required', detail: 'This space needs approval to publish: only space admins schedule publishing.' }
+    : { code: 'insufficient_role', detail: 'Your role cannot do this.' };
+}
+
 /** The state an entry is in, from what is stored: a published page with newer changes is a draft again. */
 export function workflowState(entry: { status: EntryStatus; currentVersionId: string | null; publishedVersionId: string | null }): WorkflowState {
   if (entry.status === 'archived') return 'archived';

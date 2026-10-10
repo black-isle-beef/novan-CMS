@@ -6,6 +6,7 @@ import { EntriesController, ReviewsController } from './entries.controller';
 import { EntriesService } from './entries.service';
 import { FoldersController } from './folders.controller';
 import { FoldersService } from './folders.service';
+import { ScheduledActionRunner } from './scheduled-actions';
 import { LocalesController } from './locales.controller';
 import { LocalesService } from './locales.service';
 import { VersionsController } from './versions.controller';
@@ -16,6 +17,7 @@ import { NOTIFY_CONFIG, notifyConfigFromEnv, WorkflowNotifier } from './workflow
   controllers: [EntriesController, ReviewsController, VersionsController, FoldersController, LocalesController],
   providers: [
     EntriesService,
+    ScheduledActionRunner,
     FoldersService,
     LocalesService,
     ContentEvents,

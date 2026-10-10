@@ -210,6 +210,38 @@ export type PendingReview = z.infer<typeof pendingReviewSchema>;
 export const workflowMessageRequestSchema = z.strictObject({ message: messageSchema }).default({});
 export type WorkflowMessageRequest = z.input<typeof workflowMessageRequestSchema>;
 
+// --- Scheduling (docs/build/17-scheduling-releases-webhooks.md) ---------------------------------
+
+export const scheduledActionKinds = ['publish', 'unpublish'] as const;
+export type ScheduledActionKind = (typeof scheduledActionKinds)[number];
+
+/** scheduled → queued (being carried out) → done | failed; scheduled → cancelled. */
+export const scheduledActionStatuses = ['scheduled', 'queued', 'done', 'failed', 'cancelled'] as const;
+export type ScheduledActionStatus = (typeof scheduledActionStatuses)[number];
+
+/** A publish or unpublish set for a time (GET `.../entries/:id/schedule`). Times are UTC ISO 8601. */
+export const scheduledActionSchema = z.object({
+  id: z.uuid(),
+  entryId: z.uuid(),
+  action: z.enum(scheduledActionKinds),
+  runAt: z.string(),
+  status: z.enum(scheduledActionStatuses),
+  /** Why it failed, in words. */
+  error: z.string().nullable(),
+  createdBy: z.uuid().nullable(),
+  createdByName: z.string().nullable(),
+  createdAt: z.string(),
+  finishedAt: z.string().nullable(),
+});
+export type ScheduledAction = z.infer<typeof scheduledActionSchema>;
+
+/** POST `.../entries/:id/schedule`: publish or unpublish the page at `runAt`, a future time with its offset. */
+export const scheduleActionRequestSchema = z.strictObject({
+  action: z.enum(scheduledActionKinds),
+  runAt: z.iso.datetime({ offset: true, message: 'Give a date and time, e.g. 2026-10-12T09:00:00Z.' }),
+});
+export type ScheduleActionRequest = z.input<typeof scheduleActionRequestSchema>;
+
 /** POST `.../request-changes`: what to change, for the author. */
 export const requestChangesRequestSchema = z.strictObject({
   comment: z.string().trim().min(1, 'Say what should change.').max(2000),

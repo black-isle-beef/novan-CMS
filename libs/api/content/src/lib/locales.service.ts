@@ -119,9 +119,9 @@ export class LocalesService {
       const result = await this.db.userDb(user.claims, async (tx) => {
         const { action, diff } = await apply(tx, await this.read(tx, spaceId));
         await recordAudit(tx, { spaceId, actorId: user.id, action, targetType: 'space', targetId: spaceId, diff });
+        await this.events.emit(tx, { type: 'locales.changed', spaceId, actorId: user.id });
         return this.read(tx, spaceId);
       });
-      this.events.emit({ type: 'locales.changed', spaceId, actorId: user.id });
       return result;
     } catch (error) {
       throw localeProblem(error);

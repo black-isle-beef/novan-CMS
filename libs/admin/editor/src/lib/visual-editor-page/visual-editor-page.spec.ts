@@ -200,6 +200,7 @@ async function render({
     workflow: vi.fn(() =>
       of({ state: 'draft', requireApproval: false, live: false, actions: role === 'editor' ? ['edit', 'publish', 'archive'] : ['edit'], review: null }),
     ),
+    scheduledActions: vi.fn(() => of([])),
     references: vi.fn(() => of([])),
     diff: vi.fn(() => of({ from: 'a', to: 'b', changes: [] })),
   };

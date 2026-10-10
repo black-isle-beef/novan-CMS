@@ -51,7 +51,7 @@ import {
 import type { z } from 'zod';
 import { type ExpectedType, inspectFile, type InspectedFile } from './file-inspector';
 import { withMediaProblems } from './media-errors';
-import { type MediaEvent, MediaEvents } from './media-events';
+import { MediaEvents } from './media-events';
 import { assetPath, MediaStorage, pendingPath } from './media-storage';
 
 type ListQuery = z.output<typeof listAssetsQuerySchema>;
@@ -278,9 +278,9 @@ export class AssetsService {
       });
       await this.storage.place(pending, path, file.bytes, file.mime);
       if (path !== current.path) await this.storage.remove([current.path]);
+      await this.events.emit(tx, { type: 'asset.replaced', spaceId, assetId: id, cacheTags: [cacheTag.asset(id)], actorId: user.id });
       return readAsset(tx, spaceId, id);
     });
-    this.emit({ type: 'asset.replaced', spaceId, assetId: id, cacheTags: [cacheTag.asset(id)], actorId: user.id });
     return result;
   }
 
@@ -305,9 +305,9 @@ export class AssetsService {
           targetId: id,
           diff: { filename: current.filename, usedOnPages: count },
         });
+        await this.events.emit(tx, { type: 'asset.deleted', spaceId, assetId: id, cacheTags: [cacheTag.asset(id)], actorId: user.id });
       }),
     );
-    this.emit({ type: 'asset.deleted', spaceId, assetId: id, cacheTags: [cacheTag.asset(id)], actorId: user.id });
   }
 
   /** Takes the asset out of the bin. */
@@ -340,10 +340,6 @@ export class AssetsService {
       await this.storage.remove([pending]);
       throw error;
     }
-  }
-
-  private emit(event: MediaEvent): void {
-    this.events.emit(event);
   }
 }
 

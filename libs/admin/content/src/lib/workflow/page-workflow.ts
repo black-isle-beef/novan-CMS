@@ -13,12 +13,21 @@ import {
 import { DsAlertComponent, DsModalComponent, DsSpinnerComponent } from '@black-isle-beef/novan-design-system';
 import { Confirm, copy, shortcutKeys } from '@novan/admin-shell';
 import { problemMessage } from '@novan/admin-spaces';
-import { type BlockType, type ContentType, type Entry, type EntryWorkflow, sitePath, type WorkflowAction } from '@novan/shared-schemas';
+import {
+  type BlockType,
+  type ContentType,
+  type Entry,
+  type EntryWorkflow,
+  type ScheduledAction,
+  sitePath,
+  type WorkflowAction,
+} from '@novan/shared-schemas';
 import { firstValueFrom } from 'rxjs';
 import { type SideBySideRow, sideBySide } from '../change-text';
 import type { CheckItem } from '../checklist/checklist';
 import { PublishChecklist } from '../checklist/publish-checklist';
 import { ContentApi } from '../content-api';
+import { formatUk, fromUkDateTime, ukDateTime } from './uk-time';
 
 /** The actions that open a dialog. */
 export type WorkflowDialog = Extract<WorkflowAction, 'publish' | 'approve' | 'submit' | 'requestChanges'>;
@@ -30,8 +39,9 @@ const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle
  * A page's place in the publishing workflow (docs/build/13-workflow-publishing.md), for the form view and the visual
  * editor: where it stands (waiting for review, changes asked for), the actions the API says the person may take, and
  * their dialogs. Publishing shows what changed since the live version side by side, the pre-publish checklist and an
- * optional message for the version; unpublishing names the pages that link here. Before an action the page saves
- * its unsaved changes through `prepare`.
+ * optional message for the version, and lets it be scheduled for a date and time in UK time instead
+ * (docs/build/17-scheduling-releases-webhooks.md); what is scheduled is listed, with a way to cancel it. Unpublishing
+ * names the pages that link here. Before an action the page saves its unsaved changes through `prepare`.
  */
 @Component({
   selector: 'nv-page-workflow',
@@ -78,6 +88,14 @@ export class PageWorkflow {
   protected readonly changes = signal<SideBySideRow[] | null>(null);
   protected readonly changesError = signal<string | null>(null);
   protected readonly comparing = signal(false);
+  /** The page's scheduled actions, newest first. */
+  protected readonly scheduled = signal<ScheduledAction[]>([]);
+  /** In the publish dialog: publish now, or at a set time. */
+  protected readonly when = signal<'now' | 'later'>('now');
+  protected readonly scheduleDate = signal('');
+  protected readonly scheduleTime = signal('');
+  protected readonly scheduleError = signal<string | null>(null);
+  protected readonly formatUk = formatUk;
 
   protected readonly can = (action: WorkflowAction): boolean => this.workflow()?.actions.includes(action) ?? false;
   protected readonly errors = computed(() => this.checks().filter((item) => item.severity === 'error').length);
@@ -93,6 +111,14 @@ export class PageWorkflow {
     return entry.publishedVersionId !== null && entry.publishedVersionId !== entry.currentVersionId;
   });
   protected readonly publishLabel = computed(() => (this.entry().publishedVersionId ? copy.publishChanges : copy.publish));
+  /** Actions still to happen. */
+  protected readonly waitingActions = computed(() => this.scheduled().filter((a) => a.status === 'scheduled' || a.status === 'queued'));
+  /** The latest action, when it failed: the person should know it did not happen. */
+  protected readonly failedAction = computed(() => {
+    const latest = this.scheduled().find((a) => a.status !== 'cancelled');
+    return latest?.status === 'failed' ? latest : null;
+  });
+  protected readonly scheduling = computed(() => this.dialog() === 'publish' && this.when() === 'later');
 
   constructor() {
     // Reload when the page changes state or version.
@@ -120,6 +146,15 @@ export class PageWorkflow {
     this.message.set('');
     this.comment.set('');
     this.commentError.set(false);
+    // Scheduling starts at the next whole hour, in UK time.
+    const next = new Date();
+    next.setUTCMinutes(0, 0, 0);
+    next.setUTCHours(next.getUTCHours() + 1);
+    const { date, time } = ukDateTime(next);
+    this.when.set('now');
+    this.scheduleDate.set(date);
+    this.scheduleTime.set(time);
+    this.scheduleError.set(null);
     this.dialog.set(dialog);
     if (dialog === 'publish' || dialog === 'approve') void this.loadChanges();
   }
@@ -130,6 +165,21 @@ export class PageWorkflow {
 
   protected setMessage(event: Event): void {
     this.message.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  protected setWhen(when: 'now' | 'later'): void {
+    this.when.set(when);
+    this.scheduleError.set(null);
+  }
+
+  protected setScheduleDate(event: Event): void {
+    this.scheduleDate.set((event.target as HTMLInputElement).value);
+    this.scheduleError.set(null);
+  }
+
+  protected setScheduleTime(event: Event): void {
+    this.scheduleTime.set((event.target as HTMLInputElement).value);
+    this.scheduleError.set(null);
   }
 
   protected setComment(event: Event): void {
@@ -145,6 +195,10 @@ export class PageWorkflow {
       case 'publish':
       case 'approve':
         if (this.errors()) return;
+        if (this.scheduling()) {
+          await this.schedulePublish();
+          return;
+        }
         await this.run(async () => {
           const entry = await firstValueFrom(dialog === 'approve' ? this.api.approve(spaceId, id, message) : this.api.publish(spaceId, id, message));
           return { entry, done: `${dialog === 'approve' ? 'Approved and published' : 'Published'}. It is live at ${sitePath(entry.publishedPath ?? entry.path)}.` };
@@ -168,6 +222,47 @@ export class PageWorkflow {
         }));
         return;
       }
+    }
+  }
+
+  /** Cancels a scheduled action that has not happened yet. */
+  protected async cancelScheduled(action: ScheduledAction): Promise<void> {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.problem.set(null);
+    try {
+      await firstValueFrom(this.api.cancelScheduled(this.spaceId(), this.entry().id, action.id));
+      await this.loadScheduled();
+      this.done.emit(`Cancelled. It will not be ${action.action === 'publish' ? 'published' : 'unpublished'} on ${formatUk(action.runAt)}.`);
+    } catch (error) {
+      this.problem.set(problemMessage(error));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /** Schedules the publish for the date and time entered, in UK time. */
+  private async schedulePublish(): Promise<void> {
+    const runAt = fromUkDateTime(this.scheduleDate(), this.scheduleTime());
+    if (!runAt) {
+      this.scheduleError.set('Enter a date and a time that exists in the UK.');
+      return;
+    }
+    if (runAt.getTime() <= Date.now()) {
+      this.scheduleError.set('Choose a time in the future.');
+      return;
+    }
+    this.busy.set(true);
+    this.problem.set(null);
+    try {
+      const action = await firstValueFrom(this.api.schedule(this.spaceId(), this.entry().id, { action: 'publish', runAt: runAt.toISOString() }));
+      this.dialog.set(null);
+      await this.loadScheduled();
+      this.done.emit(`Scheduled. ${this.entry().title} will be published on ${formatUk(action.runAt)} (UK time), as it is then.`);
+    } catch (error) {
+      this.problem.set(problemMessage(error));
+    } finally {
+      this.busy.set(false);
     }
   }
 
@@ -237,11 +332,23 @@ export class PageWorkflow {
   }
 
   private async load(key: string): Promise<void> {
+    void this.loadScheduled();
     try {
       const workflow = await firstValueFrom(this.api.workflow(this.spaceId(), this.entry().id));
       if (key === this.keyOf(this.entry())) this.workflow.set(workflow);
     } catch (error) {
       this.problem.set(problemMessage(error));
+    }
+  }
+
+  private async loadScheduled(): Promise<void> {
+    const id = this.entry().id;
+    try {
+      const actions = await firstValueFrom(this.api.scheduledActions(this.spaceId(), id));
+      if (id === this.entry().id) this.scheduled.set(actions);
+    } catch {
+      // The schedule is extra information; the workflow's own error covers a page that cannot be read.
+      this.scheduled.set([]);
     }
   }
 

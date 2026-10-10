@@ -1,5 +1,5 @@
 import { type WorkflowAction, workflowActions, type WorkflowState, workflowStates } from '@novan/shared-schemas';
-import { allowedActions, canTake, refusal, storedStatus, type WorkflowActor, workflowState } from './workflow';
+import { allowedActions, canTake, refusal, scheduleRefusal, storedStatus, type WorkflowActor, workflowState } from './workflow';
 
 type Who = 'admin' | 'developer' | 'editor' | 'author' | 'viewer' | 'staff' | 'outsider';
 
@@ -130,6 +130,26 @@ describe('workflow', () => {
     expect(refusal('edit', { ...draft, state: 'archived' }, actors.admin)?.detail).toContain('Restore it first');
     expect(refusal('unpublish', draft, actors.editor)).toMatchObject({ code: 'not_published' });
     expect(refusal('archive', draft, actors.author)).toMatchObject({ code: 'insufficient_role' });
+  });
+
+  it('lets editors schedule publishing and unpublishing whatever the page is like now, except archived', () => {
+    const draft = { state: 'draft' as const, live: false, requireApproval: false };
+    for (const who of ['admin', 'developer', 'editor', 'staff'] as const) {
+      expect(scheduleRefusal('publish', draft, actors[who])).toBeNull();
+      // Not live yet, but it may be by then.
+      expect(scheduleRefusal('unpublish', draft, actors[who])).toBeNull();
+    }
+    expect(scheduleRefusal('publish', draft, actors.author)).toMatchObject({ code: 'insufficient_role' });
+    expect(scheduleRefusal('unpublish', draft, actors.viewer)).toMatchObject({ code: 'insufficient_role' });
+    expect(scheduleRefusal('publish', { ...draft, state: 'archived' }, actors.admin)?.detail).toContain('Restore it first');
+  });
+
+  it('with approval on, only space admins and agency staff schedule publishing', () => {
+    const draft = { state: 'in_review' as const, live: true, requireApproval: true };
+    expect(scheduleRefusal('publish', draft, actors.admin)).toBeNull();
+    expect(scheduleRefusal('publish', draft, actors.staff)).toBeNull();
+    expect(scheduleRefusal('publish', draft, actors.editor)).toMatchObject({ code: 'approval_required' });
+    expect(scheduleRefusal('unpublish', draft, actors.editor)).toBeNull();
   });
 
   it('reads the state from what is stored, and stores it back', () => {

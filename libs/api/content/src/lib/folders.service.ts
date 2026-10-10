@@ -6,7 +6,7 @@ import type { createFolderRequestSchema, Folder, updateFolderRequestSchema } fro
 import { and, asc, count, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import { contentProblem } from './content-errors';
-import { type ContentEvent, ContentEvents } from './content-events';
+import { ContentEvents } from './content-events';
 import { environmentId } from './entry-model';
 
 type CreateBody = z.output<typeof createFolderRequestSchema>;
@@ -59,9 +59,8 @@ export class FoldersService {
 
   /** Renames or moves a folder; the pages inside move with it, published or not. */
   async update(user: AuthUser, spaceId: string, env: string, id: string, body: UpdateBody): Promise<Folder> {
-    let event: ContentEvent | null = null;
     try {
-      const result = await this.db.userDb(user.claims, async (tx) => {
+      return await this.db.userDb(user.claims, async (tx) => {
         const envId = await environmentId(tx, spaceId, env);
         const current = await findFolder(tx, envId, id);
         if (body.parentId) await findFolder(tx, envId, body.parentId, 'parent');
@@ -89,7 +88,7 @@ export class FoldersService {
           diff: { environment: env, changed: Object.keys(body), ...(row.path !== current.path ? { from: current.path, to: row.path } : {}) },
         });
         if (row.path !== current.path && published.length) {
-          event = {
+          await this.events.emit(tx, {
             type: 'paths.changed',
             spaceId,
             environmentId: envId,
@@ -97,12 +96,10 @@ export class FoldersService {
             cacheTags: published.flatMap((page) => page.cacheTags),
             paths: published.flatMap((page) => [page.fullPath, row.path + page.fullPath.slice(current.path.length)]),
             actorId: user.id,
-          };
+          });
         }
         return toFolder(row);
       });
-      if (event) this.events.emit(event);
-      return result;
     } catch (error) {
       throw contentProblem(error);
     }
