@@ -56,5 +56,8 @@ change, with whether machine translation is set up.
   `ScheduledActionRunner` in the worker carries each out through `EntriesService` as whoever scheduled it, with
   their role at that moment. What the page or role refuses fails the action with the reason (`error`), shown on the
   page; archiving a page or moving it to the bin cancels what waits for it.
+- Housekeeping (`ContentHousekeeping`, 0018): every night entries in the bin for 30 days are deleted for good
+  (`entry.purged` in the audit log), and autosave versions older than 90 days are pruned unless current, published, or
+  named by a review request or a release.
 
 Run `nx test api-content` (pure helpers) and `nx test api` (HTTP and database).

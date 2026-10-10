@@ -682,6 +682,12 @@ isOneToOne: false
 "onboarding_steps":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
+"prune_autosave_versions":
+{ Args: { "batch"?: number,"keep"?: string }; Returns: number
+                           },
+"purge_binned_entries":
+{ Args: { "batch"?: number,"older_than"?: string }; Returns: number
+                           },
 "record_not_found":
 { Args: { "missed_path": string,"referrer"?: string,"space": string }; Returns: undefined
                            },

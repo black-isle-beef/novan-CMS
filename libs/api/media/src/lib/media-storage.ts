@@ -56,6 +56,13 @@ export class MediaStorage {
     if (error) this.logger.warn(`Could not remove ${paths.join(', ')}: ${error.message}`);
   }
 
+  /** Removes the files, throwing when Storage refuses, so the caller keeps its record and tries again later. */
+  async removeOrThrow(paths: string[]): Promise<void> {
+    if (!paths.length) return;
+    const { error } = await this.bucket.remove(paths);
+    if (error) throw new Error(`Could not remove ${paths.length} file(s) from Storage: ${error.message}`);
+  }
+
   /** The file, resized when transformations are on and options are given. */
   async read(path: string, transform?: ImageTransform): Promise<{ bytes: Buffer; contentType: string } | null> {
     const { data, error } = await this.bucket.download(path, transform ? { transform } : undefined);

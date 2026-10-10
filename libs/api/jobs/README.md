@@ -7,8 +7,8 @@ Background jobs on Supabase Queues (pgmq), package 17. The queues and the dead-l
 | --- | --- |
 | `publish` | `scheduled-action`: a scheduled publish or unpublish of a page, or a release's publish, come due (`@novan/api-content`, 0015, 0016) |
 | `purge` | `content-changed`, `media-changed`, `token-revoked`: CDN purges (`@novan/api-delivery`) |
-| `webhooks` | webhook deliveries |
-| `housekeeping` | purging the bin, pruning autosaves, expiring preview tokens |
+| `webhooks` | `dispatch` (a change, fanned out to subscribed webhooks) and `deliver` (one signed request) (`@novan/api-webhooks`) |
+| `housekeeping` | `purge-bin`, `prune-autosaves` (`@novan/api-content`) and `purge-assets` (`@novan/api-media`), queued by pg_cron at 03:30 UTC (0018) |
 
 - **Sending.** `enqueue(tx, queue, job)` sends in the caller's transaction, so a job exists exactly when its change
   commits. It works inside `DbService.userDb` too (it steps out of the `authenticated` role for the send).
