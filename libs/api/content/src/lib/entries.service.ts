@@ -12,8 +12,11 @@ import {
   folders,
   profiles,
   publishedContent,
+  isCheckViolation,
+  isUniqueViolation,
   recordAudit,
   reviewRequests,
+  scheduledActions,
   spaceLocales,
   spaces,
 } from '@novan/api-db';
@@ -40,6 +43,10 @@ import {
   type PendingReview,
   type ReviewDecision,
   type ReviewRequest,
+  type ScheduledAction,
+  type ScheduledActionKind,
+  type ScheduledActionStatus,
+  type scheduleActionRequestSchema,
   slugify,
   type translateEntryRequestSchema,
   type updateEntryRequestSchema,
@@ -52,8 +59,8 @@ import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, ne, or, type SQL
 import type { z } from 'zod';
 import { canPublish } from './content-access';
 import { contentProblem } from './content-errors';
-import { type ContentEvent, ContentEvents, type EntryUnpublishedEvent } from './content-events';
-import { allowedActions, refusal, storedStatus, type WorkflowActor, workflowState } from './workflow';
+import { ContentEvents, type EntryUnpublishedEvent } from './content-events';
+import { allowedActions, refusal, scheduleRefusal, storedStatus, type WorkflowActor, workflowState } from './workflow';
 import { type NotifiedPage, WorkflowNotifier } from './workflow-notifier';
 import {
   contentTypeByApiId,
@@ -76,8 +83,9 @@ type UpdateBody = z.output<typeof updateEntryRequestSchema>;
 type AutosaveBody = z.output<typeof autosaveEntryRequestSchema>;
 type MoveBody = z.output<typeof moveEntryRequestSchema>;
 type TranslateBody = z.output<typeof translateEntryRequestSchema>;
+type ScheduleBody = z.output<typeof scheduleActionRequestSchema>;
 
-type EntryRow = typeof entries.$inferSelect;
+export type EntryRow = typeof entries.$inferSelect;
 
 /** How long autosave keeps overwriting its own version before starting a new one (see 0006_entries.sql). */
 const AUTOSAVE_WINDOW_MS = 2 * 60 * 1000;
@@ -282,7 +290,6 @@ export class EntriesService {
     id: string,
     message: string | null,
   ): Promise<Entry> {
-    let event: ContentEvent | null = null;
     let notify: { page: NotifiedPage; requester: string | null; path: string } | null = null;
     try {
       const result = await this.db.userDb(user.claims, async (tx) => {
@@ -301,28 +308,7 @@ export class EntriesService {
           entry = await findEntry(tx, model.environmentId, id);
         }
         const versionId = entry.currentVersionId as string;
-
-        const path = entryPath(entry.folderId ? await folderPath(tx, model.environmentId, entry.folderId) : null, entry.slug);
-        const tags = cacheTags({ id: entry.id, environmentId: model.environmentId, contentType: type.apiId });
-        // now() is the transaction's start, so both rows get the same time.
-        const published = {
-          spaceId,
-          environmentId: model.environmentId,
-          contentTypeApiId: type.apiId,
-          fullPath: path,
-          data,
-          publishedAt: sql`now()`,
-          cacheTags: tags,
-        };
-        await tx
-          .insert(publishedContent)
-          .values({ entryId: entry.id, ...published })
-          .onConflictDoUpdate({ target: publishedContent.entryId, set: published });
-        await tx
-          .update(entries)
-          .set({ status: 'published', publishedVersionId: versionId, publishedAt: sql`now()` })
-          .where(eq(entries.id, entry.id));
-        await recordUsages(tx, entry, mediaRefs(type.fields, data, model.blockTypes));
+        const path = await this.goLive(tx, model, entry, versionId, data, entry.slug, user);
         const review = await closeReview(tx, entry.id, flow.state === 'in_review' ? 'approved' : 'withdrawn', user);
         await recordAudit(tx, {
           spaceId,
@@ -341,28 +327,67 @@ export class EntriesService {
         await completeOnboardingStep(tx, spaceId, 'publish');
 
         const saved = await readEntry(tx, model.environmentId, id);
-        event = {
-          type: 'entry.published',
-          spaceId,
-          environmentId: model.environmentId,
-          entryId: entry.id,
-          contentType: type.apiId,
-          path,
-          cacheTags: tags,
-          actorId: user.id,
-          versionId,
-          publishedAt: saved.publishedAt as string,
-        };
         if (flow.state === 'in_review') notify = { page: page(saved, spaceId), requester: review?.requestedBy ?? null, path };
         return saved;
       });
-      this.emit(event);
       const sent = notify as { page: NotifiedPage; requester: string | null; path: string } | null;
       if (sent) await this.notifier.published(sent.page, sent.requester, user.id, sitePathOf(sent.path));
       return result;
     } catch (error) {
       throw contentProblem(error);
     }
+  }
+
+  /**
+   * Puts `versionId` (whose validated data is `data`) on the site at the address `slug` gives it: copies it into
+   * `published_content`, points the entry at it, records the files it uses and queues the purge. Returns the address.
+   * Shared by publishing a page and publishing a release.
+   */
+  async goLive(
+    tx: DbTransaction,
+    model: EntryModel,
+    entry: EntryRow,
+    versionId: string,
+    data: EntryData,
+    slug: string,
+    user: AuthUser,
+  ): Promise<string> {
+    const type = contentTypeById(model, entry.contentTypeId);
+    const path = entryPath(entry.folderId ? await folderPath(tx, model.environmentId, entry.folderId) : null, slug);
+    const tags = cacheTags({ id: entry.id, environmentId: model.environmentId, contentType: type.apiId });
+    // now() is the transaction's start, so both rows get the same time.
+    const published = {
+      spaceId: entry.spaceId,
+      environmentId: model.environmentId,
+      contentTypeApiId: type.apiId,
+      fullPath: path,
+      data,
+      publishedAt: sql`now()`,
+      cacheTags: tags,
+    };
+    await tx
+      .insert(publishedContent)
+      .values({ entryId: entry.id, ...published })
+      .onConflictDoUpdate({ target: publishedContent.entryId, set: published });
+    const [live] = await tx
+      .update(entries)
+      .set({ status: 'published', publishedVersionId: versionId, publishedAt: sql`now()` })
+      .where(eq(entries.id, entry.id))
+      .returning({ publishedAt: entries.publishedAt });
+    await recordUsages(tx, entry, mediaRefs(type.fields, data, model.blockTypes));
+    await this.events.emit(tx, {
+      type: 'entry.published',
+      spaceId: entry.spaceId,
+      environmentId: model.environmentId,
+      entryId: entry.id,
+      contentType: type.apiId,
+      path,
+      cacheTags: tags,
+      actorId: user.id,
+      versionId,
+      publishedAt: live.publishedAt as string,
+    });
+    return path;
   }
 
   /** Sends the page for review: it waits for a space admin, who gets an email. */
@@ -433,15 +458,15 @@ export class EntriesService {
 
   /** Takes the page off the site (if it is on it) and out of the way, until restored. */
   async archive(user: AuthUser, spaceId: string, env: string, id: string): Promise<Entry> {
-    let event: ContentEvent | null = null;
     try {
-      const result = await this.db.userDb(user.claims, async (tx) => {
+      return await this.db.userDb(user.claims, async (tx) => {
         const model = await loadModel(tx, spaceId, env);
         const entry = await liveEntry(tx, model.environmentId, id);
         check(await workflowOf(tx, user, entry), 'archive');
-        if (entry.publishedVersionId) event = await takeOffline(tx, model, entry, user);
+        if (entry.publishedVersionId) await this.events.emit(tx, await takeOffline(tx, model, entry, user));
         await tx.update(entries).set({ status: 'archived' }).where(eq(entries.id, entry.id));
         await closeReview(tx, entry.id, 'withdrawn', user);
+        await cancelWaitingActions(tx, entry.id);
         await recordAudit(tx, {
           spaceId,
           actorId: user.id,
@@ -452,8 +477,6 @@ export class EntriesService {
         });
         return readEntry(tx, model.environmentId, id);
       });
-      this.emit(event);
-      return result;
     } catch (error) {
       throw contentProblem(error);
     }
@@ -525,6 +548,85 @@ export class EntriesService {
     });
   }
 
+  /** The page's scheduled publishing and unpublishing, newest first (the last 20). */
+  scheduledActions(user: AuthUser, spaceId: string, env: string, id: string): Promise<ScheduledAction[]> {
+    return this.db.userDb(user.claims, async (tx) => {
+      const envId = await environmentId(tx, spaceId, env);
+      const entry = await findEntry(tx, envId, id);
+      return readScheduledActions(tx, eq(scheduledActions.entryId, entry.id), 20);
+    });
+  }
+
+  /**
+   * Schedules the page to be published or unpublished at `runAt` (stored in UTC). Whether the caller may is checked now,
+   * as for publishing (`scheduleRefusal`); when it runs, the worker does it as them, with their role then, and the
+   * page is checked as it is then (docs/build/17-scheduling-releases-webhooks.md).
+   */
+  async schedule(user: AuthUser, spaceId: string, env: string, id: string, body: ScheduleBody): Promise<ScheduledAction> {
+    const runAt = new Date(body.runAt);
+    if (runAt.getTime() <= Date.now()) throw badRequest('run_at_past', 'Choose a time in the future.');
+    try {
+      return await this.db.userDb(user.claims, async (tx) => {
+        const envId = await environmentId(tx, spaceId, env);
+        const entry = await liveEntry(tx, envId, id);
+        const flow = await workflowOf(tx, user, entry);
+        const refused = scheduleRefusal(body.action, flow, flow.actor);
+        if (refused) throw refused.code === 'workflow_state' ? conflict(refused.code, refused.detail) : forbidden(refused.code, refused.detail);
+        const [row] = await tx
+          .insert(scheduledActions)
+          .values({ spaceId, entryId: entry.id, action: body.action, runAt: runAt.toISOString(), createdBy: user.id })
+          .returning({ id: scheduledActions.id });
+        await recordAudit(tx, {
+          spaceId,
+          actorId: user.id,
+          action: 'entry.scheduled',
+          targetType: 'entry',
+          targetId: entry.id,
+          diff: { environment: env, scheduledActionId: row.id, action: body.action, runAt: runAt.toISOString() },
+        });
+        const [saved] = await readScheduledActions(tx, eq(scheduledActions.id, row.id), 1);
+        return saved;
+      });
+    } catch (error) {
+      if (isUniqueViolation(error, 'scheduled_actions_waiting_idx')) {
+        throw conflict('already_scheduled', `This page already has a scheduled ${body.action}. Cancel it to choose another time.`);
+      }
+      // The database's own check that the time is still in the future (0015_scheduling.sql).
+      if (isCheckViolation(error)) throw badRequest('run_at_past', 'Choose a time in the future.');
+      throw contentProblem(error);
+    }
+  }
+
+  /** Cancels a scheduled action that has not run yet. */
+  async cancelScheduled(user: AuthUser, spaceId: string, env: string, id: string, actionId: string): Promise<ScheduledAction> {
+    try {
+      return await this.db.userDb(user.claims, async (tx) => {
+        const envId = await environmentId(tx, spaceId, env);
+        const entry = await findEntry(tx, envId, id);
+        const [existing] = await readScheduledActions(tx, and(eq(scheduledActions.id, actionId), eq(scheduledActions.entryId, entry.id)), 1);
+        if (!existing) throw notFound('scheduled_action_not_found', 'Nothing like this is scheduled for this page.');
+        const cancelled = await tx
+          .update(scheduledActions)
+          .set({ status: 'cancelled', finishedAt: sql`now()` })
+          .where(and(eq(scheduledActions.id, actionId), eq(scheduledActions.status, 'scheduled')))
+          .returning({ id: scheduledActions.id });
+        if (!cancelled.length) throw conflict('not_waiting', 'This has already happened, or was cancelled.');
+        await recordAudit(tx, {
+          spaceId,
+          actorId: user.id,
+          action: 'entry.schedule_cancelled',
+          targetType: 'entry',
+          targetId: entry.id,
+          diff: { environment: env, scheduledActionId: actionId, action: existing.action, runAt: existing.runAt },
+        });
+        const [saved] = await readScheduledActions(tx, eq(scheduledActions.id, actionId), 1);
+        return saved;
+      });
+    } catch (error) {
+      throw contentProblem(error);
+    }
+  }
+
   /** Live pages and entries whose draft or published content points at this one (references and internal links). */
   references(user: AuthUser, spaceId: string, env: string, id: string): Promise<EntrySummary[]> {
     return this.db.userDb(user.claims, async (tx) => {
@@ -554,14 +656,14 @@ export class EntriesService {
   }
 
   async unpublish(user: AuthUser, spaceId: string, env: string, id: string): Promise<Entry> {
-    let event: ContentEvent | null = null;
     try {
-      const result = await this.db.userDb(user.claims, async (tx) => {
+      return await this.db.userDb(user.claims, async (tx) => {
         const model = await loadModel(tx, spaceId, env);
         const entry = await liveEntry(tx, model.environmentId, id);
         check(await workflowOf(tx, user, entry), 'unpublish');
 
-        event = await takeOffline(tx, model, entry, user);
+        const event = await takeOffline(tx, model, entry, user);
+        await this.events.emit(tx, event);
         await closeReview(tx, entry.id, 'withdrawn', user);
         await recordAudit(tx, {
           spaceId,
@@ -573,8 +675,6 @@ export class EntriesService {
         });
         return readEntry(tx, model.environmentId, id);
       });
-      this.emit(event);
-      return result;
     } catch (error) {
       throw contentProblem(error);
     }
@@ -679,18 +779,18 @@ export class EntriesService {
 
   /** Moves the entry to the bin, taking it off the site first if it is published. */
   async remove(user: AuthUser, spaceId: string, env: string, id: string): Promise<void> {
-    let event: ContentEvent | null = null;
     try {
       await this.db.userDb(user.claims, async (tx) => {
         const model = await loadModel(tx, spaceId, env);
         const entry = await liveEntry(tx, model.environmentId, id);
-        if (entry.publishedVersionId) event = await takeOffline(tx, model, entry, user);
+        if (entry.publishedVersionId) await this.events.emit(tx, await takeOffline(tx, model, entry, user));
         // A page in review comes back from the bin as a draft, its request closed.
         await tx
           .update(entries)
           .set({ deletedAt: sql`now()`, ...(entry.status === 'in_review' ? { status: 'draft' } : {}) })
           .where(eq(entries.id, entry.id));
         await closeReview(tx, entry.id, 'withdrawn', user);
+        await cancelWaitingActions(tx, entry.id);
         await recordAudit(tx, {
           spaceId,
           actorId: user.id,
@@ -700,7 +800,6 @@ export class EntriesService {
           diff: { environment: env, slug: entry.slug, wasPublished: Boolean(entry.publishedVersionId) },
         });
       });
-      this.emit(event);
     } catch (error) {
       throw contentProblem(error);
     }
@@ -734,9 +833,8 @@ export class EntriesService {
    * database redirects its old address to the new one (0012_seo_site.sql).
    */
   async move(user: AuthUser, space: SpaceAccess, env: string, id: string, body: MoveBody): Promise<Entry> {
-    let event: ContentEvent | null = null;
     try {
-      const result = await this.db.userDb(user.claims, async (tx) => {
+      return await this.db.userDb(user.claims, async (tx) => {
         const envId = await environmentId(tx, space.id, env);
         const entry = await liveEntry(tx, envId, id);
         if (entry.publishedVersionId && !canPublish(user, space)) {
@@ -756,7 +854,7 @@ export class EntriesService {
           // The published slug can differ from a newer draft's, so keep it.
           path = entryPath(target, lastSegment(published.fullPath));
           await tx.update(publishedContent).set({ fullPath: path }).where(eq(publishedContent.entryId, entry.id));
-          event = {
+          await this.events.emit(tx, {
             type: 'paths.changed',
             spaceId: space.id,
             environmentId: envId,
@@ -764,7 +862,7 @@ export class EntriesService {
             cacheTags: published.cacheTags,
             paths: [published.fullPath, path],
             actorId: user.id,
-          };
+          });
         }
         await recordAudit(tx, {
           spaceId: space.id,
@@ -776,8 +874,6 @@ export class EntriesService {
         });
         return readEntry(tx, envId, id);
       });
-      this.emit(event);
-      return result;
     } catch (error) {
       throw contentProblem(error);
     }
@@ -824,23 +920,19 @@ export class EntriesService {
       return { from, to, changes: diffEntryData(before.data as EntryData, after.data as EntryData) };
     });
   }
-
-  private emit(event: ContentEvent | null): void {
-    if (event) this.events.emit(event);
-  }
 }
 
 // --- Helpers -------------------------------------------------------------------------------------
 
 /** What the workflow rules need about an entry, and who is acting. */
-interface Workflow {
+export interface Workflow {
   state: WorkflowState;
   live: boolean;
   requireApproval: boolean;
   actor: WorkflowActor;
 }
 
-async function workflowOf(tx: DbTransaction, user: AuthUser, entry: EntryRow): Promise<Workflow> {
+export async function workflowOf(tx: DbTransaction, user: AuthUser, entry: EntryRow): Promise<Workflow> {
   const [space] = await tx.select({ requireApproval: spaces.requireApproval }).from(spaces).where(eq(spaces.id, entry.spaceId));
   return {
     state: workflowState({ status: entry.status as EntryStatus, currentVersionId: entry.currentVersionId, publishedVersionId: entry.publishedVersionId }),
@@ -860,7 +952,7 @@ function check(flow: Workflow, action: WorkflowAction): void {
 }
 
 /** Closes the entry's open review request, if it has one, and says who had asked. */
-async function closeReview(
+export async function closeReview(
   tx: DbTransaction,
   entryId: string,
   decision: ReviewDecision,
@@ -945,6 +1037,37 @@ async function saveVersion(
   await tx.update(entries).set({ currentVersionId: version.id, slug: options.slug }).where(eq(entries.id, entry.id));
 }
 
+/** Scheduled actions with the name of who scheduled each, newest first. */
+async function readScheduledActions(tx: DbTransaction, where: SQL | undefined, limit: number): Promise<ScheduledAction[]> {
+  const rows = await tx
+    .select({ action: scheduledActions, createdByName: profiles.displayName })
+    .from(scheduledActions)
+    .leftJoin(profiles, eq(profiles.userId, scheduledActions.createdBy))
+    .where(where)
+    .orderBy(desc(scheduledActions.createdAt), desc(scheduledActions.id))
+    .limit(limit);
+  return rows.map(({ action, createdByName }) => ({
+    id: action.id,
+    entryId: action.entryId as string,
+    action: action.action as ScheduledActionKind,
+    runAt: action.runAt,
+    status: action.status as ScheduledActionStatus,
+    error: action.error,
+    createdBy: action.createdBy,
+    createdByName,
+    createdAt: action.createdAt,
+    finishedAt: action.finishedAt,
+  }));
+}
+
+/** A page that leaves the site's reach (archived, or in the bin) has nothing left to publish or unpublish. */
+async function cancelWaitingActions(tx: DbTransaction, entryId: string): Promise<void> {
+  await tx
+    .update(scheduledActions)
+    .set({ status: 'cancelled', finishedAt: sql`now()` })
+    .where(and(eq(scheduledActions.entryId, entryId), eq(scheduledActions.status, 'scheduled')));
+}
+
 /** Records which files the published version uses (the library's "in use" warning and the image route read it). */
 async function recordUsages(tx: DbTransaction, entry: EntryRow, refs: readonly MediaRef[]): Promise<void> {
   await tx.delete(assetUsages).where(eq(assetUsages.entryId, entry.id));
@@ -983,7 +1106,7 @@ async function takeOffline(tx: DbTransaction, model: EntryModel, entry: EntryRow
   };
 }
 
-async function findEntry(tx: DbTransaction, envId: string, id: string): Promise<EntryRow> {
+export async function findEntry(tx: DbTransaction, envId: string, id: string): Promise<EntryRow> {
   const [entry] = await tx
     .select()
     .from(entries)
@@ -998,7 +1121,7 @@ function isHomePage(entry: EntryRow, type: { kind: string }): boolean {
   return type.kind === 'page' && entry.folderId === null && entry.slug === HOME_SLUG;
 }
 
-async function liveEntry(tx: DbTransaction, envId: string, id: string): Promise<EntryRow> {
+export async function liveEntry(tx: DbTransaction, envId: string, id: string): Promise<EntryRow> {
   const entry = await findEntry(tx, envId, id);
   if (entry.deletedAt) throw conflict('entry_deleted', 'This is in the bin. Restore it first.');
   return entry;

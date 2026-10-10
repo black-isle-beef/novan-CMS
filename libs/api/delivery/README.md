@@ -27,7 +27,9 @@ The Delivery and Preview APIs client sites read content from, and the API tokens
   `Cache-Tag` (`token:`, `space:`, `entry:`, `asset:`, `type:<env>:<apiId>`, `entries:<env>`, `sitemap:<env>`), a weak
   `ETag` and `Vary: Authorization`. Preview: `private, no-store`. Errors: `no-store`.
 - `CachePurge` purges by tag on `entry.published`/`entry.unpublished` and `MediaEvents`, falling back to the
-  page's URL on the space's `settings.domains`; it does nothing without `CLOUDFLARE_ZONE_ID`.
+  page's URL on the space's `settings.domains`; it does nothing without `CLOUDFLARE_ZONE_ID`. It runs as the
+  `content-changed`, `media-changed` and `token-revoked` jobs of the `purge` queue (`@novan/api-jobs`), sent in the
+  changing transaction; a failed purge throws, and the worker retries it with back-off.
 - Rate limits per token (`@nestjs/throttler`, in memory): delivery 50/s, preview 10/s, not-found reports 60/min
   (`NOT_FOUND_RATE_LIMIT`), 429 `rate_limited`.
 - `CachePurge` also purges `redirects:<space>` on publishing, `paths.changed` (a published page moved, or a folder above

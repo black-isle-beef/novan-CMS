@@ -4,6 +4,7 @@ import { JWT_VERIFIER_CONFIG } from '@novan/api-auth';
 import { type ContentEvent, ContentEvents } from '@novan/api-content';
 import { auditEvents, DbService, spaces } from '@novan/api-db';
 import { CloudflareClient } from '@novan/api-delivery';
+import { JobWorker } from '@novan/api-jobs';
 import type { CreatedApiToken, DeliveryRedirects, Entry, ImportRedirectsResult, NotFoundSummary, Redirect } from '@novan/shared-schemas';
 import { and, eq } from 'drizzle-orm';
 import { SignJWT } from 'jose';
@@ -142,7 +143,10 @@ describe.skipIf(!hasDatabase)('redirects and not-found reports', () => {
       redirect = res.body;
       expect(redirect).toMatchObject({ fromPath: '/team', toPath: '/about-us', status: 301, automatic: false, createdBy: novanAdminId });
       expect(last()).toMatchObject({ type: 'redirects.changed', spaceId: spaceA, paths: ['/team'] });
-      await vi.waitFor(() => expect(cloudflare.purgeTags).toHaveBeenCalledWith(expect.arrayContaining([`redirects:${spaceA}`])));
+      while (await app.get(JobWorker).runOnce('purge', { spaceId: spaceA })) {
+        // until none are left
+      }
+      expect(cloudflare.purgeTags).toHaveBeenCalledWith(expect.arrayContaining([`redirects:${spaceA}`]));
       const [audit] = await db.serviceDb
         .select()
         .from(auditEvents)

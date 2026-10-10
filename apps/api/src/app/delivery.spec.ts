@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { JWT_VERIFIER_CONFIG } from '@novan/api-auth';
 import { assets, auditEvents, DbService, publishedContent, spaces } from '@novan/api-db';
 import { CloudflareClient } from '@novan/api-delivery';
+import { JobWorker } from '@novan/api-jobs';
 import type { ApiToken, CreatedApiToken, DeliveryEntriesPage, DeliveryEntry, Entry } from '@novan/shared-schemas';
 import { and, eq } from 'drizzle-orm';
 import { SignJWT } from 'jose';
@@ -75,6 +76,12 @@ describe('delivery and preview APIs', () => {
   });
 
   const server = () => app.getHttpServer();
+  /** Runs the space's queued purge jobs, as the worker would. */
+  const runPurges = async (spaceId: string): Promise<void> => {
+    while (await app.get(JobWorker).runOnce('purge', { spaceId })) {
+      // until none are left
+    }
+  };
 
   // These are refused before the database is asked, so they run without one (CI's unit test job).
   describe('without a usable token', () => {
@@ -316,11 +323,13 @@ describe('delivery and preview APIs', () => {
         const temporary: CreatedApiToken = (await tokens.post('/api-tokens', { name: 'Temporary', scope: 'delivery' })).body;
         expect((await delivery('/sitemap', temporary)).status).toBe(200);
 
+        await runPurges(spaceA);
         cloudflare.purgeTags.mockClear();
         const revoked = await tokens.post(`/api-tokens/${temporary.id}/revoke`);
         expect(revoked.status).toBe(200);
         expect(revoked.body.revokedAt).not.toBeNull();
         expect((await delivery('/sitemap', temporary)).status).toBe(401);
+        await runPurges(spaceA);
         expect(cloudflare.purgeTags).toHaveBeenCalledWith([`token:${temporary.id}`]);
         expect((await tokens.post(`/api-tokens/${temporary.id}/revoke`)).body.code).toBe('api_token_revoked');
       });
@@ -511,12 +520,15 @@ describe('delivery and preview APIs', () => {
       });
 
       it('publishing purges the entry, its type, the lists, the sitemap and the redirects', async () => {
+        await runPurges(spaceA);
         cloudflare.purgeTags.mockClear();
         const editA = manage(spaceA, editorA);
         await editA.patch(`/environments/main/entries/${about.id}`, { data: { title: 'About us', slug: 'about' } });
         await editA.post(`/environments/main/entries/${about.id}/publish`);
         const [row] = await db.serviceDb.select({ env: publishedContent.environmentId }).from(publishedContent).where(eq(publishedContent.entryId, about.id));
-        await vi.waitFor(() => expect(cloudflare.purgeTags).toHaveBeenCalled());
+        // The purge is a job, sent with the publish; the worker runs it.
+        expect(cloudflare.purgeTags).not.toHaveBeenCalled();
+        await runPurges(spaceA);
         expect(cloudflare.purgeTags.mock.calls[0][0]).toEqual([
           `entry:${about.id}`,
           `type:${row.env}:page`,

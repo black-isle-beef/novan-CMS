@@ -19,6 +19,38 @@
 @if (workflow()?.state === 'archived') {
   <ds-alert variant="info" class="mb-3">This page is archived. Restore it to change or publish it.</ds-alert>
 }
+@if (waitingActions().length) {
+  <ds-alert variant="info" title="Scheduled" class="mb-3">
+    <ul class="list-unstyled mb-0">
+      @for (action of waitingActions(); track action.id) {
+        <li class="d-flex flex-wrap align-items-center gap-2 mt-1">
+          <span>
+            {{ action.action === 'publish' ? 'Publishes' : 'Unpublishes' }} on {{ formatUk(action.runAt) }} (UK time),
+            set by {{ action.createdByName ?? 'someone' }}.
+          </span>
+          @if (action.status === 'scheduled' && (can('publish') || can('approve') || can('unpublish') || can('archive'))) {
+            <button
+              type="button"
+              class="btn btn-sm btn-secondary"
+              [disabled]="busy()"
+              [attr.aria-label]="'Cancel the ' + action.action + ' on ' + formatUk(action.runAt)"
+              (click)="cancelScheduled(action)"
+            >
+              Cancel
+            </button>
+          } @else if (action.status === 'queued') {
+            <span>Happening now.</span>
+          }
+        </li>
+      }
+    </ul>
+  </ds-alert>
+}
+@if (failedAction(); as action) {
+  <ds-alert variant="warning" [title]="'The scheduled ' + action.action + ' did not happen'" class="mb-3">
+    It was due on {{ formatUk(action.runAt) }} (UK time). {{ action.error }}
+  </ds-alert>
+}
 @if (problem(); as message) {
   <div role="alert" class="mb-3">
     <ds-alert variant="danger">{{ message }}</ds-alert>
@@ -187,15 +219,83 @@
         <ng-container *ngTemplateOutlet="changeTable" />
         <h3 class="h6 mt-4">Before publishing</h3>
         <nv-publish-checklist idPrefix="nv-workflow-checklist" [items]="checks()" (goTo)="close(); goTo.emit($event)" />
-        <label class="form-label mt-4" for="nv-workflow-message">Message for the version history (optional)</label>
-        <textarea
-          id="nv-workflow-message"
-          class="form-control"
-          rows="2"
-          maxlength="500"
-          [value]="message()"
-          (input)="setMessage($event)"
-        ></textarea>
+        @if (dialog() === 'publish') {
+          <fieldset class="mt-4">
+            <legend class="h6">When</legend>
+            <div class="form-check">
+              <input
+                id="nv-workflow-when-now"
+                class="form-check-input"
+                type="radio"
+                name="nv-workflow-when"
+                [checked]="when() === 'now'"
+                (change)="setWhen('now')"
+              />
+              <label class="form-check-label" for="nv-workflow-when-now">Now</label>
+            </div>
+            <div class="form-check">
+              <input
+                id="nv-workflow-when-later"
+                class="form-check-input"
+                type="radio"
+                name="nv-workflow-when"
+                [checked]="when() === 'later'"
+                (change)="setWhen('later')"
+              />
+              <label class="form-check-label" for="nv-workflow-when-later">At a set date and time</label>
+            </div>
+            @if (when() === 'later') {
+              <div class="d-flex flex-wrap gap-3 mt-2">
+                <div>
+                  <label class="form-label" for="nv-workflow-date">Date (UK time)</label>
+                  <input
+                    id="nv-workflow-date"
+                    class="form-control"
+                    type="date"
+                    required
+                    [class.is-invalid]="scheduleError()"
+                    [attr.aria-invalid]="scheduleError() ? true : null"
+                    [attr.aria-describedby]="scheduleError() ? 'nv-workflow-when-error' : 'nv-workflow-when-hint'"
+                    [value]="scheduleDate()"
+                    (input)="setScheduleDate($event)"
+                  />
+                </div>
+                <div>
+                  <label class="form-label" for="nv-workflow-time">Time (UK time)</label>
+                  <input
+                    id="nv-workflow-time"
+                    class="form-control"
+                    type="time"
+                    required
+                    [class.is-invalid]="scheduleError()"
+                    [attr.aria-invalid]="scheduleError() ? true : null"
+                    [attr.aria-describedby]="scheduleError() ? 'nv-workflow-when-error' : 'nv-workflow-when-hint'"
+                    [value]="scheduleTime()"
+                    (input)="setScheduleTime($event)"
+                  />
+                </div>
+              </div>
+              @if (scheduleError(); as error) {
+                <p id="nv-workflow-when-error" class="invalid-feedback d-block">{{ error }}</p>
+              } @else {
+                <p id="nv-workflow-when-hint" class="form-text mb-0">
+                  The page is published as it is at that time, including changes made before then.
+                </p>
+              }
+            }
+          </fieldset>
+        }
+        @if (!scheduling()) {
+          <label class="form-label mt-4" for="nv-workflow-message">Message for the version history (optional)</label>
+          <textarea
+            id="nv-workflow-message"
+            class="form-control"
+            rows="2"
+            maxlength="500"
+            [value]="message()"
+            (input)="setMessage($event)"
+          ></textarea>
+        }
       }
     }
   }
@@ -226,7 +326,7 @@
           Approve and publish
         }
         @default {
-          {{ publishLabel() }}
+          {{ scheduling() ? 'Schedule' : publishLabel() }}
         }
       }
     </button>

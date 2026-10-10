@@ -24,6 +24,9 @@ import {
   translateEntryRequestSchema,
   type PendingReview,
   requestChangesRequestSchema,
+  type ScheduledAction,
+  scheduledActionSchema,
+  scheduleActionRequestSchema,
   updateEntryRequestSchema,
   workflowMessageRequestSchema,
 } from '@novan/shared-schemas';
@@ -147,6 +150,51 @@ export class EntriesController {
     @Param('id', idPipe) id: string,
   ): Promise<EntryWorkflow> {
     return this.entries.workflow(user, space.id, env, id);
+  }
+
+  /** The page's scheduled publishing and unpublishing, newest first. */
+  @Get(':id/schedule')
+  @ApiResponse(z.array(scheduledActionSchema))
+  scheduledActions(
+    @CurrentUser() user: AuthUser,
+    @CurrentSpace() space: SpaceAccess,
+    @Param('env') env: string,
+    @Param('id', idPipe) id: string,
+  ): Promise<ScheduledAction[]> {
+    return this.entries.scheduledActions(user, space.id, env, id);
+  }
+
+  /**
+   * Publishes or unpublishes the page at `runAt` (400 `run_at_past`; 409 `already_scheduled` while one of the same kind
+   * waits; 403 `approval_required` for publishing in a space that needs approval, unless a space admin).
+   */
+  @Post(':id/schedule')
+  @HttpCode(201)
+  @ApiResponse(scheduledActionSchema)
+  @RequireRole(...EDITORS)
+  schedule(
+    @CurrentUser() user: AuthUser,
+    @CurrentSpace() space: SpaceAccess,
+    @Param('env') env: string,
+    @Param('id', idPipe) id: string,
+    @Body(new ZodValidationPipe(scheduleActionRequestSchema)) body: z.output<typeof scheduleActionRequestSchema>,
+  ): Promise<ScheduledAction> {
+    return this.entries.schedule(user, space.id, env, id, body);
+  }
+
+  /** Cancels a scheduled action that is still waiting (409 `not_waiting` once it has run). */
+  @Post(':id/schedule/:actionId/cancel')
+  @HttpCode(200)
+  @ApiResponse(scheduledActionSchema)
+  @RequireRole(...EDITORS)
+  cancelScheduled(
+    @CurrentUser() user: AuthUser,
+    @CurrentSpace() space: SpaceAccess,
+    @Param('env') env: string,
+    @Param('id', idPipe) id: string,
+    @Param('actionId', idPipe) actionId: string,
+  ): Promise<ScheduledAction> {
+    return this.entries.cancelScheduled(user, space.id, env, id, actionId);
   }
 
   /** Sends the page for review (spaces that need approval). */

@@ -1,45 +1,50 @@
-import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { cacheTag } from '@novan/api-common';
-import { type ContentEvent, ContentEvents } from '@novan/api-content';
-import { DbService, readSpaceLocales, spaces } from '@novan/api-db';
+import type { ContentChangedJob, ContentEvent } from '@novan/api-content';
+import { DbService, type DbTransaction, readSpaceLocales, spaces } from '@novan/api-db';
+import { enqueue, type Job, JobHandlers } from '@novan/api-jobs';
 import { localisedPath } from '@novan/shared-schemas';
-import { type MediaEvent, MediaEvents } from '@novan/api-media';
+import type { MediaChangedJob, MediaEvent } from '@novan/api-media';
 import { eq } from 'drizzle-orm';
-import type { Subscription } from 'rxjs';
 import { overflowTag, tokenTag } from './cache-headers.interceptor';
 import { CloudflareClient, PURGE_BATCH } from './cloudflare-client';
 import { publicPath } from './content-source';
 
+/** The purge job for a revoked API token. */
+export interface TokenRevokedJob extends Job {
+  type: 'token-revoked';
+  spaceId: string;
+  tokenId: string;
+}
+
 /**
- * Purges the CDN when published content changes. On `entry.published` and `entry.unpublished` it purges
- * the entry's tags plus the environment's unfiltered lists and sitemap; on `asset.replaced` and
- * `asset.deleted` the file's tag (responses embedding the file carry it too); on a revoked token, every
- * response that token was given. Purging is by tag; if Cloudflare refuses (a plan without purge by tag),
- * it falls back to purging the page's URL on each of the space's domains (`settings.domains`). Without
- * `CLOUDFLARE_ZONE_ID` (local) it does nothing. Failures are logged, never raised: the content change has
- * already happened.
+ * Purges the CDN when published content changes, as jobs on the `purge` queue (libs/api/jobs) sent in the transaction
+ * that made the change. On `entry.published` and `entry.unpublished` it purges the entry's tags plus the environment's
+ * unfiltered lists and sitemap; on `asset.replaced` and `asset.deleted` the file's tag (responses embedding the file
+ * carry it too); on a revoked token, every response that token was given. Purging is by tag; if Cloudflare refuses (a
+ * plan without purge by tag), it falls back to purging the page's URL on each of the space's domains
+ * (`settings.domains`). Without `CLOUDFLARE_ZONE_ID` (local) it does nothing. A purge that fails is thrown, so the
+ * worker retries it with back-off.
  */
 @Injectable()
-export class CachePurge implements OnModuleInit, OnModuleDestroy {
+export class CachePurge implements OnModuleInit {
   private readonly logger = new Logger(CachePurge.name);
-  private readonly subscriptions: Subscription[] = [];
 
   constructor(
     private readonly cloudflare: CloudflareClient,
-    private readonly content: ContentEvents,
-    private readonly media: MediaEvents,
     private readonly db: DbService,
+    private readonly jobs: JobHandlers,
   ) {}
 
   onModuleInit(): void {
-    this.subscriptions.push(
-      this.content.events$.subscribe((event) => void this.contentChanged(event)),
-      this.media.events$.subscribe((event) => void this.mediaChanged(event)),
-    );
+    this.jobs.register('purge', 'content-changed', (job) => this.contentChanged((job as ContentChangedJob).event));
+    this.jobs.register('purge', 'media-changed', (job) => this.mediaChanged((job as MediaChangedJob).event));
+    this.jobs.register('purge', 'token-revoked', (job) => this.tokenRevoked((job as TokenRevokedJob).tokenId));
   }
 
-  onModuleDestroy(): void {
-    for (const subscription of this.subscriptions) subscription.unsubscribe();
+  /** Queues the purge of everything a revoked token was given, in the revoking transaction. */
+  queueTokenRevoked(tx: DbTransaction, spaceId: string, tokenId: string): Promise<void> {
+    return enqueue(tx, 'purge', { type: 'token-revoked', spaceId, tokenId } satisfies TokenRevokedJob);
   }
 
   contentChanged(event: ContentEvent): Promise<void> {
@@ -92,16 +97,10 @@ export class CachePurge implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.logger.warn(`Purge by tag failed for ${what}: ${String(error)}. Falling back to URLs.`);
     }
-    try {
-      const urls = await fallbackUrls();
-      if (!urls.length) {
-        this.logger.error(`Could not purge the CDN for ${what}: no URLs to fall back to. Cached copies stay until they expire.`);
-        return;
-      }
-      for (const batch of chunks(urls, PURGE_BATCH)) await this.cloudflare.purgeUrls(batch);
-    } catch (error) {
-      this.logger.error(`Could not purge the CDN for ${what}: ${String(error)}`);
-    }
+    const urls = await fallbackUrls();
+    // Thrown so the worker tries again: tag purges can fail for a moment too.
+    if (!urls.length) throw new Error(`Could not purge the CDN for ${what}: purge by tag failed and there are no URLs to fall back to`);
+    for (const batch of chunks(urls, PURGE_BATCH)) await this.cloudflare.purgeUrls(batch);
   }
 
   /** The space's site origins from `settings.domains`, e.g. `["https://www.example.com"]`. */

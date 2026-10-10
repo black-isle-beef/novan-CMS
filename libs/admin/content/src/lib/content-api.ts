@@ -16,6 +16,8 @@ import type {
   ListEntriesQuery,
   MachineTranslation,
   PendingReview,
+  ScheduleActionRequest,
+  ScheduledAction,
   TranslateEntryRequest,
   UpdateFolderRequest,
 } from '@novan/shared-schemas';
@@ -95,6 +97,20 @@ export class ContentApi {
   /** Where the page is in the workflow and what the signed-in person may do with it. */
   workflow(spaceId: string, id: string): Observable<EntryWorkflow> {
     return this.http.get<EntryWorkflow>(this.url(spaceId, 'entries', id, 'workflow'));
+  }
+
+  /** The page's scheduled publishing and unpublishing, newest first. */
+  scheduledActions(spaceId: string, id: string): Observable<ScheduledAction[]> {
+    return this.http.get<ScheduledAction[]>(this.url(spaceId, 'entries', id, 'schedule'));
+  }
+
+  /** Publishes or unpublishes the page at `runAt` (UTC ISO 8601). */
+  schedule(spaceId: string, id: string, body: ScheduleActionRequest): Observable<ScheduledAction> {
+    return this.http.post<ScheduledAction>(this.url(spaceId, 'entries', id, 'schedule'), body);
+  }
+
+  cancelScheduled(spaceId: string, id: string, actionId: string): Observable<ScheduledAction> {
+    return this.http.post<ScheduledAction>(this.url(spaceId, 'entries', id, 'schedule', actionId, 'cancel'), {});
   }
 
   submit(spaceId: string, id: string, message?: string | null): Observable<Entry> {

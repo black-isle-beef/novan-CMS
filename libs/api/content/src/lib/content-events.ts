@@ -1,4 +1,6 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { DbService, type DbTransaction } from '@novan/api-db';
+import { dispatchWebhooks, enqueue, type Job } from '@novan/api-jobs';
 import { filter, type Observable, Subject } from 'rxjs';
 
 interface EntryEventBase {
@@ -61,23 +63,36 @@ export interface LocalesChangedEvent {
 export type ContentEvent = EntryPublishedEvent | EntryUnpublishedEvent | PathsChangedEvent | RedirectsChangedEvent | LocalesChangedEvent;
 export type ContentEventType = ContentEvent['type'];
 
+/** The purge job a content event becomes (`@novan/api-delivery` runs it). */
+export interface ContentChangedJob extends Job {
+  type: 'content-changed';
+  spaceId: string;
+  event: ContentEvent;
+}
+
 /**
- * In-process event bus for content changes. Events are emitted only after their transaction commits.
- * Package 17 moves delivery onto a durable queue; subscribers should not assume they see every event.
+ * Content changes. {@link emit} records an event in the transaction that made the change: its side effects (the CDN
+ * purge) go on the `purge` queue in that transaction, so they survive a restart and never run for a change that rolled
+ * back (docs/build/17-scheduling-releases-webhooks.md), and the space's webhooks are told through a `dispatch` job. Once it commits, this process's `events$` subscribers hear of
+ * it too; they are for in-memory state only (another instance never hears), never for work that must happen.
  */
 @Injectable()
 export class ContentEvents implements OnModuleDestroy {
   private readonly subject = new Subject<ContentEvent>();
 
-  /** Every event. A subscriber that throws does not affect the request that emitted the event. */
+  constructor(private readonly db: DbService) {}
+
+  /** Every event, once committed, in this process. A subscriber that throws does not affect the request. */
   readonly events$: Observable<ContentEvent> = this.subject.asObservable();
 
   on<T extends ContentEventType>(type: T): Observable<Extract<ContentEvent, { type: T }>> {
     return this.events$.pipe(filter((event): event is Extract<ContentEvent, { type: T }> => event.type === type));
   }
 
-  emit(event: ContentEvent): void {
-    this.subject.next(event);
+  async emit(tx: DbTransaction, event: ContentEvent): Promise<void> {
+    await enqueue(tx, 'purge', { type: 'content-changed', spaceId: event.spaceId, event } satisfies ContentChangedJob);
+    await dispatchWebhooks(tx, event.spaceId, event);
+    this.db.afterCommit(tx, () => this.subject.next(event));
   }
 
   onModuleDestroy(): void {

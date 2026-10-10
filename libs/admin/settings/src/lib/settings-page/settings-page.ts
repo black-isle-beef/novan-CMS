@@ -40,7 +40,10 @@ export class SettingsPage {
       { title: 'Missing pages', description: 'Addresses where visitors found no page, most visited first.', link: [...settings, 'missing-pages'] },
       { title: copy.team, description: 'Who can sign in, and what they can do.', link: ['/spaces', this.spaceId(), 'members'] },
       ...(this.context.can('settings.update')
-        ? [{ title: 'API tokens', description: 'Keys your sites use to read published content.', link: [...settings, 'api-tokens'] }]
+        ? [
+            { title: 'API tokens', description: 'Keys your sites use to read published content.', link: [...settings, 'api-tokens'] },
+            { title: 'Webhooks', description: 'Addresses called when content changes, for builds and other systems.', link: ['/spaces', this.spaceId(), 'webhooks'] },
+          ]
         : []),
       ...(this.context.can('space.update')
         ? [{ title: 'Space settings', description: 'The space’s name and the address of its site.', link: [...settings, 'space'] }]

@@ -6,6 +6,10 @@ import { EntriesController, ReviewsController } from './entries.controller';
 import { EntriesService } from './entries.service';
 import { FoldersController } from './folders.controller';
 import { FoldersService } from './folders.service';
+import { ContentHousekeeping } from './housekeeping';
+import { ReleasesController } from './releases.controller';
+import { ReleasesService } from './releases.service';
+import { ScheduledActionRunner } from './scheduled-actions';
 import { LocalesController } from './locales.controller';
 import { LocalesService } from './locales.service';
 import { VersionsController } from './versions.controller';
@@ -13,9 +17,12 @@ import { NOTIFY_CONFIG, notifyConfigFromEnv, WorkflowNotifier } from './workflow
 
 @Module({
   imports: [AuthModule],
-  controllers: [EntriesController, ReviewsController, VersionsController, FoldersController, LocalesController],
+  controllers: [EntriesController, ReviewsController, VersionsController, FoldersController, LocalesController, ReleasesController],
   providers: [
     EntriesService,
+    ReleasesService,
+    ScheduledActionRunner,
+    ContentHousekeeping,
     FoldersService,
     LocalesService,
     ContentEvents,

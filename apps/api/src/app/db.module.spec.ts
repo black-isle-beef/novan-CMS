@@ -47,4 +47,21 @@ describe.skipIf(!process.env['DATABASE_URL'])('DbModule', () => {
     expect(JSON.parse(inside[0].claims)).toEqual(claims);
     expect(after[0].role).not.toBe('authenticated');
   });
+
+  it('runs afterCommit callbacks once the transaction commits, and never after a rollback', async () => {
+    const calls: string[] = [];
+    await db.userDb(null, async (tx) => {
+      db.afterCommit(tx, () => calls.push('committed'));
+      expect(calls).toEqual([]);
+    });
+    await expect(
+      db.transaction(async (tx) => {
+        db.afterCommit(tx, () => calls.push('rolled back'));
+        throw new Error('no');
+      }),
+    ).rejects.toThrow('no');
+
+    expect(calls).toEqual(['committed']);
+    await db.serviceDb.transaction(async (tx) => expect(() => db.afterCommit(tx, () => undefined)).toThrow('afterCommit needs'));
+  });
 });

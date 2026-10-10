@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { DsAlertComponent } from '@black-isle-beef/novan-design-system';
 
-/** A menu section that arrives in a later release (forms, webhooks, the audit log). Text from the route's data. */
+/** A menu section that arrives in a later release (forms, the audit log). Text from the route's data. */
 @Component({
   selector: 'nv-placeholder-page',
   imports: [DsAlertComponent],

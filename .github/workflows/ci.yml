@@ -131,8 +131,8 @@ jobs:
       - name: e2e (Playwright + axe)
         run: npx nx affected -t e2e --parallel=1
         # The API purges the CDN through the fake Cloudflare API that api-e2e starts and checks
-        # (apps/api-e2e/src/support/fake-cloudflare.ts). Outside api-e2e nothing listens there, and failed
-        # purges are only logged.
+        # (apps/api-e2e/src/support/fake-cloudflare.ts). Outside api-e2e nothing listens there: the worker
+        # retries those purge jobs with back-off and logs "Purge by tag failed ... fetch failed", which is expected.
         env:
           CLOUDFLARE_ZONE_ID: e2e-zone
           CLOUDFLARE_API_TOKEN: e2e-token

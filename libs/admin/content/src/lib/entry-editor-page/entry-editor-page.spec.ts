@@ -14,6 +14,8 @@ import {
   fieldListSchema,
   type ManagedLocales,
   type ReviewRequest,
+  type ScheduleActionRequest,
+  type ScheduledAction,
   type SpaceLocale,
   type WorkflowAction,
 } from '@novan/shared-schemas';
@@ -113,6 +115,30 @@ function fakeApi(initial: Entry = entry(), options: { requireApproval?: boolean;
   return {
     state,
     workflow: vi.fn(() => of(flow())),
+    scheduled: [] as ScheduledAction[],
+    scheduledActions: vi.fn(function (this: { scheduled: ScheduledAction[] }) {
+      return of(this.scheduled);
+    }),
+    schedule: vi.fn(function (this: { scheduled: ScheduledAction[] }, _s: string, id: string, body: ScheduleActionRequest) {
+      const action: ScheduledAction = {
+        id: '00000000-0000-4000-8000-000000000901',
+        entryId: id,
+        action: body.action,
+        runAt: body.runAt,
+        status: 'scheduled',
+        error: null,
+        createdBy: null,
+        createdByName: 'Sam',
+        createdAt: '2026-10-10T09:00:00Z',
+        finishedAt: null,
+      };
+      this.scheduled = [action];
+      return of(action);
+    }),
+    cancelScheduled: vi.fn(function (this: { scheduled: ScheduledAction[] }) {
+      this.scheduled = this.scheduled.map((a) => ({ ...a, status: 'cancelled' as const }));
+      return of(this.scheduled[0]);
+    }),
     references: vi.fn(() => of([] as EntrySummary[])),
     submit: vi.fn(() => keep(entry({ status: 'in_review' }))),
     approve: vi.fn(() => keep(entry({ status: 'published', publishedPath: '/home', publishedVersionId: 'v' }))),
@@ -349,6 +375,60 @@ describe('EntryEditorPage', () => {
     expect(api.publish).toHaveBeenCalledWith(spaceId, entryId, 'First version');
     expect(el.querySelector('#entry-status')?.textContent).toContain('Published. It is live at /.');
     expect(el.textContent).toContain('Unpublish');
+  });
+
+  it('schedules the publish for a date and time in UK time, lists it, and cancels it', async () => {
+    const { click, type, api, el, confirm, fixture } = await render('editor');
+    await type('Summary', 'Hello');
+    await click('Publish');
+    const dialog = el.querySelector('ds-modal dialog[open]') as HTMLElement;
+    const later = dialog.querySelector<HTMLInputElement>('#nv-workflow-when-later') as HTMLInputElement;
+    later.checked = true;
+    later.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(dialog.querySelector('#nv-workflow-message')).toBeNull();
+
+    // A time in the past is refused before asking the API.
+    await type('Date (UK time)', '2020-07-01');
+    await type('Time (UK time)', '09:00');
+    await confirm('Schedule');
+    expect(api.schedule).not.toHaveBeenCalled();
+    expect(dialog.querySelector('#nv-workflow-when-error')?.textContent).toContain('Choose a time in the future.');
+    expect(dialog.querySelector('#nv-workflow-date')?.getAttribute('aria-describedby')).toBe('nv-workflow-when-error');
+
+    const year = new Date().getUTCFullYear() + 1;
+    await type('Date (UK time)', `${year}-07-01`);
+    await confirm('Schedule');
+    // 09:00 BST is 08:00 UTC.
+    expect(api.schedule).toHaveBeenCalledWith(spaceId, entryId, { action: 'publish', runAt: `${year}-07-01T08:00:00.000Z` });
+    expect(api.publish).not.toHaveBeenCalled();
+    expect(el.querySelector('#entry-status')?.textContent).toContain(`will be published on 1 Jul ${year}, 09:00 (UK time)`);
+    expect(el.textContent).toContain(`Publishes on 1 Jul ${year}, 09:00 (UK time), set by Sam.`);
+
+    await click('Cancel');
+    expect(api.cancelScheduled).toHaveBeenCalledWith(spaceId, entryId, '00000000-0000-4000-8000-000000000901');
+    expect(el.textContent).not.toContain('Publishes on');
+  });
+
+  it('says when a scheduled publish did not happen, and why', async () => {
+    const api = fakeApi();
+    api.scheduled = [
+      {
+        id: '00000000-0000-4000-8000-000000000902',
+        entryId,
+        action: 'publish',
+        runAt: '2026-10-01T08:00:00Z',
+        status: 'failed',
+        error: 'Your role cannot do this.',
+        createdBy: null,
+        createdByName: null,
+        createdAt: '2026-09-30T09:00:00Z',
+        finishedAt: '2026-10-01T08:00:05Z',
+      },
+    ];
+    const { el } = await render('editor', api);
+    expect(el.textContent).toContain('The scheduled publish did not happen');
+    expect(el.textContent).toContain('It was due on 1 Oct 2026, 09:00 (UK time). Your role cannot do this.');
   });
 
   it('offers the visual editor for pages', async () => {

@@ -105,7 +105,6 @@ export class RedirectsService {
   }
 
   async remove(user: AuthUser, spaceId: string, id: string): Promise<void> {
-    let paths: string[] = [];
     try {
       await this.db.userDb(user.claims, async (tx) => {
         const current = await findRedirect(tx, spaceId, id);
@@ -120,12 +119,11 @@ export class RedirectsService {
           targetId: id,
           diff: { fromPath: current.fromPath, toPath: current.toPath, status: current.status },
         });
-        paths = [current.fromPath];
+        await this.events.emit(tx, { type: 'redirects.changed', spaceId, paths: [current.fromPath], actorId: user.id });
       });
     } catch (error) {
       throw redirectProblem(error);
     }
-    this.events.emit({ type: 'redirects.changed', spaceId, paths, actorId: user.id });
   }
 
   /**
@@ -133,9 +131,8 @@ export class RedirectsService {
    * and reported; the rest are written in one transaction.
    */
   async import(user: AuthUser, spaceId: string, body: ImportBody): Promise<ImportRedirectsResult> {
-    let paths: string[] = [];
     try {
-      const result = await this.db.userDb(user.claims, async (tx): Promise<ImportRedirectsResult> => {
+      return await this.db.userDb(user.claims, async (tx): Promise<ImportRedirectsResult> => {
         const live = await livePaths(tx, spaceId, body.redirects.map((r) => r.fromPath));
         const skipped = body.redirects
           .filter((r) => live.has(r.fromPath))
@@ -167,32 +164,29 @@ export class RedirectsService {
           targetType: 'redirect',
           diff: { created: wanted.length - updated, updated, skipped: skipped.length },
         });
-        paths = wanted.map((r) => r.fromPath);
+        await this.events.emit(tx, { type: 'redirects.changed', spaceId, paths: wanted.map((r) => r.fromPath), actorId: user.id });
         return { created: wanted.length - updated, updated, skipped };
       });
-      if (paths.length) this.events.emit({ type: 'redirects.changed', spaceId, paths, actorId: user.id });
-      return result;
     } catch (error) {
       throw redirectProblem(error);
     }
   }
 
-  /** Runs one change to a redirect and announces it once committed. */
+  /** Runs one change to a redirect and announces it in the same transaction. */
   private async write(
     user: AuthUser,
     spaceId: string,
     change: (tx: DbTransaction) => Promise<{ row: RedirectRow; paths: string[] }>,
   ): Promise<Redirect> {
     try {
-      const { redirect, paths } = await this.db.userDb(user.claims, async (tx) => {
+      return await this.db.userDb(user.claims, async (tx) => {
         const { row, paths } = await change(tx);
         const [author] = row.createdBy
           ? await tx.select({ name: profiles.displayName }).from(profiles).where(eq(profiles.userId, row.createdBy))
           : [];
-        return { redirect: toRedirect(row, author?.name ?? null), paths };
+        await this.events.emit(tx, { type: 'redirects.changed', spaceId, paths, actorId: user.id });
+        return toRedirect(row, author?.name ?? null);
       });
-      this.events.emit({ type: 'redirects.changed', spaceId, paths, actorId: user.id });
-      return redirect;
     } catch (error) {
       throw redirectProblem(error);
     }

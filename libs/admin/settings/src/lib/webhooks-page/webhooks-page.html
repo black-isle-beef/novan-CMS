@@ -1,0 +1,236 @@
+<h1 class="mb-1">Webhooks</h1>
+<p class="lead text-muted mb-4">
+  Addresses that are called when content in {{ context.currentSpace()?.name ?? 'this space' }} changes, for site builds,
+  search indexes and other systems.
+</p>
+
+<div role="status">
+  @if (status(); as message) {
+    <ds-alert variant="success" class="mb-3">{{ message }}</ds-alert>
+  }
+</div>
+<div role="alert">
+  @if (actionError(); as message) {
+    <ds-alert variant="danger" class="mb-3">{{ message }}</ds-alert>
+  }
+</div>
+
+@if (secretShown(); as webhook) {
+  <section aria-labelledby="secret-heading" class="border border-success rounded p-4 mb-5">
+    <h2 id="secret-heading" #secretHeading tabindex="-1" class="h4">Copy the secret of {{ webhook.name }}</h2>
+    <p>
+      This is the only time we show it. The receiving system uses it to check that each request comes from Novan CMS
+      (the signature in <code>X-Novan-Signature</code>). If you lose it, replace it.
+    </p>
+    <label for="webhook-secret" class="form-label">Signing secret</label>
+    <div class="input-group">
+      <input
+        #secretField
+        id="webhook-secret"
+        type="text"
+        class="form-control font-monospace"
+        [value]="webhook.secret"
+        readonly
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button type="button" class="btn btn-primary" (click)="copy(secretField)">Copy secret</button>
+    </div>
+    <p class="form-text mb-0" role="status">{{ copyStatus() }}</p>
+  </section>
+}
+
+@if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (webhooks(); as list) {
+  @if (list.length) {
+    <div class="table-responsive mb-5">
+      <table class="table align-middle">
+        <caption class="visually-hidden">
+          Webhooks
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Address</th>
+            <th scope="col">Sends</th>
+            <th scope="col">Last delivery</th>
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (webhook of list; track webhook.id) {
+            <tr>
+              <th scope="row" class="fw-normal">
+                {{ webhook.name }}
+                @if (!webhook.active) {
+                  <ds-badge variant="secondary" class="ms-1">Off</ds-badge>
+                }
+              </th>
+              <td class="text-break"><code>{{ webhook.url }}</code></td>
+              <td>{{ eventSummary(webhook) }}</td>
+              <td>
+                @if (webhook.lastDelivery; as last) {
+                  {{ last.status === 'delivered' ? 'Delivered' : last.status === 'failed' ? 'Failed' : 'Retrying' }}
+                  {{ last.responseCode ? '(' + last.responseCode + ')' : '' }}
+                  <span class="d-block small text-muted">{{ last.createdAt | date: 'd MMM y, HH:mm' }}</span>
+                } @else {
+                  Never
+                }
+              </td>
+              <td class="text-end">
+                <div class="d-flex flex-wrap justify-content-end gap-2">
+                  <button type="button" class="btn btn-sm btn-secondary" [attr.aria-expanded]="logOf()?.id === webhook.id" aria-controls="webhook-log" (click)="openLog(webhook)">
+                    Delivery log<span class="visually-hidden"> of {{ webhook.name }}</span>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-secondary" [disabled]="busy() || !webhook.active" (click)="test(webhook)">
+                    Send a test<span class="visually-hidden"> to {{ webhook.name }}</span>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-secondary" [disabled]="busy()" (click)="setActive(webhook, !webhook.active)">
+                    {{ webhook.active ? 'Turn off' : 'Turn on' }}<span class="visually-hidden"> {{ webhook.name }}</span>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-secondary" [disabled]="busy()" (click)="rotate(webhook)">
+                    Replace secret<span class="visually-hidden"> of {{ webhook.name }}</span>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-danger" [disabled]="busy()" (click)="remove(webhook)">
+                    Delete<span class="visually-hidden"> {{ webhook.name }}</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <p class="mb-5">There are no webhooks yet. Add one for each system that should hear about changes.</p>
+  }
+
+  <div id="webhook-log">
+    @if (logOf(); as webhook) {
+      <section aria-labelledby="log-heading" class="mb-5">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+          <h2 id="log-heading" #logHeading tabindex="-1" class="h4 mb-0">Deliveries to {{ webhook.name }}</h2>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-secondary" (click)="openLog(webhook, false)">Refresh</button>
+            <button type="button" class="btn btn-sm btn-secondary" (click)="logOf.set(null)">Close</button>
+          </div>
+        </div>
+        <p class="text-muted">The last 50, newest first. A request that fails is tried again 8 times over about 20 minutes.</p>
+        @if (logError(); as message) {
+          <ds-alert variant="danger">{{ message }}</ds-alert>
+        } @else if (log(); as deliveries) {
+          @if (deliveries.length) {
+            <div class="table-responsive" tabindex="0" role="region" aria-label="Delivery log">
+              <table class="table table-sm align-middle">
+                <caption class="visually-hidden">
+                  Deliveries to {{ webhook.name }}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">When</th>
+                    <th scope="col">Event</th>
+                    <th scope="col">Result</th>
+                    <th scope="col">Tries</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (delivery of deliveries; track delivery.id) {
+                    <tr>
+                      <td>{{ delivery.createdAt | date: 'd MMM y, HH:mm:ss' }}</td>
+                      <td><code>{{ delivery.event }}</code></td>
+                      <td>
+                        {{ result(delivery) }}
+                        @if (delivery.error && delivery.status !== 'delivered') {
+                          <span class="d-block small text-muted">{{ delivery.error }}</span>
+                        }
+                      </td>
+                      <td>{{ delivery.attempt }}</td>
+                      <td class="text-end">
+                        @if (delivery.status !== 'pending') {
+                          <button type="button" class="btn btn-sm btn-secondary" [disabled]="busy() || !webhook.active" (click)="resend(delivery)">
+                            Resend<span class="visually-hidden"> the {{ delivery.event }} delivery of {{ delivery.createdAt | date: 'd MMM y, HH:mm:ss' }}</span>
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p class="mb-0">Nothing has been sent yet.</p>
+          }
+        } @else {
+          <ds-spinner label="Loading deliveries" />
+        }
+      </section>
+    }
+  </div>
+
+  <section aria-labelledby="create-heading" class="col-lg-8">
+    <h2 id="create-heading" class="h4">Add a webhook</h2>
+    <form [formGroup]="form" (ngSubmit)="create()" novalidate>
+      <div class="mb-3">
+        <label for="webhook-name" class="form-label">Name</label>
+        <input
+          id="webhook-name"
+          type="text"
+          class="form-control"
+          formControlName="name"
+          autocomplete="off"
+          required
+          maxlength="120"
+          [class.is-invalid]="invalid('name')"
+          [attr.aria-invalid]="invalid('name')"
+          [attr.aria-describedby]="invalid('name') ? 'webhook-name-hint webhook-name-error' : 'webhook-name-hint'"
+        />
+        <div id="webhook-name-hint" class="form-text">Say what it is for, like "Site build" or "Search index".</div>
+        @if (invalid('name')) {
+          <div id="webhook-name-error" class="invalid-feedback d-block">Enter a name for the webhook.</div>
+        }
+      </div>
+      <div class="mb-3">
+        <label for="webhook-url" class="form-label">Address</label>
+        <input
+          id="webhook-url"
+          type="url"
+          class="form-control"
+          formControlName="url"
+          autocomplete="off"
+          required
+          inputmode="url"
+          [class.is-invalid]="invalid('url')"
+          [attr.aria-invalid]="invalid('url')"
+          [attr.aria-describedby]="invalid('url') ? 'webhook-url-hint webhook-url-error' : 'webhook-url-hint'"
+        />
+        <div id="webhook-url-hint" class="form-text">The full address to call, starting https://.</div>
+        @if (invalid('url')) {
+          <div id="webhook-url-error" class="invalid-feedback d-block">Enter the full address, starting https://.</div>
+        }
+      </div>
+      <fieldset class="mb-4" [attr.aria-describedby]="eventsInvalid() ? 'webhook-events-error' : null">
+        <legend class="form-label fs-6">Send when</legend>
+        @for (type of eventTypes; track type) {
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              [id]="'webhook-event-' + type"
+              [checked]="events().has(type)"
+              (change)="toggleEvent(type, $event)"
+            />
+            <label class="form-check-label" [for]="'webhook-event-' + type">{{ eventLabels[type] }}</label>
+          </div>
+        }
+        @if (eventsInvalid()) {
+          <div id="webhook-events-error" class="invalid-feedback d-block">Choose at least one event.</div>
+        }
+      </fieldset>
+      <button type="submit" class="btn btn-primary" [disabled]="busy()" [attr.aria-busy]="busy()">Add webhook</button>
+    </form>
+  </section>
+} @else {
+  <ds-spinner label="Loading webhooks" />
+}

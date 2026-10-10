@@ -66,7 +66,7 @@ export class ApiTokensService {
     }
   }
 
-  /** Stops the token working: at once on this API instance, within half a minute on others, and in the CDN. */
+  /** Stops the token working: at once on this API instance, within half a minute on others, and in the CDN (a purge job). */
   async revoke(user: AuthUser, spaceId: string, id: string): Promise<ApiToken> {
     try {
       const token = await this.db.userDb(user.claims, async (tx) => {
@@ -83,11 +83,11 @@ export class ApiTokensService {
           targetId: id,
           diff: { name: current.name, scope: current.scope, environment: current.environment },
         });
+        await this.purge.queueTokenRevoked(tx, spaceId, id);
         const [revoked] = await selectTokens(tx, spaceId, id);
         return revoked;
       });
       this.resolver.forget(id);
-      void this.purge.tokenRevoked(id);
       return token;
     } catch (error) {
       throw tokenProblem(error);

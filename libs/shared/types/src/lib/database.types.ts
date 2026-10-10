@@ -279,6 +279,19 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"job_dead_letters": {
+                  Row: {
+                    "attempts": number,"enqueued_at": string,"error": string,"failed_at": string,"id": string,"message": NonNullable<Json>,"msg_id": number,"queue": string
+                  }
+                  Insert: {
+                    "attempts": number,"enqueued_at": string,"error": string,"failed_at"?: string,"id"?: string,"message": NonNullable<Json>,"msg_id": number,"queue": string
+                  }
+                  Update: {
+                    "attempts"?: number,"enqueued_at"?: string,"error"?: string,"failed_at"?: string,"id"?: string,"message"?: NonNullable<Json>,"msg_id"?: number,"queue"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"members": {
                   Row: {
                     "created_at": string,"invited_by": string | null,"role_id": string,"space_id": string,"user_id": string
@@ -405,6 +418,68 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"release_items": {
+                  Row: {
+                    "added_at": string,"entry_id": string,"environment_id": string,"release_id": string,"space_id": string,"version_id": string
+                  }
+                  Insert: {
+                    "added_at"?: string,"entry_id": string,"environment_id": string,"release_id": string,"space_id": string,"version_id": string
+                  }
+                  Update: {
+                    "added_at"?: string,"entry_id"?: string,"environment_id"?: string,"release_id"?: string,"space_id"?: string,"version_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "release_items_entry_id_environment_id_fkey"
+      columns: ["entry_id","environment_id"]
+isOneToOne: false
+      referencedRelation: "entries"
+      referencedColumns: ["id","environment_id"]
+    },{
+      foreignKeyName: "release_items_release_id_environment_id_fkey"
+      columns: ["release_id","environment_id"]
+isOneToOne: false
+      referencedRelation: "releases"
+      referencedColumns: ["id","environment_id"]
+    },{
+      foreignKeyName: "release_items_release_id_space_id_fkey"
+      columns: ["release_id","space_id"]
+isOneToOne: false
+      referencedRelation: "releases"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "release_items_version_id_entry_id_fkey"
+      columns: ["version_id","entry_id"]
+isOneToOne: false
+      referencedRelation: "entry_versions"
+      referencedColumns: ["id","entry_id"]
+    }
+                  ]
+                },"releases": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"environment_id": string,"error": string | null,"id": string,"name": string,"published_at": string | null,"published_by": string | null,"scheduled_at": string | null,"space_id": string,"status": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"environment_id": string,"error"?: string | null,"id"?: string,"name": string,"published_at"?: string | null,"published_by"?: string | null,"scheduled_at"?: string | null,"space_id": string,"status"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"environment_id"?: string,"error"?: string | null,"id"?: string,"name"?: string,"published_at"?: string | null,"published_by"?: string | null,"scheduled_at"?: string | null,"space_id"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "releases_environment_id_space_id_fkey"
+      columns: ["environment_id","space_id"]
+isOneToOne: false
+      referencedRelation: "environments"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "releases_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"review_requests": {
                   Row: {
                     "comment": string | null,"decided_at": string | null,"decided_by": string | null,"decision": string | null,"entry_id": string,"id": string,"message": string | null,"requested_at": string,"requested_by": string | null,"space_id": string,"version_id": string
@@ -455,6 +530,37 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"scheduled_actions": {
+                  Row: {
+                    "action": string,"created_at": string,"created_by": string | null,"entry_id": string | null,"error": string | null,"finished_at": string | null,"id": string,"release_id": string | null,"run_at": string,"space_id": string,"status": string
+                  }
+                  Insert: {
+                    "action": string,"created_at"?: string,"created_by"?: string | null,"entry_id"?: string | null,"error"?: string | null,"finished_at"?: string | null,"id"?: string,"release_id"?: string | null,"run_at": string,"space_id": string,"status"?: string
+                  }
+                  Update: {
+                    "action"?: string,"created_at"?: string,"created_by"?: string | null,"entry_id"?: string | null,"error"?: string | null,"finished_at"?: string | null,"id"?: string,"release_id"?: string | null,"run_at"?: string,"space_id"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "scheduled_actions_entry_id_space_id_fkey"
+      columns: ["entry_id","space_id"]
+isOneToOne: false
+      referencedRelation: "entries"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "scheduled_actions_release_id_space_id_fkey"
+      columns: ["release_id","space_id"]
+isOneToOne: false
+      referencedRelation: "releases"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "scheduled_actions_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"space_locales": {
                   Row: {
                     "code": string,"created_at": string,"fallback_code": string | null,"is_default": boolean,"name": string,"path_prefix": string,"space_id": string
@@ -499,6 +605,50 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"webhook_deliveries": {
+                  Row: {
+                    "attempt": number,"created_at": string,"error": string | null,"event": string,"event_id": string,"id": string,"payload": NonNullable<Json>,"resend_of": string | null,"response_code": number | null,"space_id": string,"status": string,"updated_at": string,"webhook_id": string
+                  }
+                  Insert: {
+                    "attempt"?: number,"created_at"?: string,"error"?: string | null,"event": string,"event_id": string,"id"?: string,"payload": NonNullable<Json>,"resend_of"?: string | null,"response_code"?: number | null,"space_id": string,"status"?: string,"updated_at"?: string,"webhook_id": string
+                  }
+                  Update: {
+                    "attempt"?: number,"created_at"?: string,"error"?: string | null,"event"?: string,"event_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"resend_of"?: string | null,"response_code"?: number | null,"space_id"?: string,"status"?: string,"updated_at"?: string,"webhook_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "webhook_deliveries_resend_of_fkey"
+      columns: ["resend_of"]
+isOneToOne: false
+      referencedRelation: "webhook_deliveries"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "webhook_deliveries_webhook_id_space_id_fkey"
+      columns: ["webhook_id","space_id"]
+isOneToOne: false
+      referencedRelation: "webhooks"
+      referencedColumns: ["id","space_id"]
+    }
+                  ]
+                },"webhooks": {
+                  Row: {
+                    "active": boolean,"created_at": string,"created_by": string | null,"events": (string)[],"id": string,"name": string,"secret": string,"space_id": string,"updated_at": string,"url": string
+                  }
+                  Insert: {
+                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"events": (string)[],"id"?: string,"name": string,"secret": string,"space_id": string,"updated_at"?: string,"url": string
+                  }
+                  Update: {
+                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"events"?: (string)[],"id"?: string,"name"?: string,"secret"?: string,"space_id"?: string,"updated_at"?: string,"url"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "webhooks_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -520,6 +670,9 @@ isOneToOne: false
 "editor_topic_space":
 { Args: { "topic": string }; Returns: string
                            },
+"enqueue_due_scheduled_actions":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
 "has_space_role":
 { Args: { "roles": (string)[],"space": string }; Returns: boolean
                            },
@@ -528,6 +681,12 @@ isOneToOne: false
                            },
 "onboarding_steps":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
+                           },
+"prune_autosave_versions":
+{ Args: { "batch"?: number,"keep"?: string }; Returns: number
+                           },
+"purge_binned_entries":
+{ Args: { "batch"?: number,"older_than"?: string }; Returns: number
                            },
 "record_not_found":
 { Args: { "missed_path": string,"referrer"?: string,"space": string }; Returns: undefined

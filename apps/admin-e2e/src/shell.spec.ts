@@ -167,6 +167,7 @@ test.describe('@shell', () => {
       'Missing pages',
       'Team',
       'API tokens',
+      'Webhooks',
       'Space settings',
     ]);
     await expectNoAxeViolations(page);

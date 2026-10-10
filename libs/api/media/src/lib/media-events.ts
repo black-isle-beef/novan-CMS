@@ -1,4 +1,6 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { DbService, type DbTransaction } from '@novan/api-db';
+import { dispatchWebhooks, enqueue, type Job } from '@novan/api-jobs';
 import { type Observable, Subject } from 'rxjs';
 
 /**
@@ -14,15 +16,27 @@ export interface MediaEvent {
   actorId: string;
 }
 
-/** In-process bus for media changes, emitted after commit (as `ContentEvents`). */
+/** The purge job a media event becomes (`@novan/api-delivery` runs it). */
+export interface MediaChangedJob extends Job {
+  type: 'media-changed';
+  spaceId: string;
+  event: MediaEvent;
+}
+
+/** Media changes, recorded in the change's transaction and queued for purging (as `ContentEvents`). */
 @Injectable()
 export class MediaEvents implements OnModuleDestroy {
   private readonly subject = new Subject<MediaEvent>();
 
+  constructor(private readonly db: DbService) {}
+
+  /** Every event, once committed, in this process. */
   readonly events$: Observable<MediaEvent> = this.subject.asObservable();
 
-  emit(event: MediaEvent): void {
-    this.subject.next(event);
+  async emit(tx: DbTransaction, event: MediaEvent): Promise<void> {
+    await enqueue(tx, 'purge', { type: 'media-changed', spaceId: event.spaceId, event } satisfies MediaChangedJob);
+    await dispatchWebhooks(tx, event.spaceId, event);
+    this.db.afterCommit(tx, () => this.subject.next(event));
   }
 
   onModuleDestroy(): void {
