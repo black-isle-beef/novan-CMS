@@ -5,7 +5,7 @@ Background jobs on Supabase Queues (pgmq), package 17. The queues and the dead-l
 
 | Queue | Jobs |
 | --- | --- |
-| `publish` | `scheduled-action`: a scheduled publish or unpublish come due (`@novan/api-content`, 0015_scheduling.sql) |
+| `publish` | `scheduled-action`: a scheduled publish or unpublish of a page, or a release's publish, come due (`@novan/api-content`, 0015, 0016) |
 | `purge` | `content-changed`, `media-changed`, `token-revoked`: CDN purges (`@novan/api-delivery`) |
 | `webhooks` | webhook deliveries |
 | `housekeeping` | purging the bin, pruning autosaves, expiring preview tokens |

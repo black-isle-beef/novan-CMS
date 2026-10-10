@@ -242,6 +242,65 @@ export const scheduleActionRequestSchema = z.strictObject({
 });
 export type ScheduleActionRequest = z.input<typeof scheduleActionRequestSchema>;
 
+// --- Releases (docs/build/17-scheduling-releases-webhooks.md) -----------------------------------
+
+/** draft → scheduled → published | failed; scheduled → draft when cancelled. A failed release is a draft that says why. */
+export const releaseStatuses = ['draft', 'scheduled', 'published', 'failed'] as const;
+export type ReleaseStatus = (typeof releaseStatuses)[number];
+
+/** Pages that go live together (GET `.../releases`). */
+export const releaseSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  status: z.enum(releaseStatuses),
+  scheduledAt: z.string().nullable(),
+  error: z.string().nullable(),
+  createdBy: z.uuid().nullable(),
+  createdByName: z.string().nullable(),
+  createdAt: z.string(),
+  publishedAt: z.string().nullable(),
+  publishedBy: z.uuid().nullable(),
+  itemCount: z.number().int(),
+});
+export type Release = z.infer<typeof releaseSchema>;
+
+/** A page in a release, at the version the release publishes. */
+export const releaseItemSchema = z.object({
+  entryId: z.uuid(),
+  versionId: z.uuid(),
+  title: z.string(),
+  path: z.string(),
+  contentType: z.string(),
+  /** The version is the page's current one (no newer draft since it was added). */
+  current: z.boolean(),
+  /** The version is the one on the site now. */
+  live: z.boolean(),
+  addedAt: z.string(),
+});
+export type ReleaseItem = z.infer<typeof releaseItemSchema>;
+
+/** GET `.../releases/:id`. */
+export const releaseDetailSchema = releaseSchema.extend({ items: z.array(releaseItemSchema) });
+export type ReleaseDetail = z.infer<typeof releaseDetailSchema>;
+
+const releaseName = z.string().trim().min(1, 'Give the release a name.').max(120);
+
+export const createReleaseRequestSchema = z.strictObject({ name: releaseName });
+export type CreateReleaseRequest = z.input<typeof createReleaseRequestSchema>;
+
+export const updateReleaseRequestSchema = z.strictObject({ name: releaseName });
+export type UpdateReleaseRequest = z.input<typeof updateReleaseRequestSchema>;
+
+/** PUT `.../releases/:id/items/:entryId`: the version to publish (the page's current version when left out). */
+export const putReleaseItemRequestSchema = z.strictObject({ versionId: z.uuid().optional() }).default({});
+export type PutReleaseItemRequest = z.input<typeof putReleaseItemRequestSchema>;
+
+/** POST `.../releases/:id/schedule`. */
+export const scheduleReleaseRequestSchema = z.strictObject({
+  runAt: z.iso.datetime({ offset: true, message: 'Give a date and time, e.g. 2026-10-12T09:00:00Z.' }),
+});
+export type ScheduleReleaseRequest = z.input<typeof scheduleReleaseRequestSchema>;
+
 /** POST `.../request-changes`: what to change, for the author. */
 export const requestChangesRequestSchema = z.strictObject({
   comment: z.string().trim().min(1, 'Say what should change.').max(2000),

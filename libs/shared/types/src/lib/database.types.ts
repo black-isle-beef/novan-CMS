@@ -418,6 +418,68 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"release_items": {
+                  Row: {
+                    "added_at": string,"entry_id": string,"environment_id": string,"release_id": string,"space_id": string,"version_id": string
+                  }
+                  Insert: {
+                    "added_at"?: string,"entry_id": string,"environment_id": string,"release_id": string,"space_id": string,"version_id": string
+                  }
+                  Update: {
+                    "added_at"?: string,"entry_id"?: string,"environment_id"?: string,"release_id"?: string,"space_id"?: string,"version_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "release_items_entry_id_environment_id_fkey"
+      columns: ["entry_id","environment_id"]
+isOneToOne: false
+      referencedRelation: "entries"
+      referencedColumns: ["id","environment_id"]
+    },{
+      foreignKeyName: "release_items_release_id_environment_id_fkey"
+      columns: ["release_id","environment_id"]
+isOneToOne: false
+      referencedRelation: "releases"
+      referencedColumns: ["id","environment_id"]
+    },{
+      foreignKeyName: "release_items_release_id_space_id_fkey"
+      columns: ["release_id","space_id"]
+isOneToOne: false
+      referencedRelation: "releases"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "release_items_version_id_entry_id_fkey"
+      columns: ["version_id","entry_id"]
+isOneToOne: false
+      referencedRelation: "entry_versions"
+      referencedColumns: ["id","entry_id"]
+    }
+                  ]
+                },"releases": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"environment_id": string,"error": string | null,"id": string,"name": string,"published_at": string | null,"published_by": string | null,"scheduled_at": string | null,"space_id": string,"status": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"environment_id": string,"error"?: string | null,"id"?: string,"name": string,"published_at"?: string | null,"published_by"?: string | null,"scheduled_at"?: string | null,"space_id": string,"status"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"environment_id"?: string,"error"?: string | null,"id"?: string,"name"?: string,"published_at"?: string | null,"published_by"?: string | null,"scheduled_at"?: string | null,"space_id"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "releases_environment_id_space_id_fkey"
+      columns: ["environment_id","space_id"]
+isOneToOne: false
+      referencedRelation: "environments"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "releases_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"review_requests": {
                   Row: {
                     "comment": string | null,"decided_at": string | null,"decided_by": string | null,"decision": string | null,"entry_id": string,"id": string,"message": string | null,"requested_at": string,"requested_by": string | null,"space_id": string,"version_id": string
@@ -484,6 +546,12 @@ isOneToOne: false
       columns: ["entry_id","space_id"]
 isOneToOne: false
       referencedRelation: "entries"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "scheduled_actions_release_id_space_id_fkey"
+      columns: ["release_id","space_id"]
+isOneToOne: false
+      referencedRelation: "releases"
       referencedColumns: ["id","space_id"]
     },{
       foreignKeyName: "scheduled_actions_space_id_fkey"

@@ -1,10 +1,11 @@
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { type AuthUser, toAuthUser } from '@novan/api-auth';
 import { ProblemException } from '@novan/api-common';
-import { DbService, entries, environments, members, profiles, roles, scheduledActions } from '@novan/api-db';
+import { DbService, entries, environments, members, profiles, releases, roles, scheduledActions } from '@novan/api-db';
 import { type Job, type JobContext, JobHandlers, PermanentJobError } from '@novan/api-jobs';
 import { and, eq, sql } from 'drizzle-orm';
 import { EntriesService } from './entries.service';
+import { ReleasesService } from './releases.service';
 
 /** Sent to the `publish` queue by `enqueue_due_scheduled_actions()` (0015_scheduling.sql) when an action comes due. */
 export interface ScheduledActionJob extends Job {
@@ -30,6 +31,7 @@ export class ScheduledActionRunner implements OnModuleInit {
     private readonly db: DbService,
     private readonly jobs: JobHandlers,
     private readonly entries: EntriesService,
+    private readonly releases: ReleasesService,
   ) {}
 
   onModuleInit(): void {
@@ -41,7 +43,8 @@ export class ScheduledActionRunner implements OnModuleInit {
     const [action] = await this.db.serviceDb.select().from(scheduledActions).where(eq(scheduledActions.id, job.actionId));
     // Gone with its page, or already carried out by an earlier attempt that recorded it.
     if (action?.status !== 'queued') return;
-    if (!action.entryId) return this.finish(action, 'failed', 'Releases cannot be scheduled yet.');
+    if (action.releaseId) return this.runRelease(action, action.releaseId, context);
+    if (!action.entryId) throw new PermanentJobError(`Scheduled action ${action.id} names neither a page nor a release`);
 
     const [page] = await this.db.serviceDb
       .select({ env: environments.name, current: entries.currentVersionId, published: entries.publishedVersionId, publishedAt: entries.publishedAt })
@@ -66,6 +69,35 @@ export class ScheduledActionRunner implements OnModuleInit {
     }
     await this.finish(action, 'done');
     this.logger.log(`Scheduled ${action.action} of entry ${action.entryId} done`);
+  }
+
+  /** Publishes a scheduled release in one transaction; a failure marks the release failed, with the reason. */
+  private async runRelease(action: ActionRow, releaseId: string, context: JobContext): Promise<void> {
+    const [release] = await this.db.serviceDb.select({ status: releases.status }).from(releases).where(eq(releases.id, releaseId));
+    // Published by hand, or by an earlier attempt that died before recording it.
+    if (release?.status === 'published') return this.finish(action, 'done');
+    const user = action.createdBy ? await this.actingUser(action.createdBy) : null;
+    const fail = async (reason: string): Promise<void> => {
+      await this.finish(action, 'failed', reason);
+      await this.db.serviceDb
+        .update(releases)
+        .set({ status: 'failed', scheduledAt: null, error: reason.slice(0, 2000) })
+        .where(and(eq(releases.id, releaseId), eq(releases.status, 'scheduled')));
+    };
+    if (!user) return fail('The person who scheduled this no longer has an account.');
+    try {
+      await this.releases.publishScheduled(user, action.spaceId, releaseId);
+    } catch (error) {
+      if (error instanceof ProblemException && error.getStatus() < 500) {
+        const problem = error.toProblem();
+        const pages = Object.entries(problem.errors ?? {}).map(([page, messages]) => `${page}: ${messages.join(' ')}`);
+        return fail([problem.detail ?? error.message, ...pages].join(' '));
+      }
+      if (context.final) await fail('It could not be done. The agency has been told.');
+      throw error;
+    }
+    await this.finish(action, 'done');
+    this.logger.log(`Scheduled release ${releaseId} published`);
   }
 
   private async finish(action: ActionRow, status: 'done' | 'failed', error: string | null = null): Promise<void> {

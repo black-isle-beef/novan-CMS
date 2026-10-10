@@ -21,6 +21,13 @@ Entries, folders and versions (package 06), under `/v1/management/spaces/:spaceI
 | `POST entries/:id/schedule` | editors and up (space admins to publish with approval on) | `{ action, runAt }`: publish or unpublish at a future UTC time; 409 `already_scheduled` |
 | `POST entries/:id/schedule/:actionId/cancel` | editors and up | Cancel while it waits; 409 `not_waiting` after |
 
+Releases (package 17), under `.../environments/:env/releases`: `GET` (members), `POST` `{ name }`, `GET/PATCH/DELETE :id`,
+`PUT :id/items/:entryId` `{ versionId? }` (the page's current version by default), `DELETE :id/items/:entryId`,
+`POST :id/publish`, `POST :id/schedule` `{ runAt }`, `POST :id/schedule/cancel` (editors and up; space admins publish
+and schedule where the space needs approval). Publishing checks every page first (400 `release_invalid`, with each
+page's problems under its slug) and then publishes them all in one transaction, purge jobs included, so they run
+once it commits. A published release cannot change; a scheduled one that fails becomes `failed`, with the reason.
+
 Locales (package 16), under `/v1/management/spaces/:spaceId/locales`: `GET` (members), `POST`, `PATCH :code`,
 `DELETE :code` (space admins and developers), `PUT prefixes` (space admins). Each answers the space's locales after the
 change, with whether machine translation is set up.
