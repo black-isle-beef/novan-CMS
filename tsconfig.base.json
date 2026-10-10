@@ -26,6 +26,7 @@
       "@novan/api-spaces": ["./libs/api/spaces/src/index.ts"],
       "@novan/api-site": ["./libs/api/site/src/index.ts"],
       "@novan/api-jobs": ["./libs/api/jobs/src/index.ts"],
+      "@novan/api-webhooks": ["./libs/api/webhooks/src/index.ts"],
       "@novan/api-common": ["./libs/api/common/src/index.ts"],
       "@novan/api-content-model": ["./libs/api/content-model/src/index.ts"],
       "@novan/api-content": ["./libs/api/content/src/index.ts"],

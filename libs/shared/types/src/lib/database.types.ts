@@ -605,6 +605,50 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"webhook_deliveries": {
+                  Row: {
+                    "attempt": number,"created_at": string,"error": string | null,"event": string,"event_id": string,"id": string,"payload": NonNullable<Json>,"resend_of": string | null,"response_code": number | null,"space_id": string,"status": string,"updated_at": string,"webhook_id": string
+                  }
+                  Insert: {
+                    "attempt"?: number,"created_at"?: string,"error"?: string | null,"event": string,"event_id": string,"id"?: string,"payload": NonNullable<Json>,"resend_of"?: string | null,"response_code"?: number | null,"space_id": string,"status"?: string,"updated_at"?: string,"webhook_id": string
+                  }
+                  Update: {
+                    "attempt"?: number,"created_at"?: string,"error"?: string | null,"event"?: string,"event_id"?: string,"id"?: string,"payload"?: NonNullable<Json>,"resend_of"?: string | null,"response_code"?: number | null,"space_id"?: string,"status"?: string,"updated_at"?: string,"webhook_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "webhook_deliveries_resend_of_fkey"
+      columns: ["resend_of"]
+isOneToOne: false
+      referencedRelation: "webhook_deliveries"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "webhook_deliveries_webhook_id_space_id_fkey"
+      columns: ["webhook_id","space_id"]
+isOneToOne: false
+      referencedRelation: "webhooks"
+      referencedColumns: ["id","space_id"]
+    }
+                  ]
+                },"webhooks": {
+                  Row: {
+                    "active": boolean,"created_at": string,"created_by": string | null,"events": (string)[],"id": string,"name": string,"secret": string,"space_id": string,"updated_at": string,"url": string
+                  }
+                  Insert: {
+                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"events": (string)[],"id"?: string,"name": string,"secret": string,"space_id": string,"updated_at"?: string,"url": string
+                  }
+                  Update: {
+                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"events"?: (string)[],"id"?: string,"name"?: string,"secret"?: string,"space_id"?: string,"updated_at"?: string,"url"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "webhooks_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {

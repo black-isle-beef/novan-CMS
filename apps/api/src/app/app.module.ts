@@ -9,12 +9,13 @@ import { JobsModule } from '@novan/api-jobs';
 import { MediaModule } from '@novan/api-media';
 import { SiteModule } from '@novan/api-site';
 import { SpacesModule } from '@novan/api-spaces';
+import { WebhooksModule } from '@novan/api-webhooks';
 import { APP_VERSION, resolveAppVersion } from './app-version';
 import { DocsController } from './docs/docs.controller';
 import { HealthController } from './health/health.controller';
 
 @Module({
-  imports: [DbModule, JobsModule, DiscoveryModule, SpacesModule, ContentModelModule, ContentModule, MediaModule, SiteModule, DeliveryModule],
+  imports: [DbModule, JobsModule, DiscoveryModule, SpacesModule, ContentModelModule, ContentModule, MediaModule, SiteModule, DeliveryModule, WebhooksModule],
   controllers: [HealthController, DocsController],
   providers: [
     { provide: APP_VERSION, useFactory: () => resolveAppVersion() },

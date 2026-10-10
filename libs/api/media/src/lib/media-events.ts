@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { DbService, type DbTransaction } from '@novan/api-db';
-import { enqueue, type Job } from '@novan/api-jobs';
+import { dispatchWebhooks, enqueue, type Job } from '@novan/api-jobs';
 import { type Observable, Subject } from 'rxjs';
 
 /**
@@ -35,6 +35,7 @@ export class MediaEvents implements OnModuleDestroy {
 
   async emit(tx: DbTransaction, event: MediaEvent): Promise<void> {
     await enqueue(tx, 'purge', { type: 'media-changed', spaceId: event.spaceId, event } satisfies MediaChangedJob);
+    await dispatchWebhooks(tx, event.spaceId, event);
     this.db.afterCommit(tx, () => this.subject.next(event));
   }
 

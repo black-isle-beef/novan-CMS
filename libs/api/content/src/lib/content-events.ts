@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { DbService, type DbTransaction } from '@novan/api-db';
-import { enqueue, type Job } from '@novan/api-jobs';
+import { dispatchWebhooks, enqueue, type Job } from '@novan/api-jobs';
 import { filter, type Observable, Subject } from 'rxjs';
 
 interface EntryEventBase {
@@ -73,7 +73,7 @@ export interface ContentChangedJob extends Job {
 /**
  * Content changes. {@link emit} records an event in the transaction that made the change: its side effects (the CDN
  * purge) go on the `purge` queue in that transaction, so they survive a restart and never run for a change that rolled
- * back (docs/build/17-scheduling-releases-webhooks.md). Once it commits, this process's `events$` subscribers hear of
+ * back (docs/build/17-scheduling-releases-webhooks.md), and the space's webhooks are told through a `dispatch` job. Once it commits, this process's `events$` subscribers hear of
  * it too; they are for in-memory state only (another instance never hears), never for work that must happen.
  */
 @Injectable()
@@ -91,6 +91,7 @@ export class ContentEvents implements OnModuleDestroy {
 
   async emit(tx: DbTransaction, event: ContentEvent): Promise<void> {
     await enqueue(tx, 'purge', { type: 'content-changed', spaceId: event.spaceId, event } satisfies ContentChangedJob);
+    await dispatchWebhooks(tx, event.spaceId, event);
     this.db.afterCommit(tx, () => this.subject.next(event));
   }
 

@@ -12,6 +12,11 @@ import type {
   NotFoundSummary,
   Redirect,
   UpdateRedirectRequest,
+  CreateWebhookRequest,
+  UpdateWebhookRequest,
+  Webhook,
+  WebhookDelivery,
+  WebhookWithSecret,
 } from '@novan/shared-schemas';
 import type { Observable } from 'rxjs';
 
@@ -32,6 +37,40 @@ export class SettingsApi {
 
   revokeApiToken(spaceId: string, id: string): Observable<ApiToken> {
     return this.http.post<ApiToken>(`${this.base}/${spaceId}/api-tokens/${id}/revoke`, {});
+  }
+
+  listWebhooks(spaceId: string): Observable<Webhook[]> {
+    return this.http.get<Webhook[]>(`${this.base}/${spaceId}/webhooks`);
+  }
+
+  /** The response carries the webhook's secret; this is the only time it is sent. */
+  createWebhook(spaceId: string, body: CreateWebhookRequest): Observable<WebhookWithSecret> {
+    return this.http.post<WebhookWithSecret>(`${this.base}/${spaceId}/webhooks`, body);
+  }
+
+  updateWebhook(spaceId: string, id: string, body: UpdateWebhookRequest): Observable<Webhook> {
+    return this.http.patch<Webhook>(`${this.base}/${spaceId}/webhooks/${id}`, body);
+  }
+
+  /** The response carries the new secret; this is the only time it is sent. */
+  rotateWebhookSecret(spaceId: string, id: string): Observable<WebhookWithSecret> {
+    return this.http.post<WebhookWithSecret>(`${this.base}/${spaceId}/webhooks/${id}/rotate-secret`, {});
+  }
+
+  deleteWebhook(spaceId: string, id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${spaceId}/webhooks/${id}`);
+  }
+
+  webhookDeliveries(spaceId: string, id: string): Observable<WebhookDelivery[]> {
+    return this.http.get<WebhookDelivery[]>(`${this.base}/${spaceId}/webhooks/${id}/deliveries`);
+  }
+
+  resendWebhookDelivery(spaceId: string, id: string, deliveryId: string): Observable<WebhookDelivery> {
+    return this.http.post<WebhookDelivery>(`${this.base}/${spaceId}/webhooks/${id}/deliveries/${deliveryId}/resend`, {});
+  }
+
+  testWebhook(spaceId: string, id: string): Observable<WebhookDelivery> {
+    return this.http.post<WebhookDelivery>(`${this.base}/${spaceId}/webhooks/${id}/test`, {});
   }
 
   // --- Redirects and missing pages (docs/build/14-seo-site-features.md) ---

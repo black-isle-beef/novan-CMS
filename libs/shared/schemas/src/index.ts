@@ -8,3 +8,4 @@ export * from './lib/locales';
 export * from './lib/media';
 export * from './lib/site';
 export * from './lib/tenancy';
+export * from './lib/webhooks';
