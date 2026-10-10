@@ -85,15 +85,19 @@ describe('publishing reaches the Delivery API and purges the CDN', () => {
     expect(delivered.body.data['title']).toBe('Changed by e2e');
   });
 
-  // Needs the API pointed at the fake Cloudflare API (CI's e2e step does; see `purgesAreRecorded`).
-  it.skipIf(!purgesAreRecorded)('publishing purges the CDN by the entry, its type, the lists and the sitemap', async () => {
+  // Needs the API pointed at the fake Cloudflare API (CI's e2e step does; see `purgesAreRecorded`). The purge is a job on
+  // the `purge` queue, so it lands when the worker next polls (every `JOBS_POLL_MS`, a second by default).
+  it.skipIf(!purgesAreRecorded)('publishing purges the CDN by the entry, its type, the lists and the sitemap', { timeout: 30_000 }, async () => {
     const purgedBefore = (await purges()).length;
     await call('POST', `${management}/environments/main/entries/${page.id}/publish`, session);
 
-    await vi.waitFor(async () => {
-      const recent = (await purges()).slice(purgedBefore);
-      expect(recent.some((p) => p.body.tags?.includes(`entry:${page.id}`))).toBe(true);
-    });
+    await vi.waitFor(
+      async () => {
+        const recent = (await purges()).slice(purgedBefore);
+        expect(recent.some((p) => p.body.tags?.includes(`entry:${page.id}`))).toBe(true);
+      },
+      { timeout: 20_000, interval: 250 },
+    );
     const purge = (await purges()).slice(purgedBefore).find((p) => p.body.tags?.includes(`entry:${page.id}`));
     expect(purge?.zone).toBe('e2e-zone');
     expect(purge?.authorization).toBe('Bearer e2e-token');
