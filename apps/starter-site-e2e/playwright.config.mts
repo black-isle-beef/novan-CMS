@@ -83,12 +83,13 @@ export default defineConfig({
       dependencies: ['chromium', 'firefox', 'webkit'],
     },
 
-    // Forms send submissions and publish a page (package 18), likewise once and after the read-only tests.
+    // Forms send submissions and publish a page (package 18), likewise once and after the read-only tests. After
+    // seo-publish too: it moves the contact page to /get-in-touch for a while, and the inbox records the form's path.
     {
       name: 'forms',
       use: { ...devices['Desktop Chrome'] },
       testMatch: /forms\.spec\.ts/,
-      dependencies: ['chromium', 'firefox', 'webkit'],
+      dependencies: ['chromium', 'firefox', 'webkit', 'seo-publish'],
     },
 
     // Uncomment for mobile browsers support
