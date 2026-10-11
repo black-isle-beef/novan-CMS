@@ -41,7 +41,7 @@ parallel safe
 set search_path = ''
 as $$
 declare
-  parts text[] := '{}';
+  result text := '';
   part text;
   item jsonb;
   key text;
@@ -54,7 +54,7 @@ begin
       for item in select value from jsonb_array_elements(data) loop
         part := public.search_text(item, locales);
         if part <> '' then
-          parts := parts || part;
+          result := case when result = '' then part else result || ' ' || part end;
         end if;
       end loop;
     when 'object' then
@@ -74,14 +74,14 @@ begin
         if not public.search_skipped_key(key) then
           part := public.search_text(item, locales);
           if part <> '' then
-            parts := parts || part;
+            result := case when result = '' then part else result || ' ' || part end;
           end if;
         end if;
       end loop;
     else
       return '';
   end case;
-  return array_to_string(parts, ' ');
+  return result;
 end;
 $$;
 

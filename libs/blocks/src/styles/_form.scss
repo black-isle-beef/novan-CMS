@@ -45,10 +45,11 @@
 }
 
 // The summary is an alert on its own light surface whatever the tone, so its links take the alert's colour rather
-// than the tone's (white on brand and dark).
-.novan-form-block__summary .alert {
-  --bs-link-color: var(--bs-alert-link-color);
-  --ds-link-hover-color: var(--bs-alert-link-color);
+// than the tone's (white on brand and dark). `--bs-alert-link-color` is declared on `.alert-danger`, not `:root`, so
+// use the global colour it is set from.
+.novan-form-block__summary .alert-danger {
+  --bs-link-color: var(--bs-danger-text-emphasis);
+  --ds-link-hover-color: var(--bs-danger-text-emphasis);
 }
 
 // Bootstrap colours an invalid tick box's label red, which is hard to read on brand and dark; the message below says
