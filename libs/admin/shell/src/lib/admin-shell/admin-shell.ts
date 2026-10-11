@@ -24,7 +24,8 @@ import { SpaceContext, SpaceSwitcher } from '@novan/admin-spaces';
 import { filter, map } from 'rxjs';
 import { ConfirmHost } from '../confirm/confirm-host';
 import { buildSpaceNav } from '../nav/space-nav';
-import { Shortcuts } from '../shortcuts/shortcuts';
+import { SearchPalette } from '../search/search-palette';
+import { shortcutKeys, Shortcuts } from '../shortcuts/shortcuts';
 import { ViewAsBanner } from '../view-as/view-as-banner';
 import { ViewAsMenu } from '../view-as/view-as-menu';
 
@@ -34,8 +35,9 @@ const narrowScreen = '(max-width: 767.98px)';
 const spaceInUrl = /^\/spaces\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[/?#]|$)/i;
 
 /**
- * Signed-in layout: the header (space switcher, "view as" for agency staff, sign out), the role-aware space
- * menu on the left, then the screen. Also hosts the toasts, the confirm dialog and the keyboard shortcuts.
+ * Signed-in layout: the header (search, space switcher, "view as" for agency staff, sign out), the role-aware space
+ * menu on the left, then the screen. Also hosts the toasts, the confirm dialog, the search dialog (Ctrl+K inside a space)
+ * and the keyboard shortcuts.
  */
 @Component({
   selector: 'nv-admin-shell',
@@ -47,6 +49,7 @@ const spaceInUrl = /^\/spaces\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-
     DsToastContainerComponent,
     RouterLink,
     RouterOutlet,
+    SearchPalette,
     SpaceSwitcher,
     ViewAsBanner,
     ViewAsMenu,
@@ -104,10 +107,14 @@ export class AdminShell implements OnInit {
   );
 
   private readonly main = viewChild<ElementRef<HTMLElement>>('main');
+  private readonly search = viewChild(SearchPalette);
+  protected readonly searchKeys = shortcutKeys.search;
   /** The address without its query or fragment: a new screen, rather than the same one filtered. */
   private readonly path = computed(() => this.url().split(/[?#]/)[0]);
 
   constructor() {
+    // Ctrl+K searches the space being worked in; screens that register their own shortcut win.
+    this.shortcuts.register('search', () => this.openSearch());
     // Screens inside a space read it from the context; the address decides which space that is.
     effect(() => {
       const spaceId = this.spaceId();
@@ -121,6 +128,10 @@ export class AdminShell implements OnInit {
         if (main) main.scrollTop = 0;
       });
     });
+  }
+
+  protected openSearch(): void {
+    this.search()?.show();
   }
 
   /** Returns nothing: a listener that returns false makes Angular cancel the key (Tab, typing). */

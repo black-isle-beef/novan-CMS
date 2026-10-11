@@ -321,6 +321,38 @@ its own `<novan-blocks>`. For a component without one, the renderer puts them af
 no registered component shows nothing on the live site, and a warning box in preview. Blocks an editor hid
 (`_hidden: true`) are never shown.
 
+Give the page's id as well, `<novan-blocks [blocks]="page.data.body" [entryId]="page.id">`, and every block (inside
+other blocks too) can `inject(NOVAN_BLOCK_CONTEXT, { optional: true })` to learn its `uid`, its block type and the
+`entryId` of the page it is on. A form block needs this to send what visitors fill in.
+
+## Forms
+
+`NovanForms.submit(formUid, { entryId, locale, data, turnstileToken })` sends a form's answers to the Delivery API
+(`POST /v1/delivery/forms/:formUid/submit`, docs/build/18-search-forms-audit.md), from the browser only and never in
+preview. It goes through `createNovanProxy`, which adds the delivery token and the visitor's address (set
+`app.set('trust proxy', ...)` behind a CDN), or straight to the API with a `publicDeliveryToken`. A refusal is a
+`NovanApiError` whose `errors` give messages by field name (`form_invalid`), or a `code` such as
+`spam_check_failed` or `rate_limited`. Answers are checked again on the server against the published form.
+
+Forms are protected by Cloudflare Turnstile when the site has a site key: give it as `turnstileSiteKey` in
+`provideNovanCmsServer` (from the server environment; the server passes it to the browser with each page) and read it
+from `NovanForms.turnstileSiteKey`. The API checks the widget's answer with the matching secret key.
+
+## Search
+
+`content.entries({ q: 'rose garden' })` searches the site's published content (drafts in preview): entries with every
+word (the last may be unfinished), best match first, each with `search: { rank, snippet }`. A snippet is plain text in
+parts, `{ text, match }`, from the requested locale; mark the matches yourself (never as HTML). `q` combines with
+`type`, `locale`, `limit`, `cursor`, `include` and `select`, not with `filter` or `sort`.
+
+`<novan-search>` is a ready search box and results list: it searches as visitors type (from two letters), announces
+how many results it found, links each to its page and marks the matching words with `<mark>`. Inputs: `query` (two-way,
+to keep it in the address), `type`, `limit`, `label`, `placeholder`, `buttonLabel`, `moreLabel`.
+
+```html
+<novan-search [(query)]="q" type="page" />
+```
+
 ## Rich text
 
 ```html
@@ -345,6 +377,7 @@ content.entries<Article>({                           // Observable<Paged<Article
   sort: '-fields.publishedOn',
   limit: 10,
 });
+content.entries({ q: 'opening hours', type: 'page' }); // a search, best match first
 content.entry(id);                                   // Observable<NovanEntry | null>
 content.singleton<SiteSettings>('siteSettings');     // Observable<SiteSettings> (the singleton's data)
 content.sitemap();                                   // Observable<NovanSitemap>

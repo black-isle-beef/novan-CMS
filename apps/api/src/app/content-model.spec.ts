@@ -144,14 +144,14 @@ describe('content model API', () => {
       if (spaceId) await db.serviceDb.delete(spaces).where(eq(spaces.id, spaceId));
     });
 
-    it('an editor reads the seeded page type, singletons and five block types, stored as the API would store them', async () => {
+    it('an editor reads the seeded page type, singletons and six block types, stored as the API would store them', async () => {
       const editor = await as('editor');
       const types = await request(app.getHttpServer()).get(base(demoSpaceId, 'content-types')).auth(editor, { type: 'bearer' });
       const blocks = await request(app.getHttpServer()).get(base(demoSpaceId, 'block-types')).auth(editor, { type: 'bearer' });
 
       expect(types.status).toBe(200);
       expect(types.body.map((t: { apiId: string }) => t.apiId).sort()).toEqual(['navigation', 'notFound', 'page', 'siteSettings']);
-      expect(blocks.body.map((b: { apiId: string }) => b.apiId).sort()).toEqual(['cta', 'featureGrid', 'hero', 'image', 'richText']);
+      expect(blocks.body.map((b: { apiId: string }) => b.apiId).sort()).toEqual(['cta', 'featureGrid', 'form', 'hero', 'image', 'richText']);
       // Parsing fills every default, so equality proves the seed is valid and already canonical.
       for (const type of types.body) expect(contentTypeSchema.parse(type)).toEqual(type);
       for (const block of blocks.body) expect(blockTypeSchema.parse(block)).toEqual(block);
@@ -162,6 +162,7 @@ describe('content model API', () => {
         'image',
         'featureGrid',
         'cta',
+        'form',
       ]);
     });
 

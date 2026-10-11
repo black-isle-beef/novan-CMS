@@ -20,6 +20,8 @@ export const novanServerOptions: NovanServerOptions = {
   previewToken,
   // Previews from the admin's visual editor: the Preview API checks each signed link.
   verifyPreview: createNovanPreviewVerifier({ apiUrl, previewToken }),
+  // Forms show Cloudflare Turnstile with this public site key; the API checks answers with the secret key.
+  turnstileSiteKey: process.env['TURNSTILE_SITE_KEY'] || undefined,
 };
 
 /**

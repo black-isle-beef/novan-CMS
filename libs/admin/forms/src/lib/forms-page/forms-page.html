@@ -1,0 +1,179 @@
+<h1 class="mb-1">Forms</h1>
+<p class="lead text-muted mb-4">
+  Messages visitors send through the forms on {{ context.currentSpace()?.name ?? 'your site' }}.
+</p>
+
+<div role="status">
+  @if (status(); as message) {
+    <ds-alert variant="success" class="mb-3">{{ message }}</ds-alert>
+  }
+</div>
+<div role="alert">
+  @if (actionError(); as message) {
+    <ds-alert variant="danger" class="mb-3">{{ message }}</ds-alert>
+  }
+</div>
+
+@if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (forms(); as list) {
+  @if (list.length) {
+    <div class="d-flex flex-wrap align-items-end gap-3 mb-3">
+      <div>
+        <label for="forms-filter" class="form-label">Show messages from</label>
+        <select id="forms-filter" class="form-select" [value]="filter()" (change)="choose($event)">
+          <option value="">All forms ({{ total() }})</option>
+          @for (form of list; track form.formUid) {
+            <option [value]="form.formUid">{{ formName(form) }}{{ form.pagePath ? ' on ' + form.pagePath : '' }} ({{ form.count }})</option>
+          }
+        </select>
+      </div>
+      @if (chosenForm(); as form) {
+        <button type="button" class="btn btn-secondary" [disabled]="busy()" (click)="download()">
+          Download as a spreadsheet<span class="visually-hidden"> (CSV): {{ formName(form) }}</span>
+        </button>
+      }
+    </div>
+
+    @if (items(); as messages) {
+      <div class="table-responsive mb-3">
+        <table class="table align-middle">
+          <caption class="visually-hidden">
+            Messages, newest first
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Received</th>
+              <th scope="col">Form</th>
+              <th scope="col">First answer</th>
+              <th scope="col"><span class="visually-hidden">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (message of messages; track message.id) {
+              <tr [class.table-active]="open()?.id === message.id">
+                <th scope="row" class="fw-normal text-nowrap">{{ message.createdAt | date: 'd MMM y, HH:mm' }}</th>
+                <td>
+                  {{ formName(message) }}
+                  @if (message.pagePath) {
+                    <span class="d-block small text-muted">{{ message.pagePath }}</span>
+                  }
+                </td>
+                <td class="text-break">{{ summary(message) }}</td>
+                <td class="text-end">
+                  <div class="d-flex flex-wrap justify-content-end gap-2">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-secondary"
+                      [attr.aria-expanded]="open()?.id === message.id"
+                      aria-controls="forms-detail"
+                      (click)="show(message.id)"
+                    >
+                      Read<span class="visually-hidden"> the message of {{ message.createdAt | date: 'd MMM y, HH:mm' }}</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger" [disabled]="busy()" (click)="remove(message)">
+                      Delete<span class="visually-hidden"> the message of {{ message.createdAt | date: 'd MMM y, HH:mm' }}</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (nextCursor()) {
+        <button type="button" class="btn btn-secondary mb-5" [disabled]="busy()" (click)="more()">Show older messages</button>
+      }
+    } @else {
+      <ds-spinner label="Loading messages" />
+    }
+  } @else {
+    <p class="mb-5">No messages yet. They appear here when visitors send a form on your site.</p>
+  }
+
+  <div id="forms-detail">
+    @if (open(); as message) {
+      <section aria-labelledby="forms-detail-heading" class="border rounded p-4 mb-5">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+          <h2 id="forms-detail-heading" #detailHeading tabindex="-1" class="h4 mb-0">
+            Message of {{ message.createdAt | date: 'd MMM y, HH:mm' }}
+          </h2>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-danger" [disabled]="busy()" (click)="remove(message)">Delete</button>
+            <button type="button" class="btn btn-sm btn-secondary" (click)="open.set(null)">Close</button>
+          </div>
+        </div>
+        <p class="text-muted">
+          Sent through {{ formName(message) }}{{ message.pagePath ? ' on ' + message.pagePath : '' }}{{
+            message.locale ? ' (' + message.locale + ')' : ''
+          }}.
+        </p>
+        <dl class="mb-0">
+          @for (field of message.fields; track field.name) {
+            <dt>{{ field.label }}</dt>
+            <dd class="text-break nv-preserve-lines">{{ answer(message.data[field.name]) }}</dd>
+          }
+        </dl>
+      </section>
+    }
+  </div>
+
+  <section aria-labelledby="forms-settings-heading" class="col-lg-8">
+    <h2 id="forms-settings-heading" class="h4">Emails and keeping messages</h2>
+    @if (canChangeSettings()) {
+      <form [formGroup]="settingsForm" (ngSubmit)="saveSettings()" novalidate>
+        <div class="mb-3">
+          <label for="forms-recipients" class="form-label">Email new messages to</label>
+          <textarea
+            id="forms-recipients"
+            class="form-control"
+            rows="3"
+            formControlName="recipients"
+            autocomplete="off"
+            spellcheck="false"
+            [class.is-invalid]="invalid('recipients')"
+            [attr.aria-invalid]="invalid('recipients')"
+            [attr.aria-describedby]="invalid('recipients') ? 'forms-recipients-hint forms-recipients-error' : 'forms-recipients-hint'"
+          ></textarea>
+          <div id="forms-recipients-hint" class="form-text">Up to 10 email addresses, one per line. Leave empty for no emails.</div>
+          @if (invalid('recipients')) {
+            <div id="forms-recipients-error" class="invalid-feedback d-block">Enter up to 10 email addresses, like office&#64;example.com.</div>
+          }
+        </div>
+        <div class="mb-4">
+          <label for="forms-retention" class="form-label">Keep messages for (months)</label>
+          <input
+            id="forms-retention"
+            type="number"
+            class="form-control w-auto"
+            min="1"
+            max="120"
+            inputmode="numeric"
+            formControlName="retentionMonths"
+            required
+            [class.is-invalid]="invalid('retentionMonths')"
+            [attr.aria-invalid]="invalid('retentionMonths')"
+            [attr.aria-describedby]="invalid('retentionMonths') ? 'forms-retention-hint forms-retention-error' : 'forms-retention-hint'"
+          />
+          <div id="forms-retention-hint" class="form-text">Older messages are deleted every night. 12 months suits most sites.</div>
+          @if (invalid('retentionMonths')) {
+            <div id="forms-retention-error" class="invalid-feedback d-block">Choose between 1 and 120 months.</div>
+          }
+        </div>
+        <button type="submit" class="btn btn-primary" [disabled]="busy()" [attr.aria-busy]="busy()">Save form settings</button>
+      </form>
+    } @else if (settings(); as current) {
+      <p>
+        @if (current.recipients.length) {
+          Emails about new messages go to {{ current.recipients.join(', ') }}.
+        } @else {
+          Nobody is emailed about new messages.
+        }
+        Messages are deleted after {{ current.retentionMonths }} {{ current.retentionMonths === 1 ? 'month' : 'months' }}. Ask a
+        space admin to change this.
+      </p>
+    }
+  </section>
+} @else {
+  <ds-spinner label="Loading forms" />
+}

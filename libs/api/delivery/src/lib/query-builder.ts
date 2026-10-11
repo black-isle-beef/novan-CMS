@@ -164,6 +164,21 @@ export function decodeCursor(cursor: string, sort: Sort): CursorPosition {
   return position as CursorPosition;
 }
 
+/** A cursor from a search (`q`, sorted by relevance): the last hit's rank and id. */
+export function decodeSearchCursor(cursor: string): { rank: number; id: string } {
+  let position: Partial<CursorPosition> | null = null;
+  try {
+    position = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as Partial<CursorPosition>;
+  } catch {
+    // Reported below.
+  }
+  const rank = Number(position?.v);
+  if (!position || position.s !== 'relevance' || typeof position.id !== 'string' || !isUuid(position.id) || typeof position.v !== 'string' || !Number.isFinite(rank)) {
+    throw badRequest('invalid_cursor', 'This cursor does not belong to this query. Start again from the first page.');
+  }
+  return { rank, id: position.id };
+}
+
 /** Rows after the cursor's position in {@link orderBy}'s order. */
 export function afterCursor(src: ContentSource, sort: Sort, position: CursorPosition): SQL {
   const idAfter = sort.descending ? sql`${src.id} < ${position.id}` : sql`${src.id} > ${position.id}`;

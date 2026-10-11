@@ -2,6 +2,19 @@
 
 All notable changes to `@black-isle-beef/cms-angular`. The package follows [semantic versioning](https://semver.org).
 
+## 0.7.0
+
+Search and forms (docs/build/18-search-forms-audit.md).
+
+- `entries({ q })`: full-text search of the Delivery and Preview APIs, best match first; each entry has
+  `search: { rank, snippet }` (types `NovanSearchInfo`, `NovanSnippetPart`).
+- `<novan-search>` (`NovanSearch`): an accessible search box and results list with highlighted snippets.
+- `NovanForms`: sends form answers (`POST /v1/delivery/forms/:formUid/submit`) from the browser; Cloudflare Turnstile's
+  site key from `provideNovanCmsServer({ turnstileSiteKey })` (or `provideNovanCms`) reaches the browser with the page.
+- `<novan-blocks [entryId]>` and `NOVAN_BLOCK_CONTEXT`: a block learns its `uid`, block type and page.
+- `NovanApiError.errors`: the API's messages by field.
+- `createNovanProxy` passes form submissions (POST, JSON, up to 64 KB) with the visitor's address.
+
 ## 0.6.0
 
 Languages (docs/build/16-localisation.md).

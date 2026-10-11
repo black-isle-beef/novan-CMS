@@ -139,6 +139,73 @@ describe('createNovanProxy', () => {
     await handler({ method: 'GET', url: '/delivery/sitemap', headers: {} }, response(), next);
     expect(next).toHaveBeenCalledWith(expect.any(Error));
   });
+
+  describe('forms', () => {
+    const FORM_URL = '/delivery/forms/00000000-0000-4000-8000-000000000924/submit';
+    const json = { 'content-type': 'application/json' };
+    /** A request body as Node streams it. */
+    const stream = (text: string) => ({
+      async *[Symbol.asyncIterator]() {
+        yield new TextEncoder().encode(text.slice(0, 5));
+        yield text.slice(5);
+      },
+    });
+
+    it('posts the answers with the delivery token and the visitor\'s address, and passes the answer back', async () => {
+      const { handler, fetch } = proxy({}, new Response('', { status: 202 }));
+      const res = response();
+      const body = '{"entryId":"e","data":{"email":"ada@example.com"}}';
+      await handler({ method: 'POST', url: FORM_URL, headers: json, ip: '::ffff:203.0.113.9', ...stream(body) }, res);
+
+      const [url, init] = fetch.mock.calls[0];
+      expect(url).toBe(`${API}/v1${FORM_URL}`);
+      expect(init).toMatchObject({ method: 'POST', body, redirect: 'manual' });
+      expect(init.headers).toEqual({
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer nv_del_secret',
+        'X-Novan-Client-Ip': '203.0.113.9',
+      });
+      expect(res.statusCode).toBe(202);
+      expect(res.headers['cache-control']).toBe('no-store');
+    });
+
+    it('takes a body Express has already parsed, and passes refusals back', async () => {
+      const { handler, fetch } = proxy(
+        {},
+        new Response('{"code":"form_invalid"}', { status: 400, headers: { 'content-type': 'application/problem+json' } }),
+      );
+      const res = response();
+      await handler({ method: 'POST', url: FORM_URL, headers: json, body: { entryId: 'e', data: {} }, socket: { remoteAddress: '198.51.100.2' } }, res);
+      expect(fetch.mock.calls[0][1].body).toBe('{"entryId":"e","data":{}}');
+      expect((fetch.mock.calls[0][1].headers as Record<string, string>)['X-Novan-Client-Ip']).toBe('198.51.100.2');
+      expect(res.statusCode).toBe(400);
+      expect(res.headers['content-type']).toBe('application/problem+json');
+      expect(res.text()).toBe('{"code":"form_invalid"}');
+    });
+
+    it.each([
+      ['GET', json, '{}', 405],
+      ['POST', { 'content-type': 'text/plain' }, '{}', 415],
+      ['POST', json, `{"a":"${'x'.repeat(70_000)}"}`, 413],
+    ])('refuses %s with %o and a body of %#, without calling the API', async (method, headers, body, status) => {
+      const { handler, fetch } = proxy();
+      const res = response();
+      await handler({ method, url: FORM_URL, headers, ...stream(body) }, res);
+      expect(res.statusCode).toBe(status);
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('takes no other POST, and no form address with a query', async () => {
+      const { handler, fetch } = proxy();
+      for (const url of ['/delivery/pages', `${FORM_URL}?x=1`, '/delivery/forms/../../management/submit', '/preview/forms/x/submit']) {
+        const res = response();
+        const next = vi.fn();
+        await handler({ method: 'POST', url, headers: json }, res, next);
+        expect(fetch, url).not.toHaveBeenCalled();
+      }
+    });
+  });
 });
 
 describe('createNovanPreviewVerifier', () => {

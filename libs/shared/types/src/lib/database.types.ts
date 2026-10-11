@@ -63,13 +63,13 @@ isOneToOne: false
                   ]
                 },"assets": {
                   Row: {
-                    "alt": string | null,"created_at": string,"deleted_at": string | null,"filename": string,"focal_x": number | null,"focal_y": number | null,"folder": string | null,"height": number | null,"id": string,"mime": string,"path": string,"revision": number,"size_bytes": number,"space_id": string,"tags": (string)[],"title": string | null,"updated_at": string,"uploaded_by": string | null,"width": number | null
+                    "alt": string | null,"created_at": string,"deleted_at": string | null,"filename": string,"focal_x": number | null,"focal_y": number | null,"folder": string | null,"height": number | null,"id": string,"mime": string,"path": string,"revision": number,"search": unknown,"size_bytes": number,"space_id": string,"tags": (string)[],"title": string | null,"updated_at": string,"uploaded_by": string | null,"width": number | null
                   }
                   Insert: {
-                    "alt"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"filename": string,"focal_x"?: number | null,"focal_y"?: number | null,"folder"?: string | null,"height"?: number | null,"id"?: string,"mime": string,"path": string,"revision"?: number,"size_bytes": number,"space_id": string,"tags"?: (string)[],"title"?: string | null,"updated_at"?: string,"uploaded_by"?: string | null,"width"?: number | null
+                    "alt"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"filename": string,"focal_x"?: number | null,"focal_y"?: number | null,"folder"?: string | null,"height"?: number | null,"id"?: string,"mime": string,"path": string,"revision"?: number,"search"?: never,"size_bytes": number,"space_id": string,"tags"?: (string)[],"title"?: string | null,"updated_at"?: string,"uploaded_by"?: string | null,"width"?: number | null
                   }
                   Update: {
-                    "alt"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"filename"?: string,"focal_x"?: number | null,"focal_y"?: number | null,"folder"?: string | null,"height"?: number | null,"id"?: string,"mime"?: string,"path"?: string,"revision"?: number,"size_bytes"?: number,"space_id"?: string,"tags"?: (string)[],"title"?: string | null,"updated_at"?: string,"uploaded_by"?: string | null,"width"?: number | null
+                    "alt"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"filename"?: string,"focal_x"?: number | null,"focal_y"?: number | null,"folder"?: string | null,"height"?: number | null,"id"?: string,"mime"?: string,"path"?: string,"revision"?: number,"search"?: never,"size_bytes"?: number,"space_id"?: string,"tags"?: (string)[],"title"?: string | null,"updated_at"?: string,"uploaded_by"?: string | null,"width"?: number | null
                   }
                   Relationships: [
                     {
@@ -198,6 +198,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"entry_search": {
+                  Row: {
+                    "entry_id": string,"environment_id": string,"search": unknown,"space_id": string,"title": string,"updated_at": string
+                  }
+                  Insert: {
+                    "entry_id": string,"environment_id": string,"search": unknown,"space_id": string,"title": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "entry_id"?: string,"environment_id"?: string,"search"?: unknown,"space_id"?: string,"title"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "entry_search_entry_id_space_id_fkey"
+      columns: ["entry_id","space_id"]
+isOneToOne: false
+      referencedRelation: "entries"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "entry_search_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"entry_versions": {
                   Row: {
                     "autosave": boolean,"created_at": string,"created_by": string | null,"data": NonNullable<Json>,"entry_id": string,"id": string,"message": string | null,"space_id": string
@@ -273,6 +298,50 @@ isOneToOne: false
       referencedColumns: ["id","environment_id"]
     },{
       foreignKeyName: "folders_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"form_settings": {
+                  Row: {
+                    "recipients": (string)[],"retention_months": number,"space_id": string,"updated_at": string,"updated_by": string | null
+                  }
+                  Insert: {
+                    "recipients"?: (string)[],"retention_months"?: number,"space_id": string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "recipients"?: (string)[],"retention_months"?: number,"space_id"?: string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "form_settings_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: true
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"form_submissions": {
+                  Row: {
+                    "created_at": string,"data": NonNullable<Json>,"entry_id": string | null,"fields": NonNullable<Json>,"form_name": string | null,"form_uid": string,"id": string,"locale": string | null,"page_path": string | null,"space_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"data": NonNullable<Json>,"entry_id"?: string | null,"fields"?: NonNullable<Json>,"form_name"?: string | null,"form_uid": string,"id"?: string,"locale"?: string | null,"page_path"?: string | null,"space_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"data"?: NonNullable<Json>,"entry_id"?: string | null,"fields"?: NonNullable<Json>,"form_name"?: string | null,"form_uid"?: string,"id"?: string,"locale"?: string | null,"page_path"?: string | null,"space_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "form_submissions_entry_id_space_id_fkey"
+      columns: ["entry_id","space_id"]
+isOneToOne: false
+      referencedRelation: "entries"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "form_submissions_space_id_fkey"
       columns: ["space_id"]
 isOneToOne: false
       referencedRelation: "spaces"
@@ -364,13 +433,13 @@ isOneToOne: false
                   ]
                 },"published_content": {
                   Row: {
-                    "cache_tags": (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"published_at": string,"space_id": string
+                    "cache_tags": (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"published_at": string,"search": unknown,"space_id": string
                   }
                   Insert: {
-                    "cache_tags"?: (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"published_at": string,"space_id": string
+                    "cache_tags"?: (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"published_at": string,"search"?: never,"space_id": string
                   }
                   Update: {
-                    "cache_tags"?: (string)[],"content_type_api_id"?: string,"data"?: NonNullable<Json>,"entry_id"?: string,"environment_id"?: string,"full_path"?: string,"published_at"?: string,"space_id"?: string
+                    "cache_tags"?: (string)[],"content_type_api_id"?: string,"data"?: NonNullable<Json>,"entry_id"?: string,"environment_id"?: string,"full_path"?: string,"published_at"?: string,"search"?: never,"space_id"?: string
                   }
                   Relationships: [
                     {
@@ -688,8 +757,26 @@ isOneToOne: false
 "purge_binned_entries":
 { Args: { "batch"?: number,"older_than"?: string }; Returns: number
                            },
+"purge_expired_form_submissions":
+{ Args: { "batch"?: number }; Returns: number
+                           },
 "record_not_found":
 { Args: { "missed_path": string,"referrer"?: string,"space": string }; Returns: undefined
+                           },
+"refresh_entry_search":
+{ Args: { "entry": string }; Returns: undefined
+                           },
+"search_document":
+{ Args: { "data": Json }; Returns: unknown
+                           },
+"search_skipped_key":
+{ Args: { "key": string }; Returns: boolean
+                           },
+"search_text":
+{ Args: { "data": Json,"locales"?: (string)[] }; Returns: string
+                           },
+"search_words":
+{ Args: { "words": (string)[] }; Returns: string
                            },
 "site_path":
 { Args: { "full_path": string }; Returns: string

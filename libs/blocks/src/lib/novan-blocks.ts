@@ -2,6 +2,7 @@ import { defineBlocks } from '@black-isle-beef/cms-angular';
 
 import { CtaBlock } from './components/cta';
 import { FeatureGridBlock } from './components/feature-grid';
+import { FormBlock } from './components/form';
 import { HeroBlock } from './components/hero';
 import { ImageBlock } from './components/image';
 import { RichTextBlock } from './components/rich-text';
@@ -17,4 +18,5 @@ export const novanBlocks = defineBlocks({
   image: ImageBlock,
   featureGrid: FeatureGridBlock,
   cta: CtaBlock,
+  form: FormBlock,
 });

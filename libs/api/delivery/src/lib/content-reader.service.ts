@@ -3,6 +3,7 @@ import { SupabaseAdmin } from '@novan/api-auth';
 import { cacheTag, notFound } from '@novan/api-common';
 import { ContentEvents } from '@novan/api-content';
 import { assets, blockTypes, contentTypes, DbService, readSpaceLocales } from '@novan/api-db';
+import { SearchProvider } from '@novan/api-search';
 import {
   assetUrl,
   type BlockNode,
@@ -31,7 +32,7 @@ import type { z } from 'zod';
 import type { ApiTokenAccess } from './api-token-resolver';
 import { contentSource, type ContentSource, isoTimestamp, publicPath, storedPath } from './content-source';
 import { DROP, mapEntryData } from './entry-walker';
-import { afterCursor, decodeCursor, encodeCursor, fieldFilterSql, isUuid, orderBy, sortOf } from './query-builder';
+import { afterCursor, decodeCursor, decodeSearchCursor, encodeCursor, fieldFilterSql, isUuid, orderBy, sortOf } from './query-builder';
 
 type PageQuery = z.output<typeof deliveryPageQuerySchema>;
 type EntriesQuery = z.output<typeof deliveryEntriesQuerySchema>;
@@ -112,6 +113,7 @@ export class ContentReader {
     private readonly db: DbService,
     private readonly supabase: SupabaseAdmin,
     @Inject(DELIVERY_CONFIG) private readonly config: DeliveryConfig,
+    private readonly search: SearchProvider,
     events: ContentEvents,
   ) {
     // This instance forgets a space's locales as soon as they change; others within MODEL_CACHE_MS.
@@ -157,6 +159,7 @@ export class ContentReader {
     const [model, locale] = await Promise.all([this.model(access), this.locale(access, query.locale)]);
     const fields = query.type ? (model.types.get(query.type)?.fields ?? null) : null;
     if (query.type && !fields) throw notFound('content_type_not_found', `There is no content type "${query.type}".`);
+    if (query.q !== undefined) return this.searchEntries(access, model, locale, { ...query, q: query.q });
 
     const sort = sortOf(src, query.sort, fields, query.type, locale);
     const filters: (SQL | undefined)[] = [
@@ -177,6 +180,47 @@ export class ContentReader {
     const { items, tags } = await this.expand(access, model, locale, page, query);
     const listTag = query.type ? cacheTag.type(access.environmentId, query.type) : cacheTag.entries(access.environmentId);
     return { body: { items, nextCursor }, tags: [cacheTag.space(access.spaceId), listTag, ...tags] };
+  }
+
+  /**
+   * `GET entries?q=`: entries matching the search (docs/build/18-search-forms-audit.md), best first, each with its rank
+   * and a snippet in the locale. The {@link SearchProvider} finds and ranks them; they are then built as any other
+   * entries. Cached like a list, so publishing purges it.
+   */
+  private async searchEntries(
+    access: ApiTokenAccess,
+    model: Model,
+    locale: Locale,
+    query: EntriesQuery & { q: string },
+  ): Promise<Delivered<DeliveryEntriesPage>> {
+    const after = query.cursor ? decodeSearchCursor(query.cursor) : null;
+    const { hits, hasMore } = await this.search.searchContent({
+      scope: access.scope,
+      spaceId: access.spaceId,
+      environmentId: access.environmentId,
+      q: query.q,
+      locales: locale.chain,
+      type: query.type,
+      limit: query.limit,
+      after,
+    });
+    const src = this.source(access);
+    const ids = hits.map((hit) => hit.id);
+    const found = ids.length ? await this.db.serviceDb.select(columns(src)).from(src).where(inArray(src.id, ids)) : [];
+    const byId = new Map(found.map((row) => [row.id, row]));
+    // An entry unpublished between the two queries is left out.
+    const rows = ids.flatMap((id) => byId.get(id) ?? []);
+    const { items, tags } = await this.expand(access, model, locale, rows, query);
+    const info = new Map(hits.map((hit) => [hit.id, { rank: hit.rank, snippet: hit.snippet }]));
+    const last = hits[hits.length - 1];
+    const listTag = query.type ? cacheTag.type(access.environmentId, query.type) : cacheTag.entries(access.environmentId);
+    return {
+      body: {
+        items: items.map((item) => ({ ...item, search: info.get(item.id) })),
+        nextCursor: hasMore && last ? encodeCursor({ s: 'relevance', v: String(last.rank), id: last.id }) : null,
+      },
+      tags: [cacheTag.space(access.spaceId), listTag, ...tags],
+    };
   }
 
   async entry(access: ApiTokenAccess, id: string, query: EntryQuery): Promise<Delivered<DeliveryEntry>> {

@@ -1,0 +1,9 @@
+{
+  "name": "api-audit",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/api/audit/src",
+  "projectType": "library",
+  "tags": ["scope:api", "type:feature"],
+  "// targets": "to see all targets run: nx show project api-audit --web",
+  "targets": {}
+}

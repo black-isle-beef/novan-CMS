@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { NOVAN_BLOCK_CONTEXT } from './block-context';
 import { defineBlocks, type NovanBlock, type NovanBlockType } from './blocks';
 import { NovanBlocks } from './blocks.component';
 import { NOVAN_CMS_CONFIG } from './config';
@@ -63,23 +64,36 @@ class DividerBlock {
   static readonly novanBlock = { apiId: 'divider', schemaVersion: 2 };
 }
 
+/** Shows where it is, from the context <novan-blocks> gives it. */
+@Component({
+  selector: 'novan-test-where',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `<p [attr.data-uid]="context?.uid" [attr.data-entry]="context?.entryId">{{ text() }}</p>`,
+})
+class WhereBlock {
+  static readonly novanBlock = { apiId: 'where', schemaVersion: 1 };
+  readonly text = input<string>();
+  protected readonly context = inject(NOVAN_BLOCK_CONTEXT, { optional: true });
+}
+
 @Component({
   imports: [NovanBlocks],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<novan-blocks [blocks]="blocks()" />`,
+  template: `<novan-blocks [blocks]="blocks()" [entryId]="entryId()" />`,
 })
 class Host {
   readonly blocks = signal<NovanBlockNode[]>([]);
+  readonly entryId = signal<string | null>(null);
 }
 
 const uid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
-function render(blocks: unknown[], { preview = false } = {}): HTMLElement {
+function render(blocks: unknown[], { preview = false, entryId = null as string | null } = {}): HTMLElement {
   TestBed.configureTestingModule({
     providers: [
       {
         provide: NOVAN_CMS_CONFIG,
-        useValue: { blocks: defineBlocks({ hero: HeroBlock, section: SectionBlock, divider: DividerBlock, banner: BannerBlock }) },
+        useValue: { blocks: defineBlocks({ hero: HeroBlock, section: SectionBlock, divider: DividerBlock, banner: BannerBlock, where: WhereBlock }) },
       },
       { provide: NovanPreview, useValue: { active: signal(preview) } },
     ],
@@ -87,9 +101,13 @@ function render(blocks: unknown[], { preview = false } = {}): HTMLElement {
   const fixture = TestBed.createComponent(Host);
   // Content is checked at run time, so tests may pass malformed nodes.
   fixture.componentInstance.blocks.set(blocks as NovanBlockNode[]);
+  fixture.componentInstance.entryId.set(entryId);
   fixture.detectChanges();
+  lastFixture = fixture;
   return fixture.nativeElement as HTMLElement;
 }
+
+let lastFixture: ReturnType<typeof TestBed.createComponent<Host>>;
 
 describe('NovanBlocks', () => {
   it('renders each block with its registered component and fields as inputs', () => {
@@ -204,6 +222,33 @@ describe('NovanBlocks', () => {
     ]);
 
     expect([...el.querySelectorAll('h2')].map((h) => h.textContent)).toEqual(['Once']);
+  });
+
+  it('tells each block its id and the page it is on, inside other blocks too', () => {
+    const page = uid(700);
+    const el = render(
+      [
+        { _uid: uid(1), _block: 'where', text: 'Top' },
+        { _uid: uid(2), _block: 'section', label: 'Outer', children: [{ _uid: uid(3), _block: 'where', text: 'Inside' }] },
+        { _uid: uid(4), _block: 'divider', children: [{ _uid: uid(5), _block: 'where', text: 'After' }] },
+      ],
+      { entryId: page },
+    );
+    const where = [...el.querySelectorAll<HTMLElement>('novan-test-where p')].map((p) => [p.textContent, p.dataset['uid'], p.dataset['entry']]);
+    expect(where).toEqual([
+      ['Top', uid(1), page],
+      ['Inside', uid(3), page],
+      ['After', uid(5), page],
+    ]);
+  });
+
+  it('keeps a block\'s component through live updates', () => {
+    const el = render([{ _uid: uid(1), _block: 'where', text: 'Before' }], { entryId: uid(700) });
+    const first = el.querySelector('novan-test-where');
+    lastFixture.componentInstance.blocks.set([{ _uid: uid(1), _block: 'where', text: 'After' }]);
+    lastFixture.detectChanges();
+    expect(el.querySelector('novan-test-where')).toBe(first);
+    expect(first?.textContent).toBe('After');
   });
 
   it('renders nothing for a missing block list', () => {

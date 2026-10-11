@@ -5,8 +5,8 @@ import { requireSettingsAccess, requireSpaceSettingsAccess } from './settings-ac
 
 /**
  * Space settings, inside the signed-in layout. The overview, site settings, navigation, redirects and missing pages
- * are for everyone in the space (roles decide what they can change); API tokens and webhooks are for admins and developers, space
- * settings for admins (guards here, links in the shell menu).
+ * are for everyone in the space (roles decide what they can change); API tokens and webhooks are for admins and developers, the audit
+ * log and space settings for admins (guards here, links in the shell menu).
  */
 export const settingsRoutes: Route[] = [
   {
@@ -58,6 +58,12 @@ export const settingsRoutes: Route[] = [
     title: 'Webhooks | Novan CMS',
     canActivate: [requireSettingsAccess],
     loadComponent: () => import('./webhooks-page/webhooks-page').then((m) => m.WebhooksPage),
+  },
+  {
+    path: 'spaces/:spaceId/audit-log',
+    title: 'Audit log | Novan CMS',
+    canActivate: [requirePermission('audit.read')],
+    loadComponent: () => import('./audit-log-page/audit-log-page').then((m) => m.AuditLogPage),
   },
   {
     path: 'spaces/:spaceId/settings/space',

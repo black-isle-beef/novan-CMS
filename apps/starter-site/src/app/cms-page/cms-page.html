@@ -6,7 +6,7 @@
         <h1>{{ state.page.data.title }}</h1>
       </div>
     }
-    <novan-blocks [blocks]="state.page.data.body" />
+    <novan-blocks [blocks]="state.page.data.body" [entryId]="state.page.id" />
   }
   @case ('not-found') {
     @if (state.notFound; as notFound) {

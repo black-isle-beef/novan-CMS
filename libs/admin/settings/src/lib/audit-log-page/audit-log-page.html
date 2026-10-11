@@ -1,0 +1,182 @@
+<h1 class="mb-1">Audit log</h1>
+<p class="lead text-muted mb-4">
+  Who changed what in {{ context.currentSpace()?.name ?? 'this space' }}, and when. Times are UK time.
+</p>
+
+<div role="status">
+  @if (status(); as message) {
+    <ds-alert variant="success" class="mb-3">{{ message }}</ds-alert>
+  }
+</div>
+<div role="alert">
+  @if (actionError(); as message) {
+    <ds-alert variant="danger" class="mb-3">{{ message }}</ds-alert>
+  }
+</div>
+
+<form [formGroup]="filters" (ngSubmit)="apply()" class="row g-3 align-items-end mb-4" aria-label="Filter the audit log" novalidate>
+  <div class="col-md-6 col-lg-3">
+    <label for="audit-actor" class="form-label">Who</label>
+    <select id="audit-actor" class="form-select" formControlName="actor">
+      <option value="">Everyone</option>
+      @for (actor of actors(); track actor.id) {
+        <option [value]="actor.id">{{ actor.name }}</option>
+      }
+    </select>
+  </div>
+  <div class="col-md-6 col-lg-3">
+    <label for="audit-action" class="form-label">What happened</label>
+    <select id="audit-action" class="form-select" formControlName="action">
+      <option value="">Anything</option>
+      @for (group of actionGroups; track group.prefix) {
+        <optgroup [label]="group.label">
+          <option [value]="group.prefix">All: {{ group.label }}</option>
+          @for (option of group.actions; track option.action) {
+            <option [value]="option.action">{{ option.label }}</option>
+          }
+        </optgroup>
+      }
+    </select>
+  </div>
+  <div class="col-6 col-lg-2">
+    <label for="audit-from" class="form-label">From</label>
+    <input id="audit-from" type="date" class="form-control" formControlName="from" />
+  </div>
+  <div class="col-6 col-lg-2">
+    <label for="audit-to" class="form-label">To</label>
+    <input
+      id="audit-to"
+      type="date"
+      class="form-control"
+      formControlName="to"
+      [class.is-invalid]="datesInvalid()"
+      [attr.aria-invalid]="datesInvalid()"
+      [attr.aria-describedby]="datesInvalid() ? 'audit-to-error' : null"
+    />
+  </div>
+  <div class="col-lg-2 d-flex gap-2">
+    <button type="submit" class="btn btn-primary">Filter</button>
+    <button type="button" class="btn btn-secondary" (click)="clear()">Clear</button>
+  </div>
+  @if (datesInvalid()) {
+    <div id="audit-to-error" class="invalid-feedback d-block col-12 mt-1">Choose an end date on or after the start date.</div>
+  }
+</form>
+
+@if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (events(); as list) {
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+    <p class="mb-0 text-muted">{{ list.length }}{{ nextCursor() ? ' or more' : '' }} {{ list.length === 1 ? 'change' : 'changes' }}, newest first.</p>
+    @if (list.length) {
+      <button type="button" class="btn btn-secondary btn-sm" [disabled]="busy()" (click)="download()">
+        Download as a spreadsheet<span class="visually-hidden"> (CSV)</span>
+      </button>
+    }
+  </div>
+  @if (list.length) {
+    <div class="table-responsive mb-3">
+      <table class="table align-middle">
+        <caption class="visually-hidden">
+          Changes in this space, newest first
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">When</th>
+            <th scope="col">Who</th>
+            <th scope="col">What happened</th>
+            <th scope="col">Item</th>
+            <th scope="col"><span class="visually-hidden">Details</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (event of list; track event.id) {
+            <tr [class.table-active]="openId() === event.id">
+              <td class="text-nowrap">{{ when(event.createdAt) }}</td>
+              <td>{{ who(event) }}</td>
+              <th scope="row" class="fw-normal">{{ label(event.action) }}</th>
+              <td class="text-break">
+                @if (link(event); as target) {
+                  <a [routerLink]="target.path" [queryParams]="target.query">{{ item(event) }}</a>
+                } @else {
+                  {{ item(event) }}
+                }
+              </td>
+              <td class="text-end">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-secondary"
+                  [attr.aria-expanded]="openId() === event.id"
+                  [attr.aria-controls]="'audit-detail-' + event.id"
+                  (click)="toggle(event)"
+                >
+                  {{ openId() === event.id ? 'Hide' : 'Details' }}<span class="visually-hidden"> of “{{ label(event.action) }}”, {{ when(event.createdAt) }}</span>
+                </button>
+              </td>
+            </tr>
+            @if (openId() === event.id) {
+              <tr [id]="'audit-detail-' + event.id">
+                <td colspan="5" class="bg-body-tertiary">
+                  <section [attr.aria-labelledby]="'audit-detail-heading-' + event.id" class="p-2">
+                    <h2 [id]="'audit-detail-heading-' + event.id" #detailHeading tabindex="-1" class="h6">
+                      {{ label(event.action) }}: what was recorded
+                    </h2>
+                    @if (details(event); as rows) {
+                      @if (rows.length) {
+                        <dl class="row mb-2">
+                          @for (row of rows; track row.key) {
+                            <dt class="col-sm-3 text-break">{{ row.key }}</dt>
+                            <dd class="col-sm-9 text-break font-monospace small">{{ row.value }}</dd>
+                          }
+                        </dl>
+                      } @else {
+                        <p class="mb-2">Nothing more was recorded.</p>
+                      }
+                    }
+                    @if (event.hasContentDiff) {
+                      @if (contentDiff(); as diff) {
+                        <h3 class="h6 mt-3">What changed on the page</h3>
+                        @if (diff.changes.length) {
+                          <ul class="list-unstyled mb-0">
+                            @for (change of diff.changes; track $index) {
+                              <li class="mb-2">
+                                <span class="fw-semibold">{{ changeWord(change.kind) }}</span> {{ path(change.path) }}
+                                @if (change.kind === 'changed') {
+                                  <span class="d-block small">Before: <span class="font-monospace">{{ show(change.before) }}</span></span>
+                                  <span class="d-block small">After: <span class="font-monospace">{{ show(change.after) }}</span></span>
+                                } @else if (change.kind === 'added') {
+                                  <span class="d-block small font-monospace">{{ show(change.after) }}</span>
+                                } @else if (change.kind === 'removed') {
+                                  <span class="d-block small font-monospace">{{ show(change.before) }}</span>
+                                } @else {
+                                  <span class="d-block small">From position {{ (change.from ?? 0) + 1 }} to {{ (change.to ?? 0) + 1 }}</span>
+                                }
+                              </li>
+                            }
+                          </ul>
+                        } @else {
+                          <p class="mb-0">The content did not change.</p>
+                        }
+                      } @else if (contentDiffError(); as message) {
+                        <ds-alert variant="warning" class="mt-2">{{ message }}</ds-alert>
+                      } @else {
+                        <button type="button" class="btn btn-sm btn-secondary" (click)="loadContentDiff(event)">Show what changed on the page</button>
+                      }
+                    }
+                  </section>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (nextCursor()) {
+      <button type="button" class="btn btn-secondary" [disabled]="busy()" (click)="more()">Show older changes</button>
+    }
+  } @else {
+    <p>{{ filtered() ? 'No changes match these filters.' : 'Nothing has been recorded yet.' }}</p>
+  }
+} @else {
+  <ds-spinner label="Loading the audit log" />
+}

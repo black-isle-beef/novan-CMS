@@ -6,12 +6,15 @@ import type {
   DeliveryEntriesPage,
   DeliveryEntry,
   DeliveryRedirects,
+  DeliverySearchInfo,
+  FormSubmitRequest,
   ProseMirrorNode as SchemaNode,
   Sitemap,
   SpaceLocales,
 } from '@novan/shared-schemas';
 import type { NovanSitemap } from './content.service';
-import type { NovanAsset, NovanBlockNode, NovanEntry, NovanLocales, NovanRedirects, Paged, ProseMirrorNode } from './types';
+import type { NovanFormSubmission } from './forms';
+import type { NovanAsset, NovanBlockNode, NovanEntry, NovanLocales, NovanRedirects, NovanSearchInfo, Paged, ProseMirrorNode } from './types';
 
 // The SDK is published on its own, so it copies the delivered shapes instead of importing
 // @novan/shared-schemas. These assignments stop the copies drifting: they fail to compile if the API's
@@ -30,5 +33,7 @@ describe('SDK types', () => {
     expect(check<Same<NovanRedirects, DeliveryRedirects>>()).toBe(true);
     expect(check<Same<NovanLocales, SpaceLocales>>()).toBe(true);
     expect(check<Same<NovanSitemap, Sitemap>>()).toBe(true);
+    expect(check<Same<NovanSearchInfo, DeliverySearchInfo>>()).toBe(true);
+    expect(check<Same<NovanFormSubmission, Omit<FormSubmitRequest, 'data'> & { data: Record<string, string | boolean> }>>()).toBe(true);
   });
 });

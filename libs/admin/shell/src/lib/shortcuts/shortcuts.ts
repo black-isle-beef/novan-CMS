@@ -1,12 +1,13 @@
 import { DestroyRef, inject, Injectable } from '@angular/core';
 
-/** Keyboard shortcuts the admin offers: Ctrl+S (⌘S on a Mac) saves, Ctrl+Shift+P (⌘⇧P) publishes. */
-export type ShortcutAction = 'save' | 'publish';
+/** Keyboard shortcuts the admin offers: Ctrl+S (⌘S on a Mac) saves, Ctrl+Shift+P (⌘⇧P) publishes, Ctrl+K (⌘K) searches. */
+export type ShortcutAction = 'save' | 'publish' | 'search';
 
 /** For `aria-keyshortcuts` on the buttons the shortcuts press. */
 export const shortcutKeys: Record<ShortcutAction, string> = {
   save: 'Control+S Meta+S',
   publish: 'Control+Shift+P Meta+Shift+P',
+  search: 'Control+K Meta+K',
 };
 
 /**
@@ -40,5 +41,6 @@ function shortcutFor(event: KeyboardEvent): ShortcutAction | null {
   const key = event.key.toLowerCase();
   if (key === 's' && !event.shiftKey) return 'save';
   if (key === 'p' && event.shiftKey) return 'publish';
+  if (key === 'k' && !event.shiftKey) return 'search';
   return null;
 }

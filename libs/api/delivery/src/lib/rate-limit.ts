@@ -2,6 +2,7 @@ import { type ExecutionContext, HttpStatus, Injectable, SetMetadata } from '@nes
 import { ProblemException } from '@novan/api-common';
 import { ThrottlerGuard, type ThrottlerLimitDetail, type ThrottlerModuleOptions } from '@nestjs/throttler';
 import type { ApiTokenScope } from '@novan/shared-schemas';
+import { isIP } from 'node:net';
 import type { ApiTokenRequest } from './api-token.guard';
 
 /** Requests per second per token; `DELIVERY_RATE_LIMIT` and `PREVIEW_RATE_LIMIT` override them (load tests). */
@@ -10,7 +11,14 @@ export const DEFAULT_RATE_LIMITS: Readonly<Record<ApiTokenScope, number>> = { de
 /** Not-found reports a minute per delivery token (package 14); `NOT_FOUND_RATE_LIMIT` overrides it. */
 export const DEFAULT_NOT_FOUND_RATE_LIMIT = 60;
 
-export type RateLimits = Record<ApiTokenScope, number> & { notFound: number };
+/**
+ * Form submissions a minute (package 18): from one visitor (`FORM_RATE_LIMIT`), and through one token in all
+ * (`FORM_TOKEN_RATE_LIMIT`), so a robot changing its address is still held back.
+ */
+export const DEFAULT_FORM_RATE_LIMIT = 5;
+export const DEFAULT_FORM_TOKEN_RATE_LIMIT = 120;
+
+export type RateLimits = Record<ApiTokenScope, number> & { notFound: number; form: number; formToken: number };
 
 export function rateLimitsFromEnv(env: NodeJS.ProcessEnv = process.env): RateLimits {
   const read = (name: string, fallback: number) => {
@@ -21,15 +29,36 @@ export function rateLimitsFromEnv(env: NodeJS.ProcessEnv = process.env): RateLim
     delivery: read('DELIVERY_RATE_LIMIT', DEFAULT_RATE_LIMITS.delivery),
     preview: read('PREVIEW_RATE_LIMIT', DEFAULT_RATE_LIMITS.preview),
     notFound: read('NOT_FOUND_RATE_LIMIT', DEFAULT_NOT_FOUND_RATE_LIMIT),
+    form: read('FORM_RATE_LIMIT', DEFAULT_FORM_RATE_LIMIT),
+    formToken: read('FORM_TOKEN_RATE_LIMIT', DEFAULT_FORM_TOKEN_RATE_LIMIT),
   };
 }
 
 const NOT_FOUND_REPORTS = 'novan:notFoundReports';
+const FORM_SUBMISSIONS = 'novan:formSubmissions';
 
 /** Marks the route sites report misses to: it has a per-minute limit of its own. */
 export const NotFoundReports = (): MethodDecorator => SetMetadata(NOT_FOUND_REPORTS, true);
 
+/** Marks the route forms are sent to: it has per-minute limits of its own. */
+export const FormSubmissionRoute = (): MethodDecorator => SetMetadata(FORM_SUBMISSIONS, true);
+
+/** The client header a site's server (the SDK's proxy) sends the visitor's address in. */
+export const CLIENT_IP_HEADER = 'x-novan-client-ip';
+
+/**
+ * The visitor's address: what the site's server says (`X-Novan-Client-Ip`) when the browser came through it, else the
+ * connection's. Anyone holding the token could claim another address, so the per-token limit backs this up.
+ */
+export function clientIp(req: Pick<ApiTokenRequest, 'headers' | 'ip'>): string | null {
+  const claimed = req.headers[CLIENT_IP_HEADER];
+  const value = (Array.isArray(claimed) ? claimed[0] : claimed)?.trim();
+  if (value && isIP(value)) return value;
+  return req.ip ?? null;
+}
+
 const tokenOf = (context: ExecutionContext) => context.switchToHttp().getRequest<ApiTokenRequest>().apiToken;
+const isRoute = (context: ExecutionContext, key: string) => Reflect.getMetadata(key, context.getHandler()) === true;
 
 /**
  * One window of a second per token, shared by every route of the API the token is for, and a window of a minute
@@ -50,12 +79,26 @@ export function throttlerOptions(limits: RateLimits): ThrottlerModuleOptions {
         name: 'notFound',
         ttl: 60_000,
         limit: limits.notFound,
-        skipIf: (context) => Reflect.getMetadata(NOT_FOUND_REPORTS, context.getHandler()) !== true,
+        skipIf: (context) => !isRoute(context, NOT_FOUND_REPORTS),
+      },
+      {
+        // One visitor sending forms (counted per token and address).
+        name: 'formVisitor',
+        ttl: 60_000,
+        limit: limits.form,
+        skipIf: (context) => !isRoute(context, FORM_SUBMISSIONS),
+      },
+      {
+        name: 'formToken',
+        ttl: 60_000,
+        limit: limits.formToken,
+        skipIf: (context) => !isRoute(context, FORM_SUBMISSIONS),
       },
     ],
     // Runs after ApiTokenGuard, so the token is known and valid.
     getTracker: (req) => (req as ApiTokenRequest).apiToken?.tokenId ?? 'unknown',
-    generateKey: (_context, tracker, name) => `${name}:${tracker}`,
+    generateKey: (context, tracker, name) =>
+      name === 'formVisitor' ? `${name}:${tracker}:${clientIp(context.switchToHttp().getRequest<ApiTokenRequest>()) ?? 'unknown'}` : `${name}:${tracker}`,
   };
 }
 
@@ -65,6 +108,14 @@ export class ApiTokenThrottlerGuard extends ThrottlerGuard {
   protected override async throwThrottlingException(context: ExecutionContext, detail: ThrottlerLimitDetail): Promise<void> {
     const scope = tokenOf(context)?.scope ?? 'delivery';
     const per = detail.ttl >= 60_000 ? 'a minute' : 'a second';
+    if (isRoute(context, FORM_SUBMISSIONS)) {
+      throw new ProblemException(
+        HttpStatus.TOO_MANY_REQUESTS,
+        'rate_limited',
+        'Too many requests',
+        'Too many forms have been sent from here in the last minute. Wait a minute, then send it again.',
+      );
+    }
     throw new ProblemException(
       HttpStatus.TOO_MANY_REQUESTS,
       'rate_limited',

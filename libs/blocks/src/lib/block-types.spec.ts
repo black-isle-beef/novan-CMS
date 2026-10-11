@@ -26,8 +26,8 @@ function specOf(fields: SeededField[]): Record<string, CmsFieldSpec> {
 const seeded = seededBlockTypes();
 
 describe('blocks and their seeded block types', () => {
-  it('reads the five seeded block types', () => {
-    expect(seeded.map((type) => type.apiId).sort()).toEqual(['cta', 'featureGrid', 'hero', 'image', 'richText']);
+  it('reads the six seeded block types', () => {
+    expect(seeded.map((type) => type.apiId).sort()).toEqual(['cta', 'featureGrid', 'form', 'hero', 'image', 'richText']);
   });
 
   it('has one block for every seeded block type, and no others', () => {

@@ -1,7 +1,7 @@
 import type { BlockTypeDef, FieldDef } from '@novan/shared-schemas';
 import { cacheTagHeader } from './cache-headers.interceptor';
 import { DROP, mapEntryData } from './entry-walker';
-import { rateLimitsFromEnv } from './rate-limit';
+import { clientIp, rateLimitsFromEnv } from './rate-limit';
 import { generateToken, hashToken, scopeOfToken, tokenHint } from './token-secret';
 
 describe('tokens', () => {
@@ -39,14 +39,20 @@ describe('cacheTagHeader', () => {
 });
 
 describe('rateLimitsFromEnv', () => {
-  it('defaults to 50 a second for delivery and 10 for preview, and takes positive whole overrides', () => {
-    expect(rateLimitsFromEnv({})).toEqual({ delivery: 50, preview: 10, notFound: 60 });
-    expect(rateLimitsFromEnv({ DELIVERY_RATE_LIMIT: '5000', PREVIEW_RATE_LIMIT: 'lots', NOT_FOUND_RATE_LIMIT: '5' })).toEqual({
-      delivery: 5000,
-      preview: 10,
-      notFound: 5,
-    });
-    expect(rateLimitsFromEnv({ DELIVERY_RATE_LIMIT: '-1' })).toEqual({ delivery: 50, preview: 10, notFound: 60 });
+  const defaults = { delivery: 50, preview: 10, notFound: 60, form: 5, formToken: 120 };
+
+  it('defaults to 50 a second for delivery and 10 for preview, 5 forms a minute a visitor, and takes positive whole overrides', () => {
+    expect(rateLimitsFromEnv({})).toEqual(defaults);
+    expect(
+      rateLimitsFromEnv({ DELIVERY_RATE_LIMIT: '5000', PREVIEW_RATE_LIMIT: 'lots', NOT_FOUND_RATE_LIMIT: '5', FORM_RATE_LIMIT: '2', FORM_TOKEN_RATE_LIMIT: '0' }),
+    ).toEqual({ ...defaults, delivery: 5000, notFound: 5, form: 2 });
+    expect(rateLimitsFromEnv({ DELIVERY_RATE_LIMIT: '-1' })).toEqual(defaults);
+  });
+
+  it('takes the visitor\'s address from the site\'s server when it is an address', () => {
+    expect(clientIp({ headers: { 'x-novan-client-ip': '203.0.113.9' }, ip: '10.0.0.1' })).toBe('203.0.113.9');
+    expect(clientIp({ headers: { 'x-novan-client-ip': 'not-an-ip' }, ip: '10.0.0.1' })).toBe('10.0.0.1');
+    expect(clientIp({ headers: {}, ip: undefined })).toBeNull();
   });
 });
 

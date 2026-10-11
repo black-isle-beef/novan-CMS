@@ -122,7 +122,7 @@ select e.space_id, e.id, 'page', 'Page', 'page', 'A web page built from blocks.'
      "required": false, "localised": false, "default": false}
   ]},
   {"id": "body", "apiId": "body", "label": "Content", "type": "blocks", "required": false, "localised": false,
-   "allowedBlocks": ["hero", "richText", "image", "featureGrid", "cta"]}
+   "allowedBlocks": ["hero", "richText", "image", "featureGrid", "cta", "form"]}
 ]$json$::jsonb
 from public.environments e
 join public.spaces s on s.id = e.space_id
@@ -210,6 +210,43 @@ cross join (
         "options": [{"value": "light", "label": "Light"}, {"value": "brand", "label": "Brand"}, {"value": "dark", "label": "Dark"}]},
       "alignment": {"kind": "radio", "label": "Alignment", "default": "center",
         "options": [{"value": "start", "label": "Left"}, {"value": "center", "label": "Centre"}]},
+      "headingLevel": {"kind": "select", "label": "Heading level", "hint": "Keep headings in order on the page.",
+        "default": "h2", "options": [{"value": "h2", "label": "H2"}, {"value": "h3", "label": "H3"}, {"value": "h4", "label": "H4"}]}
+    }$json$::jsonb),
+    ('form', 'Form', 'ui-checks', $json$[
+      {"id": "heading", "apiId": "heading", "label": "Heading", "type": "text", "required": false, "localised": true,
+       "multiline": false, "max": 120},
+      {"id": "intro", "apiId": "intro", "label": "Introduction", "type": "text", "required": false, "localised": true,
+       "multiline": true, "max": 300},
+      {"id": "fields", "apiId": "fields", "label": "Fields", "type": "group", "required": true, "localised": false,
+       "multiple": true, "min": 1, "max": 20, "fields": [
+        {"id": "label", "apiId": "label", "label": "Label", "type": "text", "required": true, "localised": true,
+         "multiline": false, "max": 200},
+        {"id": "name", "apiId": "name", "label": "Name in the inbox",
+         "help": "A short name for this answer in the inbox and the export, like email or message.", "type": "text",
+         "required": true, "localised": false, "multiline": false, "max": 40, "pattern": "[a-z0-9]+(-[a-z0-9]+)*"},
+        {"id": "type", "apiId": "type", "label": "Type", "type": "select", "required": true, "localised": false,
+         "multiple": false, "options": [
+          {"value": "text", "label": "Short text"}, {"value": "email", "label": "Email address"},
+          {"value": "textarea", "label": "Long text"}, {"value": "select", "label": "Choice from a list"},
+          {"value": "checkbox", "label": "Tick box"}, {"value": "consent", "label": "Consent"}
+        ]},
+        {"id": "required", "apiId": "required", "label": "Must be filled in", "type": "boolean", "required": false,
+         "localised": false, "default": false},
+        {"id": "help", "apiId": "help", "label": "Hint", "type": "text", "required": false, "localised": true,
+         "multiline": false, "max": 200},
+        {"id": "options", "apiId": "options", "label": "Choices", "help": "For a choice from a list: one choice per line.",
+         "type": "text", "required": false, "localised": true, "multiline": true, "max": 2000}
+      ]},
+      {"id": "submitLabel", "apiId": "submitLabel", "label": "Button text", "type": "text", "required": true,
+       "localised": true, "multiline": false, "max": 60},
+      {"id": "successMessage", "apiId": "successMessage", "label": "Thank-you message", "type": "text", "required": true,
+       "localised": true, "multiline": true, "max": 500}
+    ]$json$::jsonb, $json${
+      "tone": {"kind": "radio", "label": "Tone", "hint": "Background and text colours.", "default": "light",
+        "options": [{"value": "light", "label": "Light"}, {"value": "brand", "label": "Brand"}, {"value": "dark", "label": "Dark"}]},
+      "width": {"kind": "radio", "label": "Width", "default": "narrow",
+        "options": [{"value": "narrow", "label": "Narrow"}, {"value": "wide", "label": "Wide"}]},
       "headingLevel": {"kind": "select", "label": "Heading level", "hint": "Keep headings in order on the page.",
         "default": "h2", "options": [{"value": "h2", "label": "H2"}, {"value": "h3", "label": "H3"}, {"value": "h4", "label": "H4"}]}
     }$json$::jsonb)
@@ -480,6 +517,20 @@ select pg_temp.seed_published_entry('00000000-0000-4000-8000-000000000703', 'pag
          {"type": "text", "text": " with a few lines about your project. There is no need to have everything worked out."}
        ]}
      ]}},
+    {"_uid": "00000000-0000-4000-8000-000000000924", "_block": "form",
+     "heading": "Send us a message",
+     "intro": "We reply within two working days.",
+     "fields": [
+       {"label": "Your name", "name": "name", "type": "text", "required": true},
+       {"label": "Email address", "name": "email", "type": "email", "required": true, "help": "We only use it to reply to you."},
+       {"label": "What is it about?", "name": "topic", "type": "select", "required": false,
+        "options": "A new site\nChanges to my site\nSomething else"},
+       {"label": "Message", "name": "message", "type": "textarea", "required": true},
+       {"label": "Send me occasional news", "name": "newsletter", "type": "checkbox", "required": false},
+       {"label": "I agree that you may keep my message to reply to it.", "name": "consent", "type": "consent", "required": true}
+     ],
+     "submitLabel": "Send message",
+     "successMessage": "Thank you. Your message has been sent, and we will reply by email."},
     {"_uid": "00000000-0000-4000-8000-000000000923", "_block": "cta", "_style": {"tone": "light", "alignment": "start"},
      "heading": "Prefer to write now?",
      "text": "Your email app opens with our address filled in.",
@@ -537,6 +588,10 @@ values
    'body.00000000-0000-4000-8000-000000000913.image'),
   ('00000000-0000-4000-8000-000000000501', '00000000-0000-4000-8000-000000000712', '00000000-0000-4000-8000-000000000200',
    'defaultOgImage');
+
+-- Who hears about messages sent through the demo site's forms (package 18); Mailpit catches them locally.
+insert into public.form_settings (space_id, recipients, updated_by)
+values ('00000000-0000-4000-8000-000000000200', '{forms@example.com}', '00000000-0000-4000-8000-000000000001');
 
 -- A redirect from an address the demo site used to have (package 14).
 insert into public.redirects (space_id, from_path, to_path, status, created_by)

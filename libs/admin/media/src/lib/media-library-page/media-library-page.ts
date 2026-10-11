@@ -38,6 +38,8 @@ export class MediaLibraryPage {
 
   /** Bound from the `:spaceId` route parameter. */
   readonly spaceId = input.required<string>();
+  /** `?asset=`: a file to open, e.g. from the admin's search (Ctrl+K). */
+  readonly asset = input<string | undefined>(undefined);
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
@@ -106,6 +108,12 @@ export class MediaLibraryPage {
         this.context.currentSpaceId.set(spaceId);
         void this.load(spaceId);
       });
+    });
+    // A file asked for in the address opens once it is loaded.
+    effect(() => {
+      const id = this.asset();
+      const loaded = this.assets();
+      if (id && loaded.some((asset) => asset.id === id)) untracked(() => this.openId.set(id));
     });
   }
 

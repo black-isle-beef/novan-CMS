@@ -1,8 +1,13 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { ADMIN_CONFIG } from '@novan/admin-auth';
+import type { Download } from '@novan/admin-shell';
 import type {
   ApiToken,
+  AuditActor,
+  AuditContentDiff,
+  AuditEventsPage,
+  AuditEventsQuery,
   CreateApiTokenRequest,
   CreatedApiToken,
   CreateRedirectRequest,
@@ -18,7 +23,7 @@ import type {
   WebhookDelivery,
   WebhookWithSecret,
 } from '@novan/shared-schemas';
-import type { Observable } from 'rxjs';
+import { map, type Observable } from 'rxjs';
 
 /** Typed client for a space's settings under `/v1/management/spaces/:spaceId`. */
 @Injectable({ providedIn: 'root' })
@@ -101,4 +106,37 @@ export class SettingsApi {
     for (const [key, value] of Object.entries(query)) if (value !== undefined) params = params.set(key, String(value));
     return this.http.get<NotFoundSummary[]>(`${this.base}/${spaceId}/not-found`, { params });
   }
+
+  // --- Audit log (docs/build/18-search-forms-audit.md) ---
+
+  auditEvents(spaceId: string, query: AuditEventsQuery = {}): Observable<AuditEventsPage> {
+    return this.http.get<AuditEventsPage>(`${this.base}/${spaceId}/audit-events`, { params: params(query) });
+  }
+
+  auditActors(spaceId: string): Observable<AuditActor[]> {
+    return this.http.get<AuditActor[]>(`${this.base}/${spaceId}/audit-events/actors`);
+  }
+
+  auditContentDiff(spaceId: string, eventId: string): Observable<AuditContentDiff> {
+    return this.http.get<AuditContentDiff>(`${this.base}/${spaceId}/audit-events/${eventId}/content-diff`);
+  }
+
+  /** The filtered log as a CSV file. */
+  exportAudit(spaceId: string, query: Omit<AuditEventsQuery, 'cursor' | 'limit'> = {}): Observable<Download> {
+    return this.http
+      .get(`${this.base}/${spaceId}/audit-events/export`, { params: params(query), responseType: 'blob', observe: 'response' })
+      .pipe(
+        map((response) => ({
+          blob: response.body ?? new Blob([]),
+          filename: /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') ?? '')?.[1] ?? 'audit-log.csv',
+        })),
+      );
+  }
+}
+
+/** A query's set values as HTTP parameters. */
+function params(query: object): HttpParams {
+  let result = new HttpParams();
+  for (const [key, value] of Object.entries(query)) if (value !== undefined && value !== '') result = result.set(key, String(value));
+  return result;
 }

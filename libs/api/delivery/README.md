@@ -11,6 +11,8 @@ The Delivery and Preview APIs client sites read content from, and the API tokens
 | `GET /v1/delivery/sitemap` | delivery token | Every published page's address and `updatedAt` in each locale it is in, except pages with `seo.noindex` |
 | `GET /v1/delivery/locales` | delivery token | The site's locales (default first) and whether addresses carry a locale prefix (package 16) |
 | `GET /v1/delivery/redirects` | delivery token | The space's redirects, for the site's server to apply (package 14) |
+| `GET /v1/delivery/entries?q=` | delivery token | Full-text search (package 18), best match first, each with `search.rank` and a snippet; with `type`, `locale`, `limit`, `cursor`, `select`, `include` |
+| `POST /v1/delivery/forms/:formUid/submit` | delivery token | A form's answers (package 18, `@novan/api-forms`): checked against the published form, Turnstile and a honeypot; 202; 5 a minute per visitor, 120 per token |
 | `POST /v1/delivery/not-found` | delivery token | A site reports an address with no page: one row per address and day (202); 60 a minute per token |
 | `GET /v1/preview/...` | preview token | The same routes and shapes, reading current drafts |
 | `GET/POST api-tokens`, `POST api-tokens/:id/revoke` | admins, developers | Under `/v1/management/spaces/:spaceId`; the secret is returned once, on create |
@@ -31,7 +33,11 @@ The Delivery and Preview APIs client sites read content from, and the API tokens
   `content-changed`, `media-changed` and `token-revoked` jobs of the `purge` queue (`@novan/api-jobs`), sent in the
   changing transaction; a failed purge throws, and the worker retries it with back-off.
 - Rate limits per token (`@nestjs/throttler`, in memory): delivery 50/s, preview 10/s, not-found reports 60/min
-  (`NOT_FOUND_RATE_LIMIT`), 429 `rate_limited`.
+  (`NOT_FOUND_RATE_LIMIT`), form submissions 5/min per visitor (`X-Novan-Client-Ip` from the site's server, else the
+  connection) and 120/min per token (`FORM_RATE_LIMIT`, `FORM_TOKEN_RATE_LIMIT`), 429 `rate_limited`.
+- Search (`q`) goes through `SearchProvider` (`@novan/api-search`): delivery searches `published_content.search`,
+  preview `entry_search` (drafts, not the bin). Results are cached like lists (`entries:<env>` or `type:`), so
+  publishing purges them.
 - `CachePurge` also purges `redirects:<space>` on publishing, `paths.changed` (a published page moved, or a folder above
   it renamed) and `redirects.changed` (redirects managed in `@novan/api-site`), and the whole `space:<id>` on
   `locales.changed`. Its URL fallback purges each page's address in every locale.

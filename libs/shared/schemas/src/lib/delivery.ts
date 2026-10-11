@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { apiIdSchema } from './fields';
 import { LOCALE_CODE_PATTERN } from './locales';
+import { type DeliverySearchInfo, deliverySearchInfoSchema, MAX_SEARCH_LENGTH, searchTerms } from './search';
 
 // API tokens (managed under /v1/management/spaces/:spaceId/api-tokens) and the Delivery and Preview APIs
 // client sites read content from (/v1/delivery/..., /v1/preview/...). docs/build/08-delivery-preview-api.md
@@ -121,6 +122,8 @@ export interface DeliveryEntry {
   data: Record<string, unknown>;
   /** Pages only: every locale the page is in (this one included), for `hreflang` links. */
   alternates?: DeliveryAlternate[];
+  /** Entries found with `q` only: how well it matched, and a snippet of the matching text. */
+  search?: DeliverySearchInfo;
 }
 
 export const deliveryEntrySchema: z.ZodType<DeliveryEntry> = z.object({
@@ -131,6 +134,7 @@ export const deliveryEntrySchema: z.ZodType<DeliveryEntry> = z.object({
   updatedAt: z.string(),
   data: z.record(z.string(), z.unknown()),
   alternates: z.array(deliveryAlternateSchema).optional(),
+  search: deliverySearchInfoSchema.optional(),
 });
 
 /** A reference left unexpanded: too deep for `include`, or a loop back to an entry being expanded. */
@@ -223,11 +227,17 @@ export interface FieldFilter {
   value: string | string[];
 }
 
-/** `updatedAt`, `path` or `fields.<field>`, ascending; a leading `-` for descending. */
+/**
+ * `updatedAt`, `path` or `fields.<field>`, ascending; a leading `-` for descending. `relevance` (best first) only with
+ * `q`, where it is the default; otherwise the default is `-updatedAt`.
+ */
 export const deliverySortSchema = z
   .string()
-  .regex(/^-?(updatedAt|path|fields\.[a-z][a-zA-Z0-9]*)$/, 'Sort by updatedAt, path or fields.<field>, with - for descending.')
-  .default('-updatedAt');
+  .regex(
+    /^(-?(updatedAt|path|fields\.[a-z][a-zA-Z0-9]*)|relevance)$/,
+    'Sort by updatedAt, path or fields.<field>, with - for descending, or by relevance when searching.',
+  )
+  .optional();
 
 export const MAX_FIELD_FILTERS = 10;
 
@@ -235,6 +245,8 @@ const entriesParams = {
   /** Content type api id; needed to filter or sort by fields. */
   type: apiIdSchema.optional(),
   locale: localeSchema.optional(),
+  /** Full-text search: entries containing every word (the last may be the start of a word), best match first. */
+  q: z.string().trim().min(1, 'Search for at least one word.').max(MAX_SEARCH_LENGTH).optional(),
   sort: deliverySortSchema,
   limit: z.coerce.number('Use a limit from 1 to 100.').int().min(1, 'Use a limit from 1 to 100.').max(100, 'Use a limit from 1 to 100.').default(25),
   cursor: z.string().max(1000).regex(/^[A-Za-z0-9_-]+$/, 'Use the nextCursor of the previous page.').optional(),
@@ -284,14 +296,25 @@ export const deliveryEntriesQuerySchema = z
     if (filters.length > MAX_FIELD_FILTERS) {
       ctx.addIssue({ code: 'custom', path: [], message: `Use ${MAX_FIELD_FILTERS} field filters or fewer.` });
     }
-    const sortsByField = query.sort.replace(/^-/, '').startsWith('fields.');
+    const sort = query.sort ?? (query.q ? 'relevance' : '-updatedAt');
+    const sortsByField = sort.replace(/^-/, '').startsWith('fields.');
     if ((filters.length || sortsByField) && !query.type) {
       ctx.addIssue({ code: 'custom', path: ['type'], message: 'Give the type to filter or sort by its fields.' });
+    }
+    if (query.q !== undefined) {
+      if (!searchTerms(query.q).length) ctx.addIssue({ code: 'custom', path: ['q'], message: 'Search with letters or numbers.' });
+      if (sort !== 'relevance') ctx.addIssue({ code: 'custom', path: ['sort'], message: 'Search results are sorted by relevance.' });
+      if (filters.length) {
+        ctx.addIssue({ code: 'custom', path: ['q'], message: 'Search with q and type; field filters cannot be combined with q.' });
+      }
+    } else if (sort === 'relevance') {
+      ctx.addIssue({ code: 'custom', path: ['sort'], message: 'Sort by relevance only when searching with q.' });
     }
     return {
       type: query.type,
       locale: query.locale,
-      sort: query.sort,
+      q: query.q,
+      sort,
       limit: query.limit,
       cursor: query.cursor,
       include: query.include,
