@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { signIn, spaceAdmin } from './support/auth';
 import { expectNoAxeViolations } from './support/axe';
+import { addRedirect } from './support/management';
 
 // Package 18's admin screens in a real browser (docs/build/18-search-forms-audit.md): global search (Ctrl+K), the Forms
 // inbox and the audit log, as the seeded space admin. Needs local Supabase (`npm run db:start && npm run db:reset`).
@@ -59,19 +60,25 @@ test.describe('@search-forms-audit', () => {
     await expectNoAxeViolations(page);
   });
 
-  test('the audit log filters by what happened and shows an event\'s details', async ({ page }) => {
-    await openSpace(page);
-    await spaceMenu(page).getByRole('link', { name: 'Audit log' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Audit log' })).toBeVisible();
-    await page.getByLabel('What happened').selectOption({ label: 'Added a redirect' });
-    await page.getByRole('button', { name: 'Filter' }).click();
-    await expect(page.getByRole('main').getByRole('status').filter({ hasText: 'The list shows only the changes you chose.' }).first()).toBeVisible();
-    const rows = page.getByRole('table').getByRole('row');
-    await expect(rows.nth(1)).toBeVisible();
-    for (const header of await page.getByRole('table').getByRole('rowheader').all()) await expect(header).toHaveText('Added a redirect');
+  test('the audit log filters by what happened and shows an event\'s details', async ({ page, request }, testInfo) => {
+    // Its own event, rather than one another journey (site.spec.ts) may or may not have left.
+    const removeRedirect = await addRedirect(request, demoSpaceId, `/e2e-audit-${testInfo.project.name}-${Date.now()}`, '/about');
+    try {
+      await openSpace(page);
+      await spaceMenu(page).getByRole('link', { name: 'Audit log' }).click();
+      await expect(page.getByRole('heading', { level: 1, name: 'Audit log' })).toBeVisible();
+      await page.getByLabel('What happened').selectOption({ label: 'Added a redirect' });
+      await page.getByRole('button', { name: 'Filter' }).click();
+      await expect(page.getByRole('main').getByRole('status').filter({ hasText: 'The list shows only the changes you chose.' }).first()).toBeVisible();
+      const rows = page.getByRole('table').getByRole('row');
+      await expect(rows.nth(1)).toBeVisible();
+      for (const header of await page.getByRole('table').getByRole('rowheader').all()) await expect(header).toHaveText('Added a redirect');
 
-    await rows.nth(1).getByRole('button', { name: /^Details/ }).click();
-    await expect(page.getByRole('heading', { name: 'Added a redirect: what was recorded' })).toBeFocused();
-    await expectNoAxeViolations(page);
+      await rows.nth(1).getByRole('button', { name: /^Details/ }).click();
+      await expect(page.getByRole('heading', { name: 'Added a redirect: what was recorded' })).toBeFocused();
+      await expectNoAxeViolations(page);
+    } finally {
+      await removeRedirect();
+    }
   });
 });
