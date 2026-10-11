@@ -1,0 +1,181 @@
+<section class="novan-form-block__inner container" [attr.aria-labelledby]="headingText() ? headingId : null">
+  @if (headingText(); as heading) {
+    @switch (resolved().headingLevel) {
+      @case ('h3') {
+        <h3 class="novan-form-block__heading" [id]="headingId">{{ heading }}</h3>
+      }
+      @case ('h4') {
+        <h4 class="novan-form-block__heading" [id]="headingId">{{ heading }}</h4>
+      }
+      @default {
+        <h2 class="novan-form-block__heading" [id]="headingId">{{ heading }}</h2>
+      }
+    }
+  }
+
+  @if (state() === 'sent') {
+    <div #success class="novan-form-block__success" role="status" tabindex="-1">
+      <p class="lead mb-0">{{ thanks() }}</p>
+    </div>
+  } @else {
+    @if (introText(); as text) {
+      <p class="novan-form-block__intro">{{ text }}</p>
+    }
+    @if (preview.active()) {
+      <p class="novan-form-block__note alert alert-info" role="note">Visitors can send this form. It does not send while you are previewing.</p>
+    }
+
+    <div #summary class="novan-form-block__summary" [id]="summaryId" tabindex="-1">
+      @if (problems().length) {
+        <div class="alert alert-danger" role="alert">
+          <p class="fw-bold mb-2">Please check the form</p>
+          <ul class="mb-0">
+            @for (problem of problems(); track problem.id) {
+              <li>
+                <a [href]="'#' + problem.id" (click)="goTo($event, problem.id)">{{ problem.message }}</a>
+              </li>
+            }
+          </ul>
+        </div>
+      } @else if (failure(); as message) {
+        <div class="alert alert-danger" role="alert">
+          <p class="mb-0">{{ message }}</p>
+        </div>
+      }
+    </div>
+
+    <form class="novan-form-block__form" novalidate (submit)="send($event)" [attr.aria-labelledby]="headingText() ? headingId : null">
+      @for (field of items(); track field.name) {
+        @let error = errors()[field.name];
+        @switch (field.type) {
+          @case ('checkbox') {
+            <div class="novan-form-block__field form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                [id]="field.id"
+                [name]="field.name"
+                [checked]="answer(field) === true"
+                [attr.aria-describedby]="describedBy(field)"
+                (change)="ticked(field, $any($event.target).checked)"
+              />
+              <label class="form-check-label" [for]="field.id">{{ field.label }}</label>
+              @if (field.help) {
+                <div class="form-text novan-form-block__hint" [id]="field.hintId">{{ field.help }}</div>
+              }
+            </div>
+          }
+          @case ('consent') {
+            <div class="novan-form-block__field form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                [id]="field.id"
+                [name]="field.name"
+                [class.is-invalid]="error"
+                [checked]="answer(field) === true"
+                [required]="field.required"
+                [attr.aria-invalid]="error ? true : null"
+                [attr.aria-describedby]="describedBy(field)"
+                (change)="ticked(field, $any($event.target).checked)"
+              />
+              <label class="form-check-label" [for]="field.id">
+                {{ field.label }}
+                @if (field.required) {
+                  <span class="novan-form-block__required">(required)</span>
+                }
+              </label>
+              @if (field.help) {
+                <div class="form-text novan-form-block__hint" [id]="field.hintId">{{ field.help }}</div>
+              }
+              @if (error) {
+                <div class="novan-form-block__error" [id]="field.errorId"><span class="visually-hidden">Error: </span>{{ error }}</div>
+              }
+            </div>
+          }
+          @default {
+            <div class="novan-form-block__field">
+              <label class="form-label" [for]="field.id">
+                {{ field.label }}
+                @if (field.required) {
+                  <span class="novan-form-block__required">(required)</span>
+                }
+              </label>
+              @if (field.help) {
+                <div class="form-text novan-form-block__hint" [id]="field.hintId">{{ field.help }}</div>
+              }
+              @if (error) {
+                <div class="novan-form-block__error" [id]="field.errorId"><span class="visually-hidden">Error: </span>{{ error }}</div>
+              }
+              @switch (field.type) {
+                @case ('textarea') {
+                  <textarea
+                    class="form-control"
+                    rows="5"
+                    [id]="field.id"
+                    [name]="field.name"
+                    [class.is-invalid]="error"
+                    [value]="answer(field) ?? ''"
+                    [required]="field.required"
+                    [attr.aria-invalid]="error ? true : null"
+                    [attr.aria-describedby]="describedBy(field)"
+                    [attr.autocomplete]="field.autocomplete"
+                    (input)="typed(field, $any($event.target).value)"
+                  ></textarea>
+                }
+                @case ('select') {
+                  <select
+                    class="form-select"
+                    [id]="field.id"
+                    [name]="field.name"
+                    [class.is-invalid]="error"
+                    [required]="field.required"
+                    [attr.aria-invalid]="error ? true : null"
+                    [attr.aria-describedby]="describedBy(field)"
+                    (change)="typed(field, $any($event.target).value)"
+                  >
+                    <option value="" [selected]="!answer(field)">Choose an option</option>
+                    @for (option of field.options; track option) {
+                      <option [value]="option" [selected]="answer(field) === option">{{ option }}</option>
+                    }
+                  </select>
+                }
+                @default {
+                  <input
+                    class="form-control"
+                    [type]="field.type === 'email' ? 'email' : 'text'"
+                    [id]="field.id"
+                    [name]="field.name"
+                    [class.is-invalid]="error"
+                    [value]="answer(field) ?? ''"
+                    [required]="field.required"
+                    [attr.aria-invalid]="error ? true : null"
+                    [attr.aria-describedby]="describedBy(field)"
+                    [attr.autocomplete]="field.autocomplete"
+                    [attr.inputmode]="field.type === 'email' ? 'email' : null"
+                    [attr.spellcheck]="field.type === 'email' ? false : null"
+                    (input)="typed(field, $any($event.target).value)"
+                  />
+                }
+              }
+            </div>
+          }
+        }
+      }
+
+      <!-- People never see this field; robots fill it in, and their submission is dropped. -->
+      <div class="novan-form-block__trap" aria-hidden="true">
+        <label [for]="honeypotId">Leave this empty</label>
+        <input type="text" [id]="honeypotId" name="website" tabindex="-1" autocomplete="off" (input)="trapped($any($event.target).value)" />
+      </div>
+
+      @if (siteKey) {
+        <div #check class="novan-form-block__check"></div>
+      }
+
+      <button type="submit" class="btn btn-primary novan-form-block__submit" [attr.aria-disabled]="state() === 'sending' ? true : null">
+        {{ state() === 'sending' ? 'Sending…' : buttonText() }}
+      </button>
+    </form>
+  }
+</section>

@@ -21,6 +21,22 @@ export interface NovanEntry<TData = Record<string, unknown>> {
   data: TData;
   /** Pages only: every locale the page is in, this one included, for `hreflang` links. */
   alternates?: NovanAlternate[];
+  /** Entries found with `q` only: how well each matched, and a snippet of the matching text. */
+  search?: NovanSearchInfo;
+}
+
+/** What a search (`entries({ q })`) adds to each entry it finds. */
+export interface NovanSearchInfo {
+  /** Relevance: higher is better, only comparable within one search. */
+  rank: number;
+  /** A short passage of the entry's text in the locale, the matching words marked. Plain text: no HTML. */
+  snippet: NovanSnippetPart[];
+}
+
+/** One stretch of a snippet; `match` marks the words that matched, for `<mark>`. */
+export interface NovanSnippetPart {
+  text: string;
+  match: boolean;
 }
 
 /** The same page in another locale. */

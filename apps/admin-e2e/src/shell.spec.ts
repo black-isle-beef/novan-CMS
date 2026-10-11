@@ -82,7 +82,8 @@ test.describe('@shell', () => {
   test('a developer sees the schema, API tokens and webhooks too', async ({ page }) => {
     await signIn(page, developer);
     await page.getByRole('link', { name: 'Demo site' }).click();
-    await expect(spaceMenu(page).getByRole('link')).toHaveText([...clientMenu, 'Schema', 'API tokens', 'Webhooks']);
+    // Forms hold what visitors send, for editors and admins only.
+    await expect(spaceMenu(page).getByRole('link')).toHaveText(['Dashboard', 'Pages', 'Media', 'Settings', 'Schema', 'API tokens', 'Webhooks']);
 
     await spaceMenu(page).getByRole('link', { name: 'Schema' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Schema' })).toBeVisible();

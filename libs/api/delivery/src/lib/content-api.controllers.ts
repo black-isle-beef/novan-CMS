@@ -1,5 +1,6 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Query, Req, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiResponse, ZodValidationPipe } from '@novan/api-common';
+import { FormSubmissions } from '@novan/api-forms';
 import {
   apiIdSchema,
   deliveryEntriesPageSchema,
@@ -9,6 +10,8 @@ import {
   deliveryPageQuerySchema,
   deliveryRedirectsSchema,
   deliverySingletonQuerySchema,
+  formSubmitRequestSchema,
+  formUidSchema,
   notFoundReportSchema,
   sitemapQuerySchema,
   sitemapSchema,
@@ -16,10 +19,10 @@ import {
 } from '@novan/shared-schemas';
 import { z } from 'zod';
 import type { ApiTokenAccess } from './api-token-resolver';
-import { ApiTokenGuard, RequireTokenScope, TokenAccess } from './api-token.guard';
+import { ApiTokenGuard, type ApiTokenRequest, RequireTokenScope, TokenAccess } from './api-token.guard';
 import { CacheHeadersInterceptor } from './cache-headers.interceptor';
 import { ContentReader, type Delivered } from './content-reader.service';
-import { ApiTokenThrottlerGuard, NotFoundReports } from './rate-limit';
+import { ApiTokenThrottlerGuard, clientIp, FormSubmissionRoute, NotFoundReports } from './rate-limit';
 import { SiteReader } from './site-reader.service';
 
 const idPipe = new ZodValidationPipe(z.uuid('Expected an id (UUID).'));
@@ -45,7 +48,10 @@ abstract class ContentApiController {
     return this.reader.page(access, query);
   }
 
-  /** Entries, filtered by `type`, `locale` and `fields.<field>[eq|in|lt|gt]`, sorted, a page at a time. */
+  /**
+   * Entries, filtered by `type`, `locale` and `fields.<field>[eq|in|lt|gt]`, sorted, a page at a time. With `q`, a
+   * full-text search (with `type` and `locale`), best match first, each entry with its `search` rank and snippet.
+   */
   @Get('entries')
   @ApiResponse(deliveryEntriesPageSchema)
   entries(
@@ -132,6 +138,31 @@ export class NotFoundReportsController {
     @Body(new ZodValidationPipe(notFoundReportSchema)) report: z.output<typeof notFoundReportSchema>,
   ): Promise<void> {
     await this.site.recordNotFound(access, { path: report.path, referrer: report.referrer ?? null });
+  }
+}
+
+/**
+ * Where a site's `form` blocks send what visitors fill in (docs/build/18-search-forms-audit.md). Answers are checked
+ * against the form as published, with Cloudflare Turnstile and a honeypot against robots, and limited per visitor and
+ * per token each minute. 202 once kept; never cached.
+ */
+@Controller('v1/delivery/forms')
+@RequireTokenScope('delivery')
+@UseGuards(ApiTokenGuard, ApiTokenThrottlerGuard)
+export class FormSubmitController {
+  constructor(private readonly forms: FormSubmissions) {}
+
+  @Post(':formUid/submit')
+  @HttpCode(202)
+  @ApiResponse(null, { status: 202 })
+  @FormSubmissionRoute()
+  async submit(
+    @TokenAccess() access: ApiTokenAccess,
+    @Param('formUid', new ZodValidationPipe(formUidSchema)) formUid: string,
+    @Body(new ZodValidationPipe(formSubmitRequestSchema)) body: z.output<typeof formSubmitRequestSchema>,
+    @Req() req: ApiTokenRequest,
+  ): Promise<void> {
+    await this.forms.submit(access, formUid, body, clientIp(req));
   }
 }
 

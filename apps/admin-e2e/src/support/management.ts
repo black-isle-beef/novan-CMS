@@ -36,6 +36,22 @@ export async function removeLocale(request: APIRequestContext, spaceId: string, 
 }
 
 /**
+ * Adds a redirect as the space admin, so the audit log has an "Added a redirect" event whichever journeys ran before,
+ * and returns a function that deletes it again.
+ */
+export async function addRedirect(request: APIRequestContext, spaceId: string, fromPath: string, toPath: string): Promise<() => Promise<void>> {
+  const headers = { Authorization: `Bearer ${await token(request)}` };
+  const redirects = `${apiUrl}/v1/management/spaces/${spaceId}/redirects`;
+  const created = await request.post(redirects, { headers, data: { fromPath, toPath } });
+  expect(created.status(), await created.text()).toBe(201);
+  const { id } = await created.json();
+  return async () => {
+    const removed = await request.delete(`${redirects}/${id}`, { headers });
+    expect(removed.status(), await removed.text()).toBe(204);
+  };
+}
+
+/**
  * Keeps a seeded page as it is now and returns a function that saves and publishes it again, so a journey
  * that publishes a seeded page leaves it as the other e2e projects (starter-site-e2e) expect it.
  */

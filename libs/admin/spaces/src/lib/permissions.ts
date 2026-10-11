@@ -7,8 +7,12 @@
 export type Permission =
   /** Open the space: dashboard, settings overview, team. */
   | 'space.read'
-  /** Pages and other content, and forms. */
+  /** Pages and other content. */
   | 'content.read'
+  /** The Forms inbox: what visitors send, which holds personal data. */
+  | 'forms.read'
+  /** Who is emailed about form submissions, and how long they are kept. */
+  | 'forms.settings'
   | 'media.read'
   /** Change the content model (Schema). */
   | 'schema.write'
@@ -23,6 +27,8 @@ const everyone: readonly string[] = ['admin', 'developer', 'editor', 'author', '
 const grants: Record<Permission, readonly string[]> = {
   'space.read': everyone,
   'content.read': everyone,
+  'forms.read': ['admin', 'editor'],
+  'forms.settings': ['admin'],
   'media.read': everyone,
   'schema.write': ['admin', 'developer'],
   'settings.update': ['admin', 'developer'],

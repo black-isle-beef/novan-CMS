@@ -31,6 +31,15 @@ describe('Shortcuts', () => {
     expect(publish).toHaveBeenCalledTimes(2);
   });
 
+  it('opens search on Ctrl+K or Cmd+K', () => {
+    const search = vi.fn();
+    shortcuts.register('search', search, scope().ref);
+    expect(shortcuts.handle(key({ key: 'k', ctrlKey: true }))).toBe(true);
+    expect(shortcuts.handle(key({ key: 'K', metaKey: true }))).toBe(true);
+    expect(shortcuts.handle(key({ key: 'k', ctrlKey: true, shiftKey: true }))).toBe(false);
+    expect(search).toHaveBeenCalledTimes(2);
+  });
+
   it('leaves other keys, held-down repeats and unregistered shortcuts to the browser', () => {
     const save = vi.fn();
     shortcuts.register('save', save, scope().ref);

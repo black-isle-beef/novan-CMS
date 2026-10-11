@@ -9,3 +9,4 @@ export * from './lib/components/rich-text';
 export * from './lib/components/image';
 export * from './lib/components/feature-grid';
 export * from './lib/components/cta';
+export * from './lib/components/form';

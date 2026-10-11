@@ -19,7 +19,7 @@ export const appRoutes: Route[] = [
       { path: '', loadChildren: () => import('@novan/admin-media').then((m) => m.mediaRoutes) },
       { path: '', loadChildren: () => import('@novan/admin-schema').then((m) => m.schemaRoutes) },
       { path: '', loadChildren: () => import('@novan/admin-settings').then((m) => m.settingsRoutes) },
-      { path: '', loadChildren: () => import('@novan/admin-shell').then((m) => m.placeholderRoutes) },
+      { path: '', loadChildren: () => import('@novan/admin-forms').then((m) => m.formsRoutes) },
     ],
   },
   { path: '**', redirectTo: '' },

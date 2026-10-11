@@ -1,8 +1,10 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { AuthService, ViewAs } from '@novan/admin-auth';
+import { ADMIN_CONFIG, AuthService, ViewAs } from '@novan/admin-auth';
 import { ManagementApi, SpaceContext } from '@novan/admin-spaces';
 import type { SpaceRole } from '@novan/shared-schemas';
 import { of } from 'rxjs';
@@ -27,6 +29,7 @@ async function render(role: SpaceRole | null, { agencyStaff = false } = {}) {
       const viewed = viewAs.roleIn(spaceId);
       return viewed ? { role: viewed, agencyStaff: false } : { role, agencyStaff };
     }),
+    agencyMode: computed(() => role === 'admin' || role === 'developer' || agencyStaff),
     load: vi.fn(() => Promise.resolve()),
     clear: vi.fn(),
   };
@@ -38,6 +41,9 @@ async function render(role: SpaceRole | null, { agencyStaff = false } = {}) {
       { provide: SpaceContext, useValue: context },
       { provide: ViewAs, useValue: viewAs },
       { provide: ManagementApi, useValue: api },
+      { provide: ADMIN_CONFIG, useValue: { apiUrl: 'http://api.test' } },
+      provideHttpClient(),
+      provideHttpClientTesting(),
     ],
   });
   const harness = await RouterTestingHarness.create(`/spaces/${spaceId}`);
@@ -46,7 +52,28 @@ async function render(role: SpaceRole | null, { agencyStaff = false } = {}) {
   return { harness, el, context, viewAs, api, menu };
 }
 
+// jsdom has no modal dialogs; the design system's modal opens one.
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
+    this.open = true;
+  };
+  HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) {
+    this.open = false;
+  };
+});
+
 describe('AdminShell', () => {
+  it('opens the space\'s search with the Search button or Ctrl+K', async () => {
+    const { harness, el } = await render('editor');
+    const button = [...el.querySelectorAll('button')].find((b) => b.textContent?.includes('Search')) as HTMLButtonElement;
+    expect(button.getAttribute('aria-keyshortcuts')).toBe('Control+K Meta+K');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, cancelable: true }));
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    expect(el.querySelector('#nv-search-box')).not.toBeNull();
+    expect(document.activeElement?.id).toBe('nv-search-box');
+  });
+
   it('opens the space in the address, and loads the spaces once', async () => {
     const { context } = await render('editor');
     expect(context.currentSpaceId()).toBe(spaceId);
@@ -60,9 +87,9 @@ describe('AdminShell', () => {
     expect(el.querySelector('nv-view-as-menu')).toBeNull();
   });
 
-  it('adds Schema, API tokens and Webhooks for a developer', async () => {
+  it('adds Schema, API tokens and Webhooks for a developer, without the Forms inbox', async () => {
     const { menu } = await render('developer');
-    expect(menu()).toEqual(['Dashboard', 'Pages', 'Media', 'Forms', 'Settings', 'Schema', 'API tokens', 'Webhooks']);
+    expect(menu()).toEqual(['Dashboard', 'Pages', 'Media', 'Settings', 'Schema', 'API tokens', 'Webhooks']);
   });
 
   it('leaves keys that are not shortcuts alone, so Tab and typing still work', async () => {

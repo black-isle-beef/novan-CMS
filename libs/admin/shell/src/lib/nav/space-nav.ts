@@ -16,14 +16,15 @@ export interface ShellNavItem {
 }
 
 /**
- * The space menu, in order. Client roles (editors, authors, viewers) get the first five; admins, developers
+ * The space menu, in order. Client roles get the first five their role allows (Forms is for editors and admins, as
+ * it holds what visitors send); admins, developers
  * and agency staff also get the technical screens their role allows.
  */
 export const spaceNav: readonly ShellNavItem[] = [
   { label: copy.dashboard, route: '', icon: 'bi bi-house', permission: 'space.read' },
   { label: copy.pages, route: 'content', icon: 'bi bi-file-earmark-richtext', permission: 'content.read' },
   { label: copy.media, route: 'media', icon: 'bi bi-images', permission: 'media.read' },
-  { label: copy.forms, route: 'forms', icon: 'bi bi-ui-checks', permission: 'content.read' },
+  { label: copy.forms, route: 'forms', icon: 'bi bi-ui-checks', permission: 'forms.read' },
   { label: copy.settings, route: 'settings', icon: 'bi bi-gear', permission: 'space.read', includes: ['members'] },
   { label: 'Schema', route: 'schema', icon: 'bi bi-diagram-3', permission: 'schema.write' },
   { label: 'API tokens', route: 'settings/api-tokens', icon: 'bi bi-key', permission: 'settings.update' },

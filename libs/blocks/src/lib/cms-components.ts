@@ -1,5 +1,6 @@
 import { CTA_DEFINITION } from './components/cta';
 import { FEATURE_GRID_DEFINITION } from './components/feature-grid';
+import { FORM_DEFINITION } from './components/form';
 import { HERO_DEFINITION } from './components/hero';
 import { IMAGE_DEFINITION } from './components/image';
 import { RICH_TEXT_DEFINITION } from './components/rich-text';
@@ -11,4 +12,5 @@ export const CMS_COMPONENT_DEFINITIONS = [
   IMAGE_DEFINITION,
   FEATURE_GRID_DEFINITION,
   CTA_DEFINITION,
+  FORM_DEFINITION,
 ] as const;

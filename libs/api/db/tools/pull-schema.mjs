@@ -67,6 +67,17 @@ for (const column of emptyArrayDefaults) {
 
 source = source.replaceAll(".default(')", '.default("")');
 
+// `tsvector` columns (search, 0019) are not understood and come out as `unknown(...)` with a TODO; ./custom-types
+// declares the type.
+source = source.replace(
+  /\/\/ TODO: failed to parse database type 'tsvector'\s*\n(\s*)(\w+): unknown\("(\w+)"\)/g,
+  '$1$2: tsvector("$3")',
+);
+if (/\bunknown\(/.test(source)) throw new Error(`${pulled} has a column type this script does not handle (unknown(...))`);
+if (/\btsvector\("/.test(source)) {
+  source = source.replace(/(import \{ sql \} from "drizzle-orm"\n)/, `$1import { tsvector } from "./custom-types"\n`);
+}
+
 // Tables whose foreign keys point at each other (entries and entry_versions) make TypeScript infer `any`
 // unless the extra-config callbacks declare their return type.
 source = source.replaceAll('(table) => [', '(table): PgTableExtraConfigValue[] => [');

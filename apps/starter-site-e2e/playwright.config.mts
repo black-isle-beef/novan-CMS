@@ -52,19 +52,19 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: /(gate-1|seo-publish)\.spec\.ts/,
+      testIgnore: /(gate-1|seo-publish|forms)\.spec\.ts/,
     },
 
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
-      testIgnore: /(gate-1|seo-publish)\.spec\.ts/,
+      testIgnore: /(gate-1|seo-publish|forms)\.spec\.ts/,
     },
 
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
-      testIgnore: /(gate-1|seo-publish)\.spec\.ts/,
+      testIgnore: /(gate-1|seo-publish|forms)\.spec\.ts/,
     },
 
     // Gate 1 publishes a change to seeded content, so it runs once, after the other tests have read it.
@@ -81,6 +81,15 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       testMatch: /seo-publish\.spec\.ts/,
       dependencies: ['chromium', 'firefox', 'webkit'],
+    },
+
+    // Forms send submissions and publish a page (package 18), likewise once and after the read-only tests. After
+    // seo-publish too: it moves the contact page to /get-in-touch for a while, and the inbox records the form's path.
+    {
+      name: 'forms',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /forms\.spec\.ts/,
+      dependencies: ['chromium', 'firefox', 'webkit', 'seo-publish'],
     },
 
     // Uncomment for mobile browsers support

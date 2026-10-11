@@ -21,3 +21,20 @@
   min-width: 0;
   overflow-y: auto;
 }
+
+// The search dialog (libs/admin/shell/src/lib/search): results scroll inside it; the one the arrow keys reached is
+// marked with a background and an outline, which forced-colours mode keeps.
+.nv-search-results {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.nv-search-option {
+  cursor: pointer;
+}
+
+.nv-search-option--active {
+  outline: 0.125rem solid var(--ds-color-brand-primary);
+  outline-offset: -0.125rem;
+  background-color: var(--ds-color-surface-muted);
+}

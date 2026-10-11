@@ -17,7 +17,12 @@ export interface NovanEntriesQuery {
   /** Content type api id; needed to filter or sort by fields. */
   type?: string;
   locale?: string;
-  /** `updatedAt`, `path` or `fields.<field>`; a leading `-` for descending. Default `-updatedAt`. */
+  /**
+   * Full-text search: entries with every word (the last may be unfinished), best match first, each with a highlighted
+   * `search.snippet`. Combines with `type`, `locale`, `limit`, `cursor`, `include` and `select`, not `filter` or `sort`.
+   */
+  q?: string;
+  /** `updatedAt`, `path` or `fields.<field>`; a leading `-` for descending. Default `-updatedAt` (`relevance` with `q`). */
   sort?: string;
   /** 1 to 100, default 25. */
   limit?: number;
@@ -48,6 +53,8 @@ export class NovanApiError extends Error {
     readonly status: number,
     readonly code: string | null,
     message: string,
+    /** Messages for each field the API refused, e.g. a form's answers (`form_invalid`). */
+    readonly errors: Readonly<Record<string, readonly string[]>> = {},
   ) {
     super(message);
     this.name = 'NovanApiError';
@@ -90,6 +97,7 @@ export class NovanContentService {
       ...this.entryParams({ locale: query.locale, include: query.include, select: query.select }),
     };
     if (query.type) params['type'] = query.type;
+    if (query.q !== undefined) params['q'] = query.q;
     if (query.sort) params['sort'] = query.sort;
     if (query.limit !== undefined) params['limit'] = String(query.limit);
     if (query.cursor) params['cursor'] = query.cursor;
@@ -211,10 +219,22 @@ function trimSlash(url: string): string {
   return url.replace(/\/+$/, '');
 }
 
-function toApiError(error: unknown): unknown {
+/** An HTTP error as a {@link NovanApiError}, with the API's problem details. */
+export function toApiError(error: unknown): unknown {
   if (!(error instanceof HttpErrorResponse)) return error;
-  const problem = (typeof error.error === 'object' && error.error !== null ? error.error : {}) as Record<string, unknown>;
+  const body: unknown = typeof error.error === 'string' ? parseJson(error.error) : error.error;
+  const problem = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
   const code = typeof problem['code'] === 'string' ? problem['code'] : null;
   const detail = typeof problem['detail'] === 'string' ? problem['detail'] : error.message;
-  return new NovanApiError(error.status, code, detail);
+  const errors = typeof problem['errors'] === 'object' && problem['errors'] !== null ? (problem['errors'] as Record<string, string[]>) : {};
+  return new NovanApiError(error.status, code, detail, errors);
+}
+
+/** A text body as JSON, or null when it is not JSON (an answer read as text). */
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }

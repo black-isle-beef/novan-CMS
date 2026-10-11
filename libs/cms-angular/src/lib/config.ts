@@ -25,6 +25,12 @@ export interface NovanCmsConfig {
    * read by anyone, and the API must allow the site's origin (CORS). Preview never uses it.
    */
   publicDeliveryToken?: string;
+  /**
+   * Cloudflare Turnstile's site key, for forms (docs/build/18-search-forms-audit.md): a form shows the widget, and the API
+   * checks its answer with the matching secret key. Public by design. Without it forms show no widget, which the API
+   * accepts only when it has no secret key either (local development).
+   */
+  turnstileSiteKey?: string;
 }
 
 /**
@@ -45,6 +51,11 @@ export interface NovanServerOptions {
    * answers with the session; the visual editor needs the session, a plain `true` only turns preview on.
    */
   verifyPreview?: (signedToken: string) => NovanPreviewVerdict | Promise<NovanPreviewVerdict>;
+  /**
+   * Cloudflare Turnstile's site key for forms (public, but per environment, so read from the server environment). The
+   * server hands it to the browser with each page.
+   */
+  turnstileSiteKey?: string;
 }
 
 /** What the Preview API says about a valid signed token (`GET /v1/preview/session`). */

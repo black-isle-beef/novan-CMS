@@ -1,0 +1,111 @@
+// _form.scss — FormBlock (libs/blocks/src/lib/components/form). Design-system tokens only: Sass spacing tokens, colour custom properties, rem.
+@use '@black-isle-beef/novan-design-system/styles/tokens' as ds;
+@use 'tones';
+
+@include tones.tones('novan-form-block');
+@include tones.block-spacing('novan-form-block');
+
+.novan-form-block {
+  // Error text and marks: the design system's danger colour, or the tone's text on dark surfaces, where red would
+  // be hard to read. Errors also say "Error:" to screen readers and thicken the field's border.
+  --novan-form-block-error: var(--ds-color-semantic-danger);
+}
+
+.novan-form-block--tone-brand,
+.novan-form-block--tone-dark {
+  --novan-form-block-error: var(--ds-color-text-inverse);
+}
+
+.novan-form-block__inner {
+  display: grid;
+  gap: ds.$ds-spacing-scale-4;
+}
+
+.novan-form-block--width-narrow .novan-form-block__inner {
+  max-inline-size: 42rem;
+}
+
+.novan-form-block__heading,
+.novan-form-block__intro {
+  margin: 0;
+}
+
+.novan-form-block__intro {
+  max-inline-size: 60ch;
+}
+
+.novan-form-block__summary:focus-visible,
+.novan-form-block__success:focus-visible {
+  outline: 0.1875rem solid currentColor;
+  outline-offset: 0.25rem;
+}
+
+.novan-form-block__summary:empty {
+  display: none;
+}
+
+// The summary is an alert on its own light surface whatever the tone, so its links take the alert's colour rather
+// than the tone's (white on brand and dark). `--bs-alert-link-color` is declared on `.alert-danger`, not `:root`, so
+// use the global colour it is set from.
+.novan-form-block__summary .alert-danger {
+  --bs-link-color: var(--bs-danger-text-emphasis);
+  --ds-link-hover-color: var(--bs-danger-text-emphasis);
+}
+
+// Bootstrap colours an invalid tick box's label red, which is hard to read on brand and dark; the message below says
+// what is wrong.
+.novan-form-block .form-check-input.is-invalid ~ .form-check-label {
+  color: inherit;
+}
+
+.novan-form-block__form {
+  display: grid;
+  gap: ds.$ds-spacing-scale-5;
+  justify-items: start;
+}
+
+.novan-form-block__field {
+  inline-size: 100%;
+  margin: 0;
+}
+
+.novan-form-block__hint {
+  margin-block: 0 ds.$ds-spacing-scale-2;
+  color: var(--novan-form-block-muted);
+}
+
+.novan-form-block__required {
+  font-weight: 400;
+  color: var(--novan-form-block-muted);
+}
+
+.novan-form-block__error {
+  margin-block-end: ds.$ds-spacing-scale-2;
+  font-weight: 700;
+  color: var(--novan-form-block-error);
+}
+
+.novan-form-block__field .is-invalid {
+  border-width: 0.125rem;
+  border-color: var(--novan-form-block-error);
+}
+
+// The honeypot: out of sight and out of the accessibility tree.
+.novan-form-block__trap {
+  display: none;
+}
+
+.novan-form-block__success {
+  padding: ds.$ds-spacing-scale-4;
+  border-inline-start: 0.375rem solid var(--novan-form-block-accent);
+}
+
+@media (forced-colors: active) {
+  .novan-form-block__field .is-invalid {
+    border-color: Mark;
+  }
+
+  .novan-form-block__success {
+    border-inline-start-color: CanvasText;
+  }
+}

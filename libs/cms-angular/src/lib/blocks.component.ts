@@ -1,5 +1,6 @@
 import { NgComponentOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, reflectComponentType, type Type } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, Injector, input, reflectComponentType, type Type } from '@angular/core';
+import { NOVAN_BLOCK_CONTEXT, type NovanBlockContext } from './block-context';
 import { NOVAN_CMS_CONFIG } from './config';
 import { NovanPreview } from './preview';
 import type { NovanBlockNode } from './types';
@@ -10,6 +11,8 @@ interface RenderedBlock {
   block: string;
   component: Type<unknown> | null;
   inputs: Record<string, unknown>;
+  /** Gives the component its {@link NovanBlockContext}. */
+  injector: Injector;
   /** Children the component does not take itself, rendered after it. */
   children: NovanBlockNode[] | null;
 }
@@ -21,6 +24,9 @@ interface RenderedBlock {
  * gets the child blocks to place itself (with its own `<novan-blocks>`); otherwise they follow it. Blocks
  * with no registered component are skipped, with a warning box in preview mode. Hidden blocks (`_hidden`)
  * are never shown.
+ *
+ * Each component can inject {@link NOVAN_BLOCK_CONTEXT}: its _uid, block type and the entryId given here (or to an
+ * outer <novan-blocks>), so a form knows what it belongs to.
  *
  * In preview mode each block is wrapped in a `<div data-novan-uid data-novan-block>`, which the visual
  * editor's bridge outlines and measures. Other visitors get the blocks without wrappers.
@@ -34,9 +40,9 @@ interface RenderedBlock {
       @if (preview.active()) {
         <div [attr.data-novan-uid]="item.uid" [attr.data-novan-block]="item.block">
           @if (item.component) {
-            <ng-container *ngComponentOutlet="item.component; inputs: item.inputs" />
+            <ng-container *ngComponentOutlet="item.component; inputs: item.inputs; injector: item.injector" />
             @if (item.children) {
-              <novan-blocks [blocks]="item.children" />
+              <novan-blocks [blocks]="item.children" [entryId]="pageId()" />
             }
           } @else {
             <div class="alert alert-warning" role="note">
@@ -46,9 +52,9 @@ interface RenderedBlock {
           }
         </div>
       } @else if (item.component) {
-        <ng-container *ngComponentOutlet="item.component; inputs: item.inputs" />
+        <ng-container *ngComponentOutlet="item.component; inputs: item.inputs; injector: item.injector" />
         @if (item.children) {
-          <novan-blocks [blocks]="item.children" />
+          <novan-blocks [blocks]="item.children" [entryId]="pageId()" />
         }
       }
     }
@@ -57,28 +63,45 @@ interface RenderedBlock {
 export class NovanBlocks {
   /** The block tree, e.g. `page.data.body`. */
   readonly blocks = input<readonly NovanBlockNode[] | null | undefined>([]);
+  /** The page or entry the blocks belong to, e.g. `page.id`; blocks inside blocks inherit it. */
+  readonly entryId = input<string | null | undefined>(undefined);
 
   protected readonly preview = inject(NovanPreview);
   private readonly registry = inject(NOVAN_CMS_CONFIG).blocks;
   private readonly inputNames = new Map<Type<unknown>, ReadonlySet<string>>();
+  private readonly injector = inject(Injector);
+  private readonly outer = inject(NOVAN_BLOCK_CONTEXT, { optional: true });
+  /** One injector per block and page, kept so a live update does not re-create the block's component. */
+  private injectors = new Map<string, Injector>();
+
+  /** This one's, else the outer blocks'. */
+  protected readonly pageId = computed(() => this.entryId() ?? this.outer?.entryId ?? null);
 
   protected readonly rendered = computed<RenderedBlock[]>(() => {
     const nodes = this.blocks();
+    const entryId = this.pageId();
     if (!Array.isArray(nodes)) return [];
     const seen = new Set<string>();
     const rendered: RenderedBlock[] = [];
+    const injectors = new Map<string, Injector>();
     for (const node of nodes) {
       if (!isBlockNode(node) || node._hidden === true || seen.has(node._uid)) continue;
       seen.add(node._uid);
-      rendered.push(this.render(node));
+      const key = `${node._uid}\u0000${node._block}\u0000${entryId ?? ''}`;
+      const context: NovanBlockContext = { uid: node._uid, block: node._block, entryId };
+      const injector =
+        this.injectors.get(key) ?? Injector.create({ providers: [{ provide: NOVAN_BLOCK_CONTEXT, useValue: context }], parent: this.injector });
+      injectors.set(key, injector);
+      rendered.push(this.render(node, injector));
     }
+    this.injectors = injectors;
     return rendered;
   });
 
-  private render(node: NovanBlockNode): RenderedBlock {
+  private render(node: NovanBlockNode, injector: Injector): RenderedBlock {
     const component = this.registry.get(node._block) ?? null;
     const children = Array.isArray(node.children) && node.children.length ? node.children : null;
-    if (!component) return { uid: node._uid, block: node._block, component: null, inputs: {}, children: null };
+    if (!component) return { uid: node._uid, block: node._block, component: null, inputs: {}, injector, children: null };
 
     const names = this.inputsOf(component);
     const inputs: Record<string, unknown> = {};
@@ -89,7 +112,7 @@ export class NovanBlocks {
     if (names.has('settings')) inputs['settings'] = isPlainObject(node._style) ? node._style : null;
     const takesChildren = names.has('children');
     if (takesChildren) inputs['children'] = node.children ?? [];
-    return { uid: node._uid, block: node._block, component, inputs, children: takesChildren ? null : children };
+    return { uid: node._uid, block: node._block, component, inputs, injector, children: takesChildren ? null : children };
   }
 
   /** The component's input names as templates use them. */

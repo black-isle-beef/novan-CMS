@@ -2,6 +2,11 @@
 <ds-header [navItems]="headerNav()">
   <a dsBrand routerLink="/spaces" class="fw-bold text-body text-decoration-none">Novan CMS</a>
   <ng-container dsActions>
+    @if (spaceId()) {
+      <button type="button" class="btn btn-secondary btn-sm" [attr.aria-keyshortcuts]="searchKeys" (click)="openSearch()">
+        <span class="bi bi-search" aria-hidden="true"></span> Search<span class="visually-hidden"> (Ctrl+K)</span>
+      </button>
+    }
     <nv-space-switcher />
     @if (viewAsSpaceId(); as id) {
       <nv-view-as-menu [spaceId]="id" />
@@ -25,5 +30,8 @@
   </main>
 </div>
 
+@if (spaceId(); as id) {
+  <nv-search-palette [spaceId]="id" />
+}
 <ds-toast-container position="bottom-end" />
 <nv-confirm-host />

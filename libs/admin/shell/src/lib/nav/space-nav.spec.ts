@@ -6,12 +6,16 @@ const labels = (role: string | null, agencyStaff = false) =>
   buildSpaceNav(spaceId, { role, agencyStaff }, base).map((item) => item.label);
 
 describe('buildSpaceNav', () => {
-  it.each(['editor', 'author', 'viewer'])('gives a space %s the client menu only', (role) => {
-    expect(labels(role)).toEqual(['Dashboard', 'Pages', 'Media', 'Forms', 'Settings']);
+  it('gives a space editor the client menu, with the Forms inbox', () => {
+    expect(labels('editor')).toEqual(['Dashboard', 'Pages', 'Media', 'Forms', 'Settings']);
+  });
+
+  it.each(['author', 'viewer'])('gives a space %s the client menu without forms, which hold personal data', (role) => {
+    expect(labels(role)).toEqual(['Dashboard', 'Pages', 'Media', 'Settings']);
   });
 
   it('adds the technical screens a developer may use', () => {
-    expect(labels('developer')).toEqual(['Dashboard', 'Pages', 'Media', 'Forms', 'Settings', 'Schema', 'API tokens', 'Webhooks']);
+    expect(labels('developer')).toEqual(['Dashboard', 'Pages', 'Media', 'Settings', 'Schema', 'API tokens', 'Webhooks']);
   });
 
   it('gives space admins and agency staff everything', () => {
@@ -30,7 +34,7 @@ describe('buildSpaceNav', () => {
         .filter((item) => item.active)
         .map((item) => item.label);
 
-    expect(buildSpaceNav(spaceId, { role: 'viewer', agencyStaff: false }, base).map((item) => item.href)).toEqual([
+    expect(buildSpaceNav(spaceId, { role: 'editor', agencyStaff: false }, base).map((item) => item.href)).toEqual([
       base,
       `${base}/content`,
       `${base}/media`,
