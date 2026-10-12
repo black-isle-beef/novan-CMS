@@ -82,7 +82,7 @@ export class WebhookRunner implements OnModuleInit {
       }
       const reason = error instanceof Error && error.name === 'TimeoutError' ? 'It did not answer in time.' : `It could not be reached: ${describe(error)}`;
       await this.record(job.deliveryId, { status: context.final ? 'failed' : 'pending', attempt: context.attempt, error: reason });
-      throw new Error(`Webhook delivery ${job.deliveryId}: ${reason}`);
+      throw new Error(`Webhook delivery ${job.deliveryId}: ${reason}`, { cause: error });
     }
     if (status >= 200 && status < 300) {
       await this.record(job.deliveryId, { status: 'delivered', attempt: context.attempt, responseCode: status, error: null });
