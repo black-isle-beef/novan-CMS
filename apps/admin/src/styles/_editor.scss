@@ -1,5 +1,5 @@
-// The visual editor (libs/admin/editor): the client site in a frame at the chosen screen width, between the blocks
-// on the page (left) and the block's panel (right), on a dotted charcoal canvas under a toolbar.
+// The visual editor (libs/admin/editor): the client site in a frame at the chosen screen width, beside one column with
+// the block's panel, the blocks on the page and the checklist, on a dotted charcoal canvas under a toolbar.
 
 // The canvas fills the wide screen's column, edge to edge: a dotted grid of the line token on the canvas token.
 .nv-editor-canvas {
@@ -11,8 +11,8 @@
   background-size: 18px 18px;
 }
 
-// One wrapping row: where you are and the page's title, its save state, what to show, the actions, who else is
-// here and the workflow (Publish last).
+// One wrapping row: Edit in form, the save state, the language and who else is here, then the page's actions
+// (Undo, Redo, Save draft and the workflow, Publish first) at the end.
 .nv-editor-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -25,14 +25,34 @@
   background-color: var(--ds-color-copper-theme-surface);
 }
 
-.nv-editor-toolbar__title {
-  flex: 1 1 16rem;
-  min-width: 0;
+.nv-editor-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-inline-start: auto;
 }
 
+// The workflow's buttons match the small editing buttons beside them.
 .nv-editor-toolbar__workflow {
   display: block;
-  margin-inline-start: auto;
+
+  .btn {
+    --bs-btn-padding-y: 0.25rem;
+    --bs-btn-padding-x: 0.5rem;
+    --bs-btn-font-size: 0.875rem;
+  }
+}
+
+// Screen size and Show, on their own row centred over the page.
+.nv-editor-viewbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 0.75rem;
 }
 
 // The save state, with a copper dot and the word "Draft" while changes are not live.
@@ -94,28 +114,26 @@
   }
 }
 
-// Page, panel, blocks and checklist in source order; side by side from 1200px.
+// The page, then one side column (panel, blocks and checklist, in source order); side by side from 1200px, so the
+// page gets all the width but the column's.
 .nv-editor-layout {
   display: grid;
-  grid-template-areas:
-    'centre'
-    'right'
-    'left'
-    'checklist';
   gap: 1rem;
 
   @media (min-width: 1200px) {
-    grid-template-columns: 15rem minmax(0, 1fr) 21rem;
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      'left centre right'
-      'left centre checklist';
+    grid-template-columns: minmax(0, 1fr) 22rem;
     align-items: start;
   }
 }
 
 .nv-editor-centre {
-  grid-area: centre;
+  min-width: 0;
+}
+
+.nv-editor-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   min-width: 0;
 }
 
@@ -129,18 +147,6 @@
   border-radius: var(--bs-border-radius-xl);
   background-color: var(--ds-color-copper-theme-surface);
   box-shadow: var(--ds-elevation-component-card);
-}
-
-.nv-editor-panel--left {
-  grid-area: left;
-}
-
-.nv-editor-panel--right {
-  grid-area: right;
-}
-
-.nv-editor-panel--checklist {
-  grid-area: checklist;
 }
 
 // A charcoal hairline and a deep shadow around the page; a frame wider than the screen scrolls inside it.

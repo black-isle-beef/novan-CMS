@@ -267,8 +267,19 @@ describe('VisualEditorPage', () => {
       const { el, frame } = await render();
       expect(frame()?.getAttribute('src')).toBe(`${SITE}/?novan_preview=first`);
       expect(frame()?.title).toBe('Draft of Home');
-      expect(el.querySelector('h1')?.textContent).toBe('Home');
+      expect(el.querySelector('h1')?.textContent).toBe('Edit on the page: Home');
       expect(el.textContent).toContain('Connecting to your site');
+    });
+
+    it('leads with Edit in form and the page actions, and centres screen size and Show over the page', async () => {
+      const { el } = await render();
+      const toolbar = el.querySelector('.nv-editor-toolbar') as HTMLElement;
+      expect(toolbar.querySelector('nav[aria-label="Breadcrumb"]')).toBeNull();
+      expect(toolbar.querySelector(`a[href="/spaces/${spaceId}/content/${entryId}"]`)?.textContent?.trim()).toBe('Edit in form');
+      expect(toolbar.querySelector('[role="group"][aria-label="Page actions"]')?.textContent).toContain('Save draft');
+      const viewbar = el.querySelector('.nv-editor-centre .nv-editor-viewbar') as HTMLElement;
+      expect([...viewbar.querySelectorAll('legend')].map((legend) => legend.textContent?.trim())).toEqual(['Screen size', 'Show']);
+      expect(toolbar.querySelector('fieldset')).toBeNull();
     });
 
     it('opens other pages at their path', async () => {

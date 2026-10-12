@@ -2,12 +2,13 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { ADMIN_CONFIG, AuthService, ViewAs } from '@novan/admin-auth';
 import { ManagementApi, SpaceContext } from '@novan/admin-spaces';
-import type { SpaceRole } from '@novan/shared-schemas';
+import type { EntrySummary, SpaceRole } from '@novan/shared-schemas';
 import { of } from 'rxjs';
+import { SpacePages } from '../space-sidebar/space-sidebar';
 import { AdminShell } from './admin-shell';
 
 const spaceId = '00000000-0000-4000-8000-000000000200';
@@ -16,7 +17,7 @@ const spaceId = '00000000-0000-4000-8000-000000000200';
 class Screen {}
 
 /** The shell with a fake session: `role` in the demo space, or agency staff. */
-async function render(role: SpaceRole | null, { agencyStaff = false } = {}) {
+async function render(role: SpaceRole | null, { agencyStaff = false, pages = [] as Pick<EntrySummary, 'id' | 'title'>[] } = {}) {
   const viewAs = new ViewAs();
   const currentSpaceId = signal<string | null>(null);
   const context = {
@@ -51,6 +52,8 @@ async function render(role: SpaceRole | null, { agencyStaff = false } = {}) {
       { provide: SpaceContext, useValue: context },
       { provide: ViewAs, useValue: viewAs },
       { provide: ManagementApi, useValue: api },
+      // The sidebar's pages menu.
+      { provide: SpacePages, useValue: { list: vi.fn(() => of(pages)) } },
       { provide: ADMIN_CONFIG, useValue: { apiUrl: 'http://api.test' } },
       provideHttpClient(),
       provideHttpClientTesting(),
@@ -99,17 +102,37 @@ describe('AdminShell', () => {
     expect(el.querySelector('nv-view-as-menu')).toBeNull();
   });
 
-  it('keeps the space menu in the sidebar, and Spaces and Account in a compact top bar with the brand', async () => {
+  it('keeps the space menu in the sidebar, under a compact top bar whose brand goes to all spaces', async () => {
     const { el, nav } = await render('editor');
-    expect(el.querySelector('ds-sidebar')).not.toBeNull();
+    expect(el.querySelector('nv-space-sidebar.ds-sidebar')).not.toBeNull();
     expect(el.querySelector('ds-header')?.classList).toContain('ds-header--app');
-    expect(nav()).toEqual(['Spaces', 'Account']);
+    // Spaces and Account are not repeated as top-bar links.
+    expect(nav()).toEqual([]);
     const brand = el.querySelector('a.nv-brand') as HTMLAnchorElement;
     expect(brand.getAttribute('aria-label')).toBe('Novan CMS, all spaces');
     expect(brand.getAttribute('href')).toBe('/spaces');
     expect([...brand.querySelectorAll('img')].every((img) => img.getAttribute('alt') === '')).toBe(true);
-    // Icons are decorative; the link text names each section.
-    expect(el.querySelector('nav[aria-label="Primary"] a i')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('lists the space\'s pages under Pages, shows the one being edited, and opens another in the editor', async () => {
+    const home = '00000000-0000-4000-8000-000000000301';
+    const about = '00000000-0000-4000-8000-000000000302';
+    const { harness, el } = await render('editor', {
+      pages: [{ id: about, title: 'About' }, { id: home, title: 'Home' }],
+    });
+    const trigger = () => el.querySelector('.nv-space-sidebar__pages button[aria-haspopup="menu"]') as HTMLButtonElement;
+    expect(trigger().textContent?.trim()).toBe('Open a page');
+    await harness.navigateByUrl(`/spaces/${spaceId}/pages/${home}/edit`);
+
+    const pagesItem = [...el.querySelectorAll('nav[aria-label="Space"] li')].find((li) => li.querySelector('a')?.textContent?.trim() === 'Pages');
+    expect(pagesItem?.contains(trigger())).toBe(true);
+    expect(trigger().textContent).toContain('Home, open another page');
+    const items = [...(pagesItem?.querySelectorAll('[role="menuitem"]') ?? [])] as HTMLElement[];
+    expect(items.map((item) => item.textContent?.trim())).toEqual(['About', 'Home']);
+
+    items[0].click();
+    await harness.fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe(`/spaces/${spaceId}/pages/${about}/edit`);
   });
 
   it('gives wide screens (the visual editor) the whole window, and others the usual column', async () => {

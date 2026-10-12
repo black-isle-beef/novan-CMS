@@ -32,8 +32,8 @@
 
 <!-- Only <main> scrolls; the header and the space menu stay in view (apps/admin/src/styles/_shell.scss). -->
 <div class="nv-shell__body">
-  @if (spaceNav().length && !narrow()) {
-    <ds-sidebar [items]="spaceNav()" ariaLabel="Space" />
+  @if (spaceNav().length && !narrow() ? spaceId() : null; as id) {
+    <nv-space-sidebar [items]="spaceNav()" [spaceId]="id" [url]="url()" />
   }
   <main #main id="ds-main-content" class="nv-shell__main">
     <div [class]="wide() ? 'container-fluid py-3' : 'container py-6'">

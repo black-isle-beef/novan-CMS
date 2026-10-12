@@ -16,7 +16,6 @@ import {
   DsDropdownComponent,
   DsHeaderComponent,
   DsMenuItemComponent,
-  DsSidebarComponent,
   DsToastContainerComponent,
   type NavItem,
 } from '@black-isle-beef/novan-design-system';
@@ -27,6 +26,7 @@ import { initialsFromEmail } from '../account/initials';
 import { ConfirmHost } from '../confirm/confirm-host';
 import { buildSpaceNav } from '../nav/space-nav';
 import { SearchPalette } from '../search/search-palette';
+import { SpaceSidebar } from '../space-sidebar/space-sidebar';
 import { shortcutKeys, Shortcuts } from '../shortcuts/shortcuts';
 import { ViewAsBanner } from '../view-as/view-as-banner';
 import { ViewAsMenu } from '../view-as/view-as-menu';
@@ -37,9 +37,9 @@ const narrowScreen = '(max-width: 767.98px)';
 const spaceInUrl = /^\/spaces\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[/?#]|$)/i;
 
 /**
- * Signed-in layout: the top bar (Spaces and Account; search, space switcher, "view as" for agency staff and the
- * account menu), the role-aware space menu in the sidebar on the left, then the screen. Below `md` the space menu
- * moves into the top bar's menu button. Also hosts the toasts, the confirm dialog, the search dialog (Ctrl+K inside a
+ * Signed-in layout: the top bar (the brand, which goes to all spaces; search, space switcher, "view as" for agency
+ * staff and the account menu), the role-aware space menu in the sidebar on the left, then the screen. Below `md` the
+ * space menu moves into the top bar's menu button. Also hosts the toasts, the confirm dialog, the search dialog (Ctrl+K inside a
  * space) and the keyboard shortcuts.
  */
 @Component({
@@ -49,11 +49,11 @@ const spaceInUrl = /^\/spaces\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-
     DsDropdownComponent,
     DsHeaderComponent,
     DsMenuItemComponent,
-    DsSidebarComponent,
-    DsToastContainerComponent,
+      DsToastContainerComponent,
     RouterLink,
     RouterOutlet,
     SearchPalette,
+    SpaceSidebar,
     SpaceSwitcher,
     ViewAsBanner,
     ViewAsMenu,
@@ -71,7 +71,7 @@ export class AdminShell implements OnInit {
   protected readonly context = inject(SpaceContext);
   private readonly shortcuts = inject(Shortcuts);
 
-  private readonly url = toSignal(
+  protected readonly url = toSignal(
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
       map((event) => event.urlAfterRedirects),
@@ -96,15 +96,11 @@ export class AdminShell implements OnInit {
     return spaceId && access && this.context.currentSpaceId() === spaceId ? buildSpaceNav(spaceId, access, this.url()) : [];
   });
 
-  /** The top bar's navigation: Spaces and Account, led by the space menu on narrow screens (no sidebar there). */
-  protected readonly headerNav = computed<NavItem[]>(() => {
-    const url = this.url().split(/[?#]/)[0];
-    return [
-      ...(this.narrow() ? this.spaceNav() : []),
-      { label: 'Spaces', href: '/spaces', icon: 'bi bi-grid', active: url === '/spaces' || url === '/spaces/new' },
-      { label: 'Account', href: '/account', icon: 'bi bi-person', active: url.startsWith('/account') },
-    ];
-  });
+  /**
+   * The top bar's navigation: only the space menu, on narrow screens where there is no sidebar. Spaces is reached from
+   * the brand and the space switcher, Account from the account menu.
+   */
+  protected readonly headerNav = computed<NavItem[]>(() => (this.narrow() ? this.spaceNav() : []));
 
   /** Screens whose route has `data: { layout: 'wide' }` (the visual editor) use the whole width of the window. */
   protected readonly wide = computed(() => {

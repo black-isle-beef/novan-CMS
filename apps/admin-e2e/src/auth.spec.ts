@@ -90,13 +90,23 @@ test.describe('@auth', () => {
       await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
     }
 
-    const nav = page.getByRole('navigation', { name: 'Primary' });
-    await expect(nav.getByRole('link', { name: 'Spaces' })).toHaveAttribute('aria-current', 'page');
+    // Inside a space, the sidebar marks the current section.
+    await page.getByRole('link', { name: 'Demo site' }).click();
+    const spaceMenu = page.getByRole('navigation', { name: 'Space' });
+    await expect(spaceMenu.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page');
+    await spaceMenu.getByRole('link', { name: 'Pages' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Pages' })).toBeFocused();
+    await expect(spaceMenu.getByRole('link', { name: 'Pages' })).toHaveAttribute('aria-current', 'page');
 
-    await nav.getByRole('link', { name: 'Account' }).click();
+    // Account is in the account menu (the top bar has no Spaces or Account links).
+    await page.getByRole('button', { name: 'Account and sign out' }).click();
+    await page.getByRole('menuitem', { name: 'Account' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Your account' })).toBeFocused();
     await expectNoAxeViolations(page);
-    await expect(nav.getByRole('link', { name: 'Account' })).toHaveAttribute('aria-current', 'page');
+
+    // The brand goes back to all spaces.
+    await page.getByRole('link', { name: 'Novan CMS, all spaces' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Spaces' })).toBeFocused();
   });
 
   test('a wrong password shows an error and stays on sign in', async ({ page }) => {

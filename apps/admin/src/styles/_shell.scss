@@ -167,3 +167,36 @@ a.nv-brand[href] {
     border-color: CanvasText;
   }
 }
+
+// The space menu (libs/admin/shell/src/lib/space-sidebar): copper icons and labels on the charcoal surface. Copper
+// 500 is below 4.5:1 on the raised surface, so hovered and current links take the lighter Copper 300.
+.nv-space-sidebar .ds-sidebar__nav .ds-sidebar__link {
+  color: var(--ds-color-copper-500);
+
+  &:hover,
+  &.ds-sidebar__link--active {
+    color: var(--ds-color-copper-300);
+  }
+}
+
+// The pages menu under Pages, lined up with the link's label; a long title is cut short (its button keeps the name).
+.nv-space-sidebar__pages {
+  display: block;
+  margin: 0.25rem 0 0.25rem 2.35rem;
+
+  .ds-dropdown__trigger {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    text-align: start;
+  }
+}
+
+.nv-space-sidebar__pages-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,26 +1,18 @@
-<!-- Three regions on a dotted charcoal canvas: the toolbar, then the page with the blocks (left) and the panel (right). -->
+<!-- On a dotted charcoal canvas: the toolbar, then the page beside one column (the panel, the blocks and the checklist). -->
 <div class="nv-editor-canvas">
+  <!-- Top row: switch to the form, the save state, the language and who else is here, then the page's actions. -->
   <div class="nv-editor-toolbar">
-    <nav aria-label="Breadcrumb">
-      <ol class="breadcrumb mb-0">
-        <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'content']">{{ copy.pages }}</a></li>
-        @if (entry(); as e) {
-          <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'content', e.id]">{{ title() }}</a></li>
-        }
-        <li class="breadcrumb-item active" aria-current="page">Edit on the page</li>
-      </ol>
-    </nav>
+    <!-- The page's name is in the sidebar's pages menu; screen readers still get it as the heading. -->
+    <h1 class="visually-hidden">Edit on the page{{ entry() ? ': ' + title() : '' }}</h1>
 
     @if (!loadError() && !loading() && entry(); as e) {
-      <div class="nv-editor-toolbar__title">
-        <h1 class="h4 mb-0">{{ title() }}</h1>
-        <p class="small text-body-secondary mb-0">
-          Click a block on the page, or in the list of blocks, to edit it.
-          <a [routerLink]="['/spaces', spaceId(), 'content', e.id]" [queryParams]="form.locale() ? { locale: form.locale() } : {}">
-            Edit in the form instead
-          </a>
-        </p>
-      </div>
+      <a
+        class="btn btn-secondary btn-sm"
+        [routerLink]="['/spaces', spaceId(), 'content', e.id]"
+        [queryParams]="form.locale() ? { locale: form.locale() } : {}"
+      >
+        <i class="bi bi-ui-checks me-1" aria-hidden="true"></i>Edit in form
+      </a>
 
       @if (canEdit()) {
         <div class="nv-editor-save">
@@ -41,83 +33,6 @@
           (localeChange)="form.locale.set($event)"
         />
       }
-      <fieldset class="nv-editor-segmented">
-        <legend class="nv-editor-segmented__legend">Screen size</legend>
-        <div class="btn-group" role="group">
-          @for (d of devices; track d.id) {
-            <input
-              type="radio"
-              class="btn-check"
-              name="nv-editor-device"
-              [id]="'nv-editor-device-' + d.id"
-              [checked]="device() === d.id"
-              (change)="setDevice(d.id)"
-            />
-            <label class="btn btn-secondary btn-sm" [for]="'nv-editor-device-' + d.id">
-              <i [class]="'bi bi-' + d.icon + ' me-1'" aria-hidden="true"></i>{{ d.label
-              }}<span class="visually-hidden">, {{ d.width }} pixels wide</span>
-            </label>
-          }
-        </div>
-      </fieldset>
-
-      <fieldset class="nv-editor-segmented">
-        <legend class="nv-editor-segmented__legend">Show</legend>
-        <div class="btn-group" role="group">
-          <input
-            type="radio"
-            class="btn-check"
-            name="nv-editor-view"
-            id="nv-editor-view-draft"
-            [checked]="view() === 'draft'"
-            (change)="setView('draft')"
-          />
-          <label class="btn btn-secondary btn-sm" for="nv-editor-view-draft">Draft</label>
-          <input
-            type="radio"
-            class="btn-check"
-            name="nv-editor-view"
-            id="nv-editor-view-live"
-            [checked]="view() === 'live'"
-            [disabled]="!published()"
-            [attr.aria-describedby]="published() ? null : 'nv-editor-live-hint'"
-            (change)="setView('live')"
-          />
-          <label class="btn btn-secondary btn-sm" for="nv-editor-view-live">Live</label>
-        </div>
-      </fieldset>
-
-      @if (canEdit()) {
-        <div class="d-flex flex-wrap align-items-center gap-1" role="group" aria-label="Page actions">
-          <button
-            type="button"
-            class="btn btn-secondary btn-sm"
-            [disabled]="!store.canUndo()"
-            aria-keyshortcuts="Control+Z Meta+Z"
-            (click)="undo()"
-          >
-            <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Undo
-          </button>
-          <button
-            type="button"
-            class="btn btn-secondary btn-sm"
-            [disabled]="!store.canRedo()"
-            aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
-            (click)="redo()"
-          >
-            <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Redo
-          </button>
-          <button
-            type="button"
-            class="btn btn-secondary btn-sm"
-            [disabled]="busy() !== null"
-            [attr.aria-keyshortcuts]="shortcutKeys.save"
-            (click)="save()"
-          >
-            {{ copy.saveDraft }}
-          </button>
-        </div>
-      }
 
       @if (presence.others(); as others) {
         @if (others.length) {
@@ -135,27 +50,61 @@
         }
       }
 
-      @if (showWorkflow() && contentTypeOf(); as type) {
-        <nv-page-workflow
-          #workflow
-          class="nv-editor-toolbar__workflow"
-          [spaceId]="spaceId()"
-          [entry]="e"
-          [contentType]="type"
-          [blockTypes]="blockTypes()"
-          [checks]="checks()"
-          [prepare]="prepare"
-          [disabled]="busy() !== null"
-          (changed)="workflowChanged($event)"
-          (done)="workflowDone($event)"
-          (goTo)="select($event)"
-        />
-      }
+      <!-- Undo, Redo and Save draft, then publishing (Publish changes, Unpublish, Archive). -->
+      <div class="nv-editor-toolbar__actions">
+        @if (canEdit()) {
+          <div class="d-flex flex-wrap align-items-center gap-1" role="group" aria-label="Page actions">
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              [disabled]="!store.canUndo()"
+              aria-keyshortcuts="Control+Z Meta+Z"
+              (click)="undo()"
+            >
+              <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Undo
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              [disabled]="!store.canRedo()"
+              aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
+              (click)="redo()"
+            >
+              <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Redo
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              [disabled]="busy() !== null"
+              [attr.aria-keyshortcuts]="shortcutKeys.save"
+              (click)="save()"
+            >
+              {{ copy.saveDraft }}
+            </button>
+          </div>
+        }
+
+        @if (showWorkflow() && contentTypeOf(); as type) {
+          <nv-page-workflow
+            #workflow
+            class="nv-editor-toolbar__workflow"
+            [spaceId]="spaceId()"
+            [entry]="e"
+            [contentType]="type"
+            [blockTypes]="blockTypes()"
+            [checks]="checks()"
+            [prepare]="prepare"
+            [disabled]="busy() !== null"
+            (changed)="workflowChanged($event)"
+            (done)="workflowDone($event)"
+            (goTo)="select($event)"
+          />
+        }
+      </div>
     }
   </div>
 
   @if (loadError(); as message) {
-    <h1>Edit on the page</h1>
     <ds-alert variant="danger">{{ message }}</ds-alert>
   } @else if (loading()) {
     <nv-skeleton label="Loading the page" [lines]="8" [heading]="true" />
@@ -188,9 +137,57 @@
         <a [routerLink]="['/spaces', spaceId(), 'content', e.id]">Edit the page in the form</a> meanwhile.
       </ds-alert>
     } @else {
-      <!-- Source order (page, panel, blocks, checklist) is the reading order, and the stacked order below 1200px. -->
+      <!-- Source order (page, panel, blocks, checklist) is the reading order, and the stacked order in the side column. -->
       <div class="nv-editor-layout">
         <div class="nv-editor-centre">
+          <!-- Its own row, centred over the page: at what width, and the draft or the live page. -->
+          <div class="nv-editor-viewbar">
+            <fieldset class="nv-editor-segmented">
+              <legend class="nv-editor-segmented__legend">Screen size</legend>
+              <div class="btn-group" role="group">
+                @for (d of devices; track d.id) {
+                  <input
+                    type="radio"
+                    class="btn-check"
+                    name="nv-editor-device"
+                    [id]="'nv-editor-device-' + d.id"
+                    [checked]="device() === d.id"
+                    (change)="setDevice(d.id)"
+                  />
+                  <label class="btn btn-secondary btn-sm" [for]="'nv-editor-device-' + d.id">
+                    <i [class]="'bi bi-' + d.icon + ' me-1'" aria-hidden="true"></i>{{ d.label
+                    }}<span class="visually-hidden">, {{ d.width }} pixels wide</span>
+                  </label>
+                }
+              </div>
+            </fieldset>
+
+            <fieldset class="nv-editor-segmented">
+              <legend class="nv-editor-segmented__legend">Show</legend>
+              <div class="btn-group" role="group">
+                <input
+                  type="radio"
+                  class="btn-check"
+                  name="nv-editor-view"
+                  id="nv-editor-view-draft"
+                  [checked]="view() === 'draft'"
+                  (change)="setView('draft')"
+                />
+                <label class="btn btn-secondary btn-sm" for="nv-editor-view-draft">Draft</label>
+                <input
+                  type="radio"
+                  class="btn-check"
+                  name="nv-editor-view"
+                  id="nv-editor-view-live"
+                  [checked]="view() === 'live'"
+                  [disabled]="!published()"
+                  [attr.aria-describedby]="published() ? null : 'nv-editor-live-hint'"
+                  (change)="setView('live')"
+                />
+                <label class="btn btn-secondary btn-sm" for="nv-editor-view-live">Live</label>
+              </div>
+            </fieldset>
+          </div>
           <p class="small text-body-secondary mb-2" role="status">
             @if (view() === 'live') {
               Showing the live page. Switch to the draft to select blocks.
@@ -232,96 +229,99 @@
           </div>
         </div>
 
-        <div class="nv-editor-panel--right">
-          <!-- Arrow keys move between the tabs (role="tablist" pattern). -->
-          <div class="nav nav-tabs mb-3" role="tablist" aria-label="Side panel">
-            @for (tab of panelTabs; track tab.id) {
-              <button
-                type="button"
-                role="tab"
-                class="nav-link"
-                [id]="'nv-panel-tab-' + tab.id"
-                [class.active]="panelTab() === tab.id"
-                [attr.aria-selected]="panelTab() === tab.id"
-                [attr.aria-controls]="'nv-panel-' + tab.id"
-                [tabindex]="panelTab() === tab.id ? 0 : -1"
-                (click)="showTab(tab.id)"
-                (keydown)="tabKey($event)"
-              >
-                {{ tab.label }}
-              </button>
-            }
-          </div>
-
-          <div id="nv-panel-seo" role="tabpanel" aria-labelledby="nv-panel-tab-seo" [hidden]="panelTab() !== 'seo'">
-            <section aria-labelledby="nv-seo-heading">
-              <h2 id="nv-seo-heading" class="h5">Search and sharing</h2>
-              @if (panelTab() === 'seo') {
-                <nv-seo-panel
-                  [field]="seoField()"
-                  [value]="store.data()['seo']"
-                  [pageTitle]="shownTitle()"
-                  [path]="shownPath()"
-                  [siteUrl]="siteUrl()"
-                  [defaults]="seoDefaults()"
-                  (valueChange)="changeSeo($event)"
-                />
+        <!-- One column beside the page: the side tabs, the blocks on the page, then the checklist. -->
+        <div class="nv-editor-side">
+          <div class="nv-editor-panel--right">
+            <!-- Arrow keys move between the tabs (role="tablist" pattern). -->
+            <div class="nav nav-tabs mb-3" role="tablist" aria-label="Side panel">
+              @for (tab of panelTabs; track tab.id) {
+                <button
+                  type="button"
+                  role="tab"
+                  class="nav-link"
+                  [id]="'nv-panel-tab-' + tab.id"
+                  [class.active]="panelTab() === tab.id"
+                  [attr.aria-selected]="panelTab() === tab.id"
+                  [attr.aria-controls]="'nv-panel-' + tab.id"
+                  [tabindex]="panelTab() === tab.id ? 0 : -1"
+                  (click)="showTab(tab.id)"
+                  (keydown)="tabKey($event)"
+                >
+                  {{ tab.label }}
+                </button>
               }
-            </section>
-          </div>
+            </div>
 
-          <div id="nv-panel-blocks" role="tabpanel" aria-labelledby="nv-panel-tab-blocks" [hidden]="panelTab() !== 'blocks'">
-            <aside class="nv-editor-panel" id="nv-editor-panel" aria-labelledby="nv-editor-panel-heading">
-              <h2 id="nv-editor-panel-heading" class="h5">Block</h2>
-              <!-- Selection can happen inside the frame; announce it here. -->
-              <div id="nv-editor-selection" role="status">
-                @if (selectionName(); as name) {
-                  <p class="visually-hidden">{{ name }} selected.</p>
-                } @else {
-                  <p class="text-body-secondary">Nothing selected. Click a block on the page, or in the list of blocks, to select it.</p>
+            <div id="nv-panel-seo" role="tabpanel" aria-labelledby="nv-panel-tab-seo" [hidden]="panelTab() !== 'seo'">
+              <section aria-labelledby="nv-seo-heading">
+                <h2 id="nv-seo-heading" class="h5">Search and sharing</h2>
+                @if (panelTab() === 'seo') {
+                  <nv-seo-panel
+                    [field]="seoField()"
+                    [value]="store.data()['seo']"
+                    [pageTitle]="shownTitle()"
+                    [path]="shownPath()"
+                    [siteUrl]="siteUrl()"
+                    [defaults]="seoDefaults()"
+                    (valueChange)="changeSeo($event)"
+                  />
                 }
-              </div>
-              @if (selection(); as place) {
-                <nv-block-panel
-                  [place]="place"
-                  [type]="selectionType()"
-                  [path]="selectionPath()"
-                  [readonly]="!canEdit()"
-                  [intoName]="intoName()"
-                  [outOfName]="outOfName()"
-                  (blockChange)="changeBlock($event)"
-                  (moveInto)="moveInto()"
-                  (moveOut)="moveOut()"
-                  (duplicate)="duplicate()"
-                  (toggleHidden)="toggleHidden()"
-                  (remove)="remove()"
-                />
-              }
-            </aside>
+              </section>
+            </div>
+
+            <div id="nv-panel-blocks" role="tabpanel" aria-labelledby="nv-panel-tab-blocks" [hidden]="panelTab() !== 'blocks'">
+              <aside class="nv-editor-panel" id="nv-editor-panel" aria-labelledby="nv-editor-panel-heading">
+                <h2 id="nv-editor-panel-heading" class="h5">Block</h2>
+                <!-- Selection can happen inside the frame; announce it here. -->
+                <div id="nv-editor-selection" role="status">
+                  @if (selectionName(); as name) {
+                    <p class="visually-hidden">{{ name }} selected.</p>
+                  } @else {
+                    <p class="text-body-secondary">Nothing selected. Click a block on the page, or in the list of blocks, to select it.</p>
+                  }
+                </div>
+                @if (selection(); as place) {
+                  <nv-block-panel
+                    [place]="place"
+                    [type]="selectionType()"
+                    [path]="selectionPath()"
+                    [readonly]="!canEdit()"
+                    [intoName]="intoName()"
+                    [outOfName]="outOfName()"
+                    (blockChange)="changeBlock($event)"
+                    (moveInto)="moveInto()"
+                    (moveOut)="moveOut()"
+                    (duplicate)="duplicate()"
+                    (toggleHidden)="toggleHidden()"
+                    (remove)="remove()"
+                  />
+                }
+              </aside>
+            </div>
           </div>
-        </div>
 
-        <!-- Out of the side tabs: always beside the page. -->
-        <section class="nv-editor-panel--left" aria-labelledby="nv-outline-heading">
-          <h2 id="nv-outline-heading" class="h5" tabindex="-1">Blocks on this page</h2>
-          <nv-block-outline
-            [lists]="outline()"
-            [blockTypes]="blockTypes()"
-            [selected]="store.selected()"
-            [readonly]="!canEdit()"
-            (selectBlock)="select($event)"
-            (move)="moveTo($event)"
-            (add)="openPicker($event)"
-          />
-        </section>
-
-        <!-- Outside the tabs: publishing focuses it, whichever tab is open. -->
-        @if (canEdit()) {
-          <section class="nv-editor-panel--checklist" aria-labelledby="nv-checklist-heading">
-            <h2 id="nv-checklist-heading" class="h5" tabindex="-1">Before publishing</h2>
-            <nv-publish-checklist [items]="checks()" (goTo)="select($event)" />
+          <!-- Out of the side tabs: always beside the page. -->
+          <section class="nv-editor-panel--left" aria-labelledby="nv-outline-heading">
+            <h2 id="nv-outline-heading" class="h5" tabindex="-1">Blocks on this page</h2>
+            <nv-block-outline
+              [lists]="outline()"
+              [blockTypes]="blockTypes()"
+              [selected]="store.selected()"
+              [readonly]="!canEdit()"
+              (selectBlock)="select($event)"
+              (move)="moveTo($event)"
+              (add)="openPicker($event)"
+            />
           </section>
-        }
+
+          <!-- Outside the tabs: publishing focuses it, whichever tab is open. -->
+          @if (canEdit()) {
+            <section class="nv-editor-panel--checklist" aria-labelledby="nv-checklist-heading">
+              <h2 id="nv-checklist-heading" class="h5" tabindex="-1">Before publishing</h2>
+              <nv-publish-checklist [items]="checks()" (goTo)="select($event)" />
+            </section>
+          }
+        </div>
       </div>
     }
 
