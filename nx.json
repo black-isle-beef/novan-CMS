@@ -3,6 +3,9 @@
   "neverConnectToCloud": true,
   "analytics": false,
   "targetDefaults": {
+    "e2e": {
+      "inputs": ["default", "^default", { "externalDependencies": ["@playwright/test"] }, { "env": "E2E_BROWSERS" }]
+    },
     "@angular/build:application": {
       "cache": true,
       "dependsOn": ["^build"],

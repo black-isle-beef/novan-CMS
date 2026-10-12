@@ -5,6 +5,25 @@ import { workspaceRoot } from '@nx/devkit';
 // For CI, you may want to set BASE_URL to the deployed application.
 const baseURL = process.env['BASE_URL'] || 'http://localhost:4200';
 
+const allBrowsers = {
+  chromium: devices['Desktop Chrome'],
+  firefox: devices['Desktop Firefox'],
+  webkit: devices['Desktop Safari'],
+};
+
+/**
+ * The browsers to run, from E2E_BROWSERS (comma-separated): CI runs chromium on every change and firefox and webkit
+ * nightly (.github/workflows/e2e-nightly.yml). All three when unset.
+ */
+const browsers = (process.env['E2E_BROWSERS'] || Object.keys(allBrowsers).join(','))
+  .split(',')
+  .map((name) => name.trim())
+  .filter(Boolean)
+  .map((name) => {
+    if (!(name in allBrowsers)) throw new Error(`E2E_BROWSERS: unknown browser "${name}" (use ${Object.keys(allBrowsers).join(', ')})`);
+    return name as keyof typeof allBrowsers;
+  });
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -53,26 +72,12 @@ export default defineConfig({
       timeout: 180_000,
     },
   ],
-  // Browsers run one after another, and tests one at a time: several sign the seeded agency user in with
-  // MFA, and Supabase Auth ends that user's other password-only sessions when a second factor is verified.
+  // Tests run one at a time: several sign the seeded agency user in with MFA, and Supabase Auth ends that
+  // user's other password-only sessions when a second factor is verified. The browsers do not depend on each
+  // other, so a failure in one does not skip the others.
   workers: 1,
   projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-      dependencies: ['chromium'],
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-      dependencies: ['firefox'],
-    },
+    ...browsers.map((name) => ({ name, use: { ...allBrowsers[name] } })),
 
     // Uncomment for mobile browsers support
     /* {

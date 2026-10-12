@@ -264,6 +264,15 @@ a.nv-dash-chip[href] {
 .nv-checklist__step--current {
   border-color: var(--ds-color-copper-theme-line);
   background-color: var(--ds-color-copper-theme-raised);
+
+  // Copper 500 text is for Charcoal 900/800, not this raised Charcoal 700: the lighter copper keeps the link at AA.
+  a[href] {
+    color: var(--ds-color-copper-300);
+
+    &:hover {
+      color: var(--ds-color-copper-100);
+    }
+  }
 }
 
 .nv-checklist__icon {

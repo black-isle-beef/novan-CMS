@@ -77,10 +77,13 @@ jobs:
         shell: pwsh
         run: ./tools/ci/audit-angular.ps1 -Affected
 
+  # Chromium only on every change; firefox and webkit run nightly (e2e-nightly.yml).
   e2e:
     needs: database
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      E2E_BROWSERS: chromium
     steps:
       - uses: actions/checkout@v7
         with:
@@ -88,44 +91,9 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-name: e2e
-      - name: Supabase CLI version from package-lock.json
-        id: supabase-version
-        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/supabase'].version")" >> "$GITHUB_OUTPUT"
-      - uses: supabase/setup-cli@v3
+      - uses: ./.github/actions/e2e-stack
         with:
-          version: ${{ steps.supabase-version.outputs.version }}
-      # The admin needs Auth behind the gateway (kong), Mailpit for invite emails, REST/Storage for the API, and
-      # Realtime for the visual editor's presence and soft locks.
-      - name: Start Supabase
-        run: supabase start -x imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
-      # The API reads .env.local (apps/api/src/main.ts); fill it from the local stack, as a developer would.
-      - name: Write .env.local
-        run: |
-          supabase status -o json | jq -r '
-            "DATABASE_URL=\(.DB_URL)",
-            "SUPABASE_URL=\(.API_URL)",
-            "SUPABASE_ANON_KEY=\(.ANON_KEY)",
-            "SUPABASE_SERVICE_ROLE_KEY=\(.SERVICE_ROLE_KEY)",
-            "SUPABASE_JWT_SECRET=\(.JWT_SECRET)",
-            "API_PORT=3000",
-            "ADMIN_URL=http://localhost:4200",
-            "MAILPIT_URL=\(.MAILPIT_URL)"
-          ' > .env.local
-      - name: Playwright version
-        id: playwright
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-      - name: Playwright browser cache
-        id: playwright-cache
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium firefox webkit
-      - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium firefox webkit
+          browsers: ${{ env.E2E_BROWSERS }}
       # Each e2e target starts what it needs: the admin and API dev servers (Playwright webServer / Nx
       # continuous tasks). One project at a time, because admin-e2e and api-e2e share the API port.
       - name: e2e (Playwright + axe)

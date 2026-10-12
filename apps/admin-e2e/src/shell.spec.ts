@@ -198,7 +198,8 @@ test.describe('@shell', () => {
 
     const layout = await page.evaluate(() => ({
       windowScrolls: document.documentElement.scrollHeight > window.innerHeight,
-      menuBottom: document.querySelector('ds-sidebar')?.getBoundingClientRect().bottom ?? Infinity,
+      // The space menu is `nv-space-sidebar`, with the design system's `ds-sidebar` class.
+      menuBottom: document.querySelector('.ds-sidebar')?.getBoundingClientRect().bottom ?? Infinity,
       headerTop: document.querySelector('ds-header')?.getBoundingClientRect().top ?? -1,
       height: window.innerHeight,
     }));
