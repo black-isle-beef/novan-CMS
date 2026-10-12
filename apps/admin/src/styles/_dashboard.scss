@@ -1,0 +1,326 @@
+// A space's dashboard (libs/admin/dashboard) on the Charcoal & Copper theme: a centred, search-led hero, then cards.
+// Colours come from the design system's copper theme tokens only.
+
+// The hero: the heading, a large search box with the New page button, then quick links.
+.nv-dash-hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding-block: 2.5rem 3rem;
+  text-align: center;
+}
+
+// A soft copper glow behind the heading; decorative.
+.nv-dash-glow {
+  position: absolute;
+  z-index: -1;
+  inset-block-start: 0;
+  inset-inline: 50% auto;
+  width: min(48rem, 100%);
+  height: 16rem;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--ds-color-copper-500) 16%, transparent), transparent);
+  pointer-events: none;
+}
+
+.nv-dash-hero__title {
+  margin: 0;
+  font-size: clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
+}
+
+.nv-dash-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  width: min(40rem, 100%);
+}
+
+// A button made to look like a search field, with a thin copper halo. Its visible text is its name.
+.nv-dash-search {
+  display: flex;
+  flex: 1 1 18rem;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3rem;
+  padding: 0.5rem 0.75rem 0.5rem 1rem;
+  border: var(--bs-border-width) solid var(--ds-color-copper-theme-control);
+  border-radius: var(--bs-border-radius-lg);
+  background-color: var(--ds-color-copper-theme-surface);
+  box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--ds-color-copper-500) 18%, transparent);
+  color: var(--bs-secondary-color);
+  text-align: start;
+
+  &:hover {
+    border-color: var(--ds-color-copper-500);
+  }
+}
+
+.nv-dash-search__icon {
+  color: var(--ds-color-copper-500);
+}
+
+.nv-dash-search__text {
+  flex-grow: 1;
+}
+
+// Quick links: outline chips.
+.nv-dash-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+a.nv-dash-chip[href] {
+  display: inline-block;
+  padding: 0.375rem 0.875rem;
+  border: var(--bs-border-width) solid var(--ds-color-copper-theme-control);
+  border-radius: 999px;
+  color: var(--bs-body-color);
+  font-size: 0.875rem;
+  text-decoration: none;
+
+  &:hover {
+    border-color: var(--ds-color-copper-500);
+    background-color: var(--ds-color-copper-theme-raised);
+    color: var(--bs-body-color);
+  }
+}
+
+// A card on the charcoal page.
+.nv-card {
+  padding: 1.25rem;
+  border: var(--bs-border-width) solid var(--ds-color-copper-theme-line);
+  border-radius: var(--bs-border-radius-xl);
+  background-color: var(--ds-color-copper-theme-surface);
+}
+
+.nv-card__header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+// The site card: a placeholder for the site's picture (no screenshots yet), its status, address and actions.
+.nv-site-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.nv-site-card__thumb {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 9rem;
+  max-width: 16rem;
+  padding: 1rem;
+  border: var(--bs-border-width) solid var(--ds-color-copper-theme-line);
+  border-radius: var(--bs-border-radius-lg);
+  background-color: var(--ds-color-copper-theme-canvas);
+}
+
+.nv-site-card__thumb-line {
+  width: 80%;
+  height: 0.5rem;
+  border-radius: 999px;
+  background-color: var(--ds-color-copper-theme-raised);
+}
+
+.nv-site-card__thumb-line--short {
+  width: 55%;
+}
+
+.nv-site-card__thumb-block {
+  flex-grow: 1;
+  margin-top: 0.5rem;
+  border-radius: var(--bs-border-radius);
+  background-color: var(--ds-color-copper-theme-raised);
+}
+
+.nv-site-card__body {
+  display: flex;
+  flex: 1 1 14rem;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.nv-site-card__address {
+  overflow-wrap: anywhere;
+}
+
+.nv-site-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+// Live / not live: a pill with its words, never colour alone.
+.nv-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.125rem 0.625rem;
+  border: var(--bs-border-width) solid var(--ds-color-copper-theme-control);
+  border-radius: 999px;
+  color: var(--bs-body-color);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.nv-status-pill--live {
+  border-color: var(--ds-color-copper-theme-success);
+  color: var(--ds-color-copper-theme-success);
+}
+
+.nv-status-pill__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: currentcolor;
+}
+
+// Rows of the page lists: a decorative page tile, the title and path, then when it was edited and its status.
+.nv-page-row,
+.nv-list-row {
+  padding-block: 0.625rem;
+
+  & + & {
+    border-top: var(--bs-border-width) solid var(--ds-color-copper-theme-line);
+  }
+}
+
+.nv-page-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.nv-page-row__thumb {
+  flex: 0 0 2.5rem;
+  height: 2rem;
+  border-radius: var(--bs-border-radius-sm);
+  background: linear-gradient(var(--ds-color-copper-theme-control) 0 0.375rem, var(--ds-color-copper-theme-raised) 0.375rem);
+}
+
+.nv-page-row__main {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.nv-page-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+// The getting-started checklist: one segment per step (brushed copper once done); done steps struck through; the
+// current step raised, with a copper ring.
+.nv-checklist__progress {
+  display: flex;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+.nv-checklist__segment {
+  flex: 1 1 0;
+  height: 0.375rem;
+  border-radius: 999px;
+  background-color: var(--ds-color-copper-theme-raised);
+}
+
+.nv-checklist__segment--done {
+  background-color: var(--ds-color-copper-500);
+  background-image: var(--ds-gradient-copper-brushed);
+}
+
+.nv-checklist__steps {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.nv-checklist__step {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: var(--bs-border-width) solid transparent;
+  border-radius: var(--bs-border-radius-lg);
+}
+
+.nv-checklist__step--current {
+  border-color: var(--ds-color-copper-theme-line);
+  background-color: var(--ds-color-copper-theme-raised);
+
+  // Copper 500 text is for Charcoal 900/800, not this raised Charcoal 700: the lighter copper keeps the link at AA.
+  a[href] {
+    color: var(--ds-color-copper-300);
+
+    &:hover {
+      color: var(--ds-color-copper-100);
+    }
+  }
+}
+
+.nv-checklist__icon {
+  color: var(--bs-secondary-color);
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.nv-checklist__step--done .nv-checklist__icon {
+  color: var(--ds-color-copper-theme-success);
+}
+
+.nv-checklist__step--current .nv-checklist__icon {
+  color: var(--ds-color-copper-500);
+}
+
+.nv-checklist__title {
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.nv-checklist__step--done .nv-checklist__title {
+  margin-bottom: 0;
+  color: var(--bs-secondary-color);
+  font-weight: 400;
+  text-decoration: line-through;
+}
+
+@media (prefers-contrast: more) {
+  .nv-checklist__segment--done {
+    background-image: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .nv-card,
+  .nv-dash-search,
+  .nv-checklist__segment {
+    border: 1px solid CanvasText;
+  }
+
+  .nv-checklist__segment--done {
+    background-color: Highlight;
+    forced-color-adjust: none;
+  }
+
+  .nv-checklist__step--current {
+    border-color: Highlight;
+  }
+}

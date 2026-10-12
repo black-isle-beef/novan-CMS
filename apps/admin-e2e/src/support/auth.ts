@@ -31,8 +31,10 @@ export async function signInAsAgency(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { level: 1, name: 'Spaces' })).toBeVisible();
 }
 
+/** Signs out from the account menu in the top bar (its button is named "Account and sign out"). */
 export async function signOut(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.getByRole('button', { name: 'Account and sign out' }).click();
+  await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Sign in' })).toBeVisible();
 }
 

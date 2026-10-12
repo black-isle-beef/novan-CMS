@@ -4,7 +4,7 @@ import { expect, type Page } from '@playwright/test';
 /** WCAG 2.2 AA, the level every admin screen must meet (docs/build/00-conventions.md). */
 const wcag22aa = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
-/** Runs axe on the current page and fails with a readable list of any violations. */
+/** Runs axe on the current page and fails with a readable list of its violations. */
 export async function expectNoAxeViolations(page: Page): Promise<void> {
   // A dialog that is still fading in is part transparent, which axe reports as low contrast.
   await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));

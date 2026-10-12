@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { RouterLink } from '@angular/router';
 import { DsAlertComponent, DsBadgeComponent, DsToastService } from '@black-isle-beef/novan-design-system';
 import { ContentApi, statusBadges } from '@novan/admin-content';
-import { Confirm, copy, Skeleton } from '@novan/admin-shell';
+import { Confirm, copy, shortcutKeys, Shortcuts, Skeleton } from '@novan/admin-shell';
 import { ManagementApi, problemMessage, SpaceContext } from '@novan/admin-spaces';
 import { type EntrySummary, HOME_SLUG, type Onboarding, type PendingReview } from '@novan/shared-schemas';
 import { firstValueFrom } from 'rxjs';
@@ -12,10 +12,35 @@ import { OnboardingChecklist } from '../onboarding-checklist/onboarding-checklis
 const LIST_LENGTH = 5;
 
 const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+const relative = new Intl.RelativeTimeFormat('en-GB', { numeric: 'auto' });
+const units: [unit: Intl.RelativeTimeFormatUnit, seconds: number][] = [
+  ['year', 365 * 24 * 3600],
+  ['month', 30 * 24 * 3600],
+  ['week', 7 * 24 * 3600],
+  ['day', 24 * 3600],
+  ['hour', 3600],
+  ['minute', 60],
+];
+
+/** `iso` relative to `now`, in plain words: "2 hours ago", "yesterday", "just now". */
+export function timeAgo(iso: string, now = Date.now()): string {
+  const seconds = Math.round((new Date(iso).getTime() - now) / 1000);
+  for (const [unit, size] of units) {
+    if (Math.abs(seconds) >= size) return relative.format(Math.round(seconds / size), unit);
+  }
+  return 'just now';
+}
+
+/** A quick link under the search box. */
+interface QuickLink {
+  label: string;
+  link: string[];
+}
 
 /**
- * A space's home: the getting-started checklist while it is new, pages waiting for review (the reviewer inbox,
- * docs/build/13-workflow-publishing.md), recently edited pages, changes not live yet and a quick way to add a page.
+ * A space's home, led by a search box: what to work on next (search, a new page, quick links the role allows), the
+ * site with its address, the getting-started checklist while the space is new, recently edited pages, pages waiting
+ * for review (the reviewer inbox, docs/build/13-workflow-publishing.md) and changes not live yet.
  */
 @Component({
   selector: 'nv-dashboard-page',
@@ -28,9 +53,12 @@ export class DashboardPage {
   private readonly management = inject(ManagementApi);
   private readonly confirm = inject(Confirm);
   private readonly toasts = inject(DsToastService);
+  private readonly shortcuts = inject(Shortcuts);
   protected readonly context = inject(SpaceContext);
   protected readonly copy = copy;
   protected readonly statusBadges = statusBadges;
+  protected readonly searchKeys = shortcutKeys.search;
+  protected readonly timeAgo = timeAgo;
 
   /** Bound from the `:spaceId` route parameter. */
   readonly spaceId = input.required<string>();
@@ -66,11 +94,39 @@ export class DashboardPage {
     return checklist !== null && !checklist.dismissedAt;
   });
 
+  /** Whether the home page is on the live site: the site card's status. Null without a home page. */
+  protected readonly homeLive = computed(() => {
+    const id = this.homePageId();
+    const home = id ? this.pages().find((entry) => entry.id === id) : undefined;
+    return home ? home.status === 'published' || home.publishedAt !== null : null;
+  });
+
+  /** The site's address from Space settings, without a trailing slash; shown without its scheme. */
+  protected readonly siteUrl = computed(() => this.context.currentSpace()?.previewUrl?.replace(/\/+$/, '') || null);
+  protected readonly siteHost = computed(() => this.siteUrl()?.replace(/^https?:\/\//, '') ?? null);
+
+  /** The quick links under the search box, each only when the role allows it. */
+  protected readonly quickLinks = computed<QuickLink[]>(() => {
+    const space = ['/spaces', this.spaceId()];
+    const home = this.homePageId();
+    return [
+      ...(home && this.context.canEditCurrent() ? [{ label: 'Edit home page', link: [...space, 'pages', home, 'edit'] }] : []),
+      ...(this.context.can('media.read') ? [{ label: 'Upload images', link: [...space, 'media'] }] : []),
+      ...(this.context.can('forms.read') ? [{ label: 'Read form replies', link: [...space, 'forms'] }] : []),
+      ...(this.context.can('space.read') ? [{ label: 'Site settings', link: [...space, 'settings', 'site'] }] : []),
+    ];
+  });
+
   constructor() {
     effect(() => {
       const spaceId = this.spaceId();
       untracked(() => void this.load(spaceId));
     });
+  }
+
+  /** Opens the shell's search, as Ctrl+K does. */
+  protected search(): void {
+    this.shortcuts.trigger('search');
   }
 
   protected edited(entry: EntrySummary): string {

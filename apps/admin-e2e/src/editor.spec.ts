@@ -54,6 +54,7 @@ test.describe('@editor', () => {
       const frame = page.frameLocator('iframe[title="Draft of Contact"]');
       const panel = page.getByRole('complementary', { name: 'Block' });
       const outline = page.getByRole('region', { name: 'Blocks on this page' });
+      const orderTab = page.getByRole('tab', { name: 'Block order' });
 
       // Click the hero on the page; change its heading in the panel; the page follows without reloading.
       await frame.locator('[data-novan-block="hero"]').first().click();
@@ -70,12 +71,15 @@ test.describe('@editor', () => {
       await expect(panel.getByRole('textbox', { name: /^Heading/ })).toHaveValue(`${heading}!`);
 
       // Add a call to action from the picker; it appears on the page and in the outline.
+      await orderTab.click();
       await outline.getByRole('button', { name: 'Add block to Content' }).click();
       const picker = page.getByRole('dialog', { name: 'Add a block to Content' });
       await picker.getByRole('button', { name: 'Call to action' }).click();
       await expect(frame.locator('[data-novan-block="cta"]')).toHaveCount(2);
 
-      // Reorder with the keyboard-friendly arrows: the rich text moves above the hero.
+      // Reorder with the keyboard-friendly arrows: the rich text moves above the hero. (Adding opened the new block's
+      // fields in the Blocks tab.)
+      await orderTab.click();
       await outline.getByRole('button', { name: 'Move Rich text up' }).click();
       await expect(frame.locator('[data-novan-block]').first()).toHaveAttribute('data-novan-block', 'richText');
 
@@ -122,6 +126,7 @@ test.describe('@editor', () => {
     await expect(second.page.getByRole('list', { name: 'Also on this page:' })).toContainText('Client User');
 
     // The first changes the page: the second can look but not change it.
+    await first.page.getByRole('tab', { name: 'Block order' }).click();
     await first.page.getByRole('region', { name: 'Blocks on this page' }).getByRole('button', { name: /^Hero/ }).click();
     const heading = first.page.getByRole('complementary', { name: 'Block' }).getByRole('textbox', { name: /^Heading/ });
     await heading.fill('About this site, edited together');

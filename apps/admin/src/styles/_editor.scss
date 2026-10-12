@@ -1,11 +1,171 @@
-// The visual editor (libs/admin/editor): the client site in a frame at the chosen screen width.
+// The visual editor (libs/admin/editor): the client site in a frame at the chosen screen width, beside one column with
+// the block's panel, the blocks on the page and the checklist, on a dotted charcoal canvas under a toolbar.
 
-// Grey surround, so the page's own edges are visible; a frame wider than the screen scrolls inside it.
+// The canvas fills the wide screen's column, edge to edge: a dotted grid of the line token on the canvas token.
+.nv-editor-canvas {
+  min-height: 100%;
+  margin: -1rem calc(var(--bs-gutter-x) * -0.5);
+  padding: 1rem;
+  background-color: var(--ds-color-copper-theme-canvas);
+  background-image: radial-gradient(var(--ds-color-copper-theme-line) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+// One wrapping row: Edit in form, the save state, the language and who else is here, then the page's actions
+// (Undo, Redo, Save draft and the workflow, Publish first) at the end.
+.nv-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: var(--bs-border-width) solid var(--ds-color-copper-theme-line);
+  border-radius: var(--bs-border-radius-xl);
+  background-color: var(--ds-color-copper-theme-surface);
+}
+
+.nv-editor-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-inline-start: auto;
+}
+
+// The workflow's buttons match the small editing buttons beside them.
+.nv-editor-toolbar__workflow {
+  display: block;
+
+  .btn {
+    --bs-btn-padding-y: 0.25rem;
+    --bs-btn-padding-x: 0.5rem;
+    --bs-btn-font-size: 0.875rem;
+  }
+}
+
+// Screen size and Show, on their own row centred over the page.
+.nv-editor-viewbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+// The save state, with a copper dot and the word "Draft" while changes are not live.
+.nv-editor-save {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nv-editor-save__draft {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.nv-editor-save__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--ds-color-copper-500);
+}
+
+// Screen size and Show: each radio group is one segmented control; the checked option sits on the raised surface
+// with a copper edge (the design system's btn-check active state).
+.nv-editor-segmented {
+  display: flow-root;
+  margin: 0;
+}
+
+.nv-editor-segmented__legend {
+  float: left;
+  width: auto;
+  margin: 0 0.5rem 0 0;
+  padding: 0;
+  color: var(--bs-secondary-color);
+  font-size: 0.875rem;
+  line-height: 2rem;
+
+  + * {
+    clear: none;
+  }
+}
+
+.nv-editor-segmented .btn-group {
+  gap: 0.125rem;
+  padding: 0.125rem;
+  border: var(--bs-border-width) solid var(--ds-color-copper-theme-control);
+  border-radius: 999px;
+  background-color: var(--ds-color-copper-theme-canvas);
+
+  > .btn {
+    --bs-btn-border-color: transparent;
+
+    margin: 0;
+    // Bootstrap squares the inner corners of grouped buttons with more specific selectors.
+    border-radius: 999px !important;
+  }
+}
+
+// The page, then one side column (panel, blocks and checklist, in source order); side by side from 1200px, so the
+// page gets all the width but the column's.
+.nv-editor-layout {
+  display: grid;
+  gap: 1rem;
+
+  @media (min-width: 1200px) {
+    grid-template-columns: minmax(0, 1fr) 22rem;
+  }
+}
+
+.nv-editor-centre {
+  min-width: 0;
+}
+
+.nv-editor-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+
+  // Side by side, the column is exactly as tall as the page beside it and scrolls on its own, so the page stays in
+  // view while editing. `contain: size` stops its content from growing the row; the grid stretches it to the
+  // page's height. The padding keeps the cards' shadows inside the scrolling box.
+  @media (min-width: 1200px) {
+    contain: size;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    margin: -0.5rem;
+    padding: 0.5rem;
+  }
+}
+
+// Floating cards on the charcoal canvas.
+.nv-editor-panel--right,
+.nv-editor-panel--checklist {
+  min-width: 0;
+  padding: 1rem;
+  border: var(--bs-border-width) solid var(--ds-color-copper-theme-line);
+  border-radius: var(--bs-border-radius-xl);
+  background-color: var(--ds-color-copper-theme-surface);
+  box-shadow: var(--ds-elevation-component-card);
+}
+
+// A charcoal hairline and a deep shadow around the page; a frame wider than the screen scrolls inside it.
 .nv-editor-stage {
   overflow: auto;
-  border: var(--bs-border-width) solid var(--bs-border-color);
-  border-radius: var(--bs-border-radius);
-  background-color: var(--ds-color-surface-muted);
+  border: var(--bs-border-width) solid var(--ds-color-copper-theme-line);
+  border-radius: var(--bs-border-radius-lg);
+  background-color: var(--ds-color-copper-theme-canvas);
+  box-shadow: var(--ds-elevation-component-modal);
 }
 
 .nv-editor-frame {
@@ -36,9 +196,19 @@
   border-radius: var(--bs-border-radius);
 }
 
+// Selected: a copper inset outline on the raised surface. Copper text fails on raised (4.3:1), so the block's name
+// turns white there; `aria-current` names the selection for screen readers.
 .nv-outline-row-selected {
-  border-inline-start-color: var(--ds-color-brand-primary);
-  background-color: var(--ds-color-surface-muted);
+  border-inline-start-color: var(--ds-color-copper-500);
+  background-color: var(--ds-color-copper-theme-raised);
+  box-shadow: inset 0 0 0 0.0625rem var(--ds-color-copper-500);
+
+  .nv-outline-select {
+    --bs-btn-color: var(--bs-body-color);
+    --bs-btn-hover-color: var(--bs-body-color);
+
+    font-weight: 600;
+  }
 }
 
 .nv-outline-children {
@@ -52,16 +222,18 @@
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border: 0.125rem dashed var(--bs-border-color);
+  border: 0.125rem dashed var(--ds-color-copper-theme-control);
   border-radius: 50%;
-  background-color: var(--ds-color-surface-muted);
-  font-size: var(--bs-body-font-size);
+  background-color: var(--ds-color-copper-900);
+  color: var(--ds-color-copper-100);
+  font-size: 0.8125rem;
   font-weight: 600;
 }
 
+// A copper ring marks someone editing.
 .nv-avatar-editing {
   border-style: solid;
-  border-color: var(--ds-color-brand-primary);
+  border-color: var(--ds-color-copper-500);
 }
 
 // A block type's preview image in the block picker.
@@ -109,8 +281,15 @@
 }
 
 @media (forced-colors: active) {
-  .nv-editor-stage {
+  .nv-editor-stage,
+  .nv-editor-toolbar,
+  .nv-editor-panel--right,
+  .nv-editor-panel--checklist {
     border-color: CanvasText;
+  }
+
+  .nv-outline-row-selected {
+    outline: 0.125rem solid Highlight;
   }
 
   .nv-outline-row-selected {

@@ -57,10 +57,11 @@ describe('TwoStepPage', () => {
   it('makes users without an authenticator app add one', async () => {
     auth.enrolTotp.mockResolvedValue({ factorId: 'new', qrCode: 'data:image/svg+xml;utf8,<svg/>', secret: 'ABC123' });
     const el = await render();
-    await vi.waitFor(() => expect(el.querySelector('img')).not.toBeNull());
+    // The header's brand images come first; the QR code is in the page itself.
+    await vi.waitFor(() => expect(el.querySelector('main img')).not.toBeNull());
 
     expect(el.textContent).toContain('Your account needs two-step verification');
-    expect(el.querySelector('img')?.getAttribute('alt')).toContain('QR code');
+    expect(el.querySelector('main img')?.getAttribute('alt')).toContain('QR code');
     expect(el.querySelector('code')?.textContent).toBe('ABC123');
   });
 });

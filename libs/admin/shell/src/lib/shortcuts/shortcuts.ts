@@ -27,12 +27,23 @@ export class Shortcuts {
   /** Handles a keydown; returns whether it ran a shortcut. */
   handle(event: KeyboardEvent): boolean {
     const action = shortcutFor(event);
-    const handlers = action ? (this.handlers.get(action) ?? []) : [];
-    const handler = handlers[handlers.length - 1];
+    const handler = action ? this.current(action) : undefined;
     if (!handler) return false;
     event.preventDefault();
     handler();
     return true;
+  }
+
+  /** Does what the shortcut's keys would, for buttons that offer the same action (the dashboard's search box). */
+  trigger(action: ShortcutAction): boolean {
+    const handler = this.current(action);
+    handler?.();
+    return !!handler;
+  }
+
+  private current(action: ShortcutAction): (() => void) | undefined {
+    const handlers = this.handlers.get(action) ?? [];
+    return handlers[handlers.length - 1];
   }
 }
 

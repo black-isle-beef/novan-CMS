@@ -1,0 +1,59 @@
+name: Start the e2e stack
+description: Local Supabase, .env.local from it, and the Playwright browsers the run needs.
+
+inputs:
+  browsers:
+    description: Comma-separated Playwright browsers to install (E2E_BROWSERS in the e2e Playwright configs).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Supabase CLI version from package-lock.json
+      id: supabase-version
+      shell: bash
+      run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/supabase'].version")" >> "$GITHUB_OUTPUT"
+    - uses: supabase/setup-cli@v3
+      with:
+        version: ${{ steps.supabase-version.outputs.version }}
+    # The admin needs Auth behind the gateway (kong), Mailpit for invite emails, REST/Storage for the API, and
+    # Realtime for the visual editor's presence and soft locks.
+    - name: Start Supabase
+      shell: bash
+      run: supabase start -x imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+    # The API reads .env.local (apps/api/src/main.ts); fill it from the local stack, as a developer would.
+    - name: Write .env.local
+      shell: bash
+      run: |
+        supabase status -o json | jq -r '
+          "DATABASE_URL=\(.DB_URL)",
+          "SUPABASE_URL=\(.API_URL)",
+          "SUPABASE_ANON_KEY=\(.ANON_KEY)",
+          "SUPABASE_SERVICE_ROLE_KEY=\(.SERVICE_ROLE_KEY)",
+          "SUPABASE_JWT_SECRET=\(.JWT_SECRET)",
+          "API_PORT=3000",
+          "ADMIN_URL=http://localhost:4200",
+          "MAILPIT_URL=\(.MAILPIT_URL)"
+        ' > .env.local
+    - name: Playwright version
+      id: playwright
+      shell: bash
+      run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+    - name: Playwright browser cache
+      id: playwright-cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ inputs.browsers }}
+    - name: Install Playwright browsers
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        BROWSERS: ${{ inputs.browsers }}
+      run: npx playwright install --with-deps ${BROWSERS//,/ }
+    - name: Install Playwright system dependencies
+      if: steps.playwright-cache.outputs.cache-hit == 'true'
+      shell: bash
+      env:
+        BROWSERS: ${{ inputs.browsers }}
+      run: npx playwright install-deps ${BROWSERS//,/ }

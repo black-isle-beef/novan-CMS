@@ -1,12 +1,25 @@
-<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
-  <div>
-    <h1 class="mb-1">{{ copy.dashboard }}</h1>
-    <p class="lead text-body-secondary mb-0">{{ context.currentSpace()?.name ?? 'Your site' }} at a glance.</p>
+<div class="nv-dash-hero">
+  <div class="nv-dash-glow" aria-hidden="true"></div>
+  <h1 class="nv-dash-hero__title">What are we working on?</h1>
+  <div class="nv-dash-hero__actions">
+    <!-- Looks like a search field; opens the search dialog, as Ctrl+K does. -->
+    <button type="button" class="nv-dash-search" [attr.aria-keyshortcuts]="searchKeys" (click)="search()">
+      <i class="bi bi-search nv-dash-search__icon" aria-hidden="true"></i>
+      <span class="nv-dash-search__text">Find a page, image or setting</span>
+      <kbd class="nv-kbd" aria-hidden="true">Ctrl K</kbd>
+    </button>
+    @if (context.canEditCurrent()) {
+      <a class="btn btn-primary btn-lg" [routerLink]="['/spaces', spaceId(), 'content']" [queryParams]="{ add: 'page' }">
+        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>{{ copy.newPage }}
+      </a>
+    }
   </div>
-  @if (context.canEditCurrent()) {
-    <a class="btn btn-primary" [routerLink]="['/spaces', spaceId(), 'content']" [queryParams]="{ add: 'page' }">
-      <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>{{ copy.newPage }}
-    </a>
+  @if (quickLinks().length) {
+    <ul class="nv-dash-chips list-unstyled" aria-label="Quick links">
+      @for (quick of quickLinks(); track quick.label) {
+        <li><a class="nv-dash-chip" [routerLink]="quick.link">{{ quick.label }}</a></li>
+      }
+    </ul>
   }
 </div>
 
@@ -15,71 +28,123 @@
 } @else if (loading()) {
   <nv-skeleton label="Loading the dashboard" [lines]="8" [heading]="true" />
 } @else {
-  @if (showChecklist() && checklist(); as list) {
-    <nv-onboarding-checklist
-      [spaceId]="spaceId()"
-      [checklist]="list"
-      [homePageId]="homePageId()"
-      [canEdit]="context.canEditCurrent()"
-      [canDismiss]="context.canEditCurrent()"
-      (dismiss)="dismissChecklist()"
-    />
-  }
-
-  @if (reviews().length) {
-    <section class="mb-5" aria-labelledby="reviews-heading">
-      <h2 id="reviews-heading" class="h4">Waiting for review</h2>
-      <p class="small text-body-secondary">
-        {{ canReview() ? 'Publish them, or ask for changes.' : 'A space admin publishes them, or asks for changes.' }}
-      </p>
-      <ul class="list-unstyled mb-0">
-        @for (review of reviews(); track review.id) {
-          <li class="py-2" [class.border-top]="!$first">
-            <a [routerLink]="['/spaces', spaceId(), 'content', review.entryId]">{{ review.entry.title }}</a>
-            <div class="small text-body-secondary">Sent by {{ review.requestedByName ?? 'someone' }} on {{ sent(review) }}</div>
-            @if (review.message) {
-              <div class="small">{{ review.message }}</div>
+  <div class="row g-4 mb-4">
+    <div [class]="showChecklist() && checklist() ? 'col-lg-7' : 'col-12'">
+      <section class="nv-card nv-site-card h-100" aria-labelledby="site-heading">
+        <div class="nv-site-card__thumb" aria-hidden="true">
+          <span class="nv-site-card__thumb-line"></span>
+          <span class="nv-site-card__thumb-line nv-site-card__thumb-line--short"></span>
+          <span class="nv-site-card__thumb-block"></span>
+        </div>
+        <div class="nv-site-card__body">
+          @if (homeLive() !== null) {
+            <p class="nv-status-pill mb-2" [class.nv-status-pill--live]="homeLive()">
+              <span class="nv-status-pill__dot" aria-hidden="true"></span>{{ homeLive() ? 'Live' : 'Not live yet' }}
+            </p>
+          }
+          <h2 id="site-heading" class="h4 mb-1">{{ context.currentSpace()?.name ?? 'Your site' }}</h2>
+          @if (siteUrl(); as url) {
+            <a class="nv-site-card__address" [href]="url">{{ siteHost() }}</a>
+          } @else {
+            <p class="small text-body-secondary mb-0">This site has no address yet.</p>
+          }
+          <div class="nv-site-card__actions">
+            @if (homePageId(); as home) {
+              <a class="btn btn-light btn-sm" [routerLink]="['/spaces', spaceId(), 'pages', home, 'edit']">Open editor</a>
             }
-          </li>
+            <a class="btn btn-secondary btn-sm" [routerLink]="['/spaces', spaceId(), 'settings']">{{ copy.settings }}</a>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    @if (showChecklist() && checklist(); as list) {
+      <div class="col-lg-5">
+        <nv-onboarding-checklist
+          class="d-block h-100"
+          [spaceId]="spaceId()"
+          [checklist]="list"
+          [homePageId]="homePageId()"
+          [canEdit]="context.canEditCurrent()"
+          [canDismiss]="context.canEditCurrent()"
+          (dismiss)="dismissChecklist()"
+        />
+      </div>
+    }
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <section class="nv-card h-100" aria-labelledby="recent-heading">
+        <div class="nv-card__header">
+          <h2 id="recent-heading" class="h5 mb-0">Recently edited</h2>
+          <a class="small" [routerLink]="['/spaces', spaceId(), 'content']">All pages</a>
+        </div>
+        @if (recent().length) {
+          <ul class="list-unstyled mb-0">
+            @for (entry of recent(); track entry.id) {
+              <li class="nv-page-row">
+                <span class="nv-page-row__thumb" aria-hidden="true"></span>
+                <div class="nv-page-row__main">
+                  <a [routerLink]="['/spaces', spaceId(), 'content', entry.id]">{{ entry.title }}</a>
+                  <div class="small text-body-secondary text-break">{{ entry.path }}</div>
+                </div>
+                <div class="nv-page-row__meta">
+                  <span class="small text-body-secondary">
+                    Edited <time [attr.datetime]="entry.updatedAt" [title]="edited(entry)">{{ timeAgo(entry.updatedAt) }}</time>
+                  </span>
+                  @for (badge of statusBadges(entry); track badge.label) {
+                    <ds-badge [variant]="badge.variant">{{ badge.label }}</ds-badge>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="mb-0">No pages yet.</p>
         }
-      </ul>
-    </section>
-  }
+      </section>
+    </div>
 
-  <div class="row g-5">
-    <section class="col-lg-6" aria-labelledby="recent-heading">
-      <h2 id="recent-heading" class="h4">Recently edited</h2>
-      @if (recent().length) {
-        <ul class="list-unstyled mb-0">
-          @for (entry of recent(); track entry.id) {
-            <li class="py-2" [class.border-top]="!$first">
-              <a [routerLink]="['/spaces', spaceId(), 'content', entry.id]">{{ entry.title }}</a>
-              <div class="small text-body-secondary">Edited {{ edited(entry) }}</div>
-            </li>
-          }
-        </ul>
-      } @else {
-        <p>No pages yet.</p>
+    <div class="col-lg-5 d-flex flex-column gap-4">
+      @if (reviews().length) {
+        <section class="nv-card" aria-labelledby="reviews-heading">
+          <h2 id="reviews-heading" class="h5">Waiting for review</h2>
+          <p class="small text-body-secondary">
+            {{ canReview() ? 'Publish them, or ask for changes.' : 'A space admin publishes them, or asks for changes.' }}
+          </p>
+          <ul class="list-unstyled mb-0">
+            @for (review of reviews(); track review.id) {
+              <li class="nv-list-row">
+                <a [routerLink]="['/spaces', spaceId(), 'content', review.entryId]">{{ review.entry.title }}</a>
+                <div class="small text-body-secondary">Sent by {{ review.requestedByName ?? 'someone' }} on {{ sent(review) }}</div>
+                @if (review.message) {
+                  <div class="small">{{ review.message }}</div>
+                }
+              </li>
+            }
+          </ul>
+        </section>
       }
-    </section>
 
-    <section class="col-lg-6" aria-labelledby="drafts-heading">
-      <h2 id="drafts-heading" class="h4">Changes not live yet</h2>
-      <p class="small text-body-secondary">Pages with changes that are not on the live site yet.</p>
-      @if (drafts().length) {
-        <ul class="list-unstyled mb-0">
-          @for (entry of drafts(); track entry.id) {
-            <li class="d-flex flex-wrap align-items-center gap-2 py-2" [class.border-top]="!$first">
-              <a [routerLink]="['/spaces', spaceId(), 'content', entry.id]">{{ entry.title }}</a>
-              @for (badge of statusBadges(entry); track badge.label) {
-                <ds-badge [variant]="badge.variant">{{ badge.label }}</ds-badge>
-              }
-            </li>
-          }
-        </ul>
-      } @else {
-        <p>Nothing waiting. Every change is live.</p>
-      }
-    </section>
+      <section class="nv-card flex-grow-1" aria-labelledby="drafts-heading">
+        <h2 id="drafts-heading" class="h5">Changes not live yet</h2>
+        <p class="small text-body-secondary">Pages with changes that are not on the live site yet.</p>
+        @if (drafts().length) {
+          <ul class="list-unstyled mb-0">
+            @for (entry of drafts(); track entry.id) {
+              <li class="nv-list-row d-flex flex-wrap align-items-center gap-2">
+                <a [routerLink]="['/spaces', spaceId(), 'content', entry.id]">{{ entry.title }}</a>
+                @for (badge of statusBadges(entry); track badge.label) {
+                  <ds-badge [variant]="badge.variant">{{ badge.label }}</ds-badge>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="mb-0">Nothing waiting. Every change is live.</p>
+        }
+      </section>
+    </div>
   </div>
 }

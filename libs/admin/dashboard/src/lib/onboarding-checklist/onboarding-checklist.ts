@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DsButtonComponent, DsProgressComponent } from '@black-isle-beef/novan-design-system';
+import { DsButtonComponent } from '@black-isle-beef/novan-design-system';
 import type { Onboarding, OnboardingStep } from '@novan/shared-schemas';
 
 interface StepView {
@@ -19,7 +19,7 @@ interface StepView {
  */
 @Component({
   selector: 'nv-onboarding-checklist',
-  imports: [DsButtonComponent, DsProgressComponent, RouterLink],
+  imports: [DsButtonComponent, RouterLink],
   templateUrl: './onboarding-checklist.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -74,4 +74,7 @@ export class OnboardingChecklist {
   });
 
   protected readonly doneCount = computed(() => this.steps().filter((step) => step.done).length);
+
+  /** The first step not done yet: shown raised, with a copper ring. */
+  protected readonly currentKey = computed(() => this.steps().find((step) => !step.done)?.key ?? null);
 }

@@ -71,11 +71,12 @@ import { initials, LOCK_TTL_MS } from '../presence/presence';
 
 export type Device = 'mobile' | 'tablet' | 'desktop';
 export type View = 'draft' | 'live';
-export type PanelTab = 'blocks' | 'seo';
+export type PanelTab = 'blocks' | 'order' | 'seo';
 
 /** The side panel's tabs, in order. */
 export const PANEL_TABS: readonly { id: PanelTab; label: string }[] = [
   { id: 'blocks', label: 'Blocks' },
+  { id: 'order', label: 'Block order' },
   { id: 'seo', label: 'SEO' },
 ];
 
@@ -206,6 +207,11 @@ export class VisualEditorPage implements HasUnsavedChanges {
   });
   protected readonly deviceWidth = computed(() => DEVICES.find((d) => d.id === this.device())?.width ?? 1280);
   protected readonly published = computed(() => Boolean(this.entry()?.publishedPath));
+  /** The page has changes that are not live: marked "Draft" (with a copper dot) beside the save status. */
+  protected readonly hasDraft = computed(() => {
+    const entry = this.entry();
+    return !!entry && (this.store.dirty() || !this.published() || entry.hasUnpublishedChanges || entry.currentVersionId !== entry.publishedVersionId);
+  });
   /** Someone else changing the page: this tab looks but does not touch until they finish or leave. */
   protected readonly lockedBy = computed(() => this.presence.lockedBy());
   /** Archived pages are kept as they are until restored. */
@@ -548,7 +554,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
 
   // --- Blocks ---
 
-  /** Selects a block from the outline: outlined and scrolled to on the page. */
+  /** Selects a block from the outline: outlined and scrolled to on the page, with its fields in the Blocks tab. */
   protected select(uid: string): void {
     this.panelTab.set('blocks');
     this.store.selected.set(uid);
@@ -602,6 +608,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
     if (!place || !target) return;
     this.moveTo({ from: place, to: target.list, index: blocksAt(this.store.data(), target.list).length });
     // The button pressed may be gone now: carry on from the block in the outline.
+    this.panelTab.set('order');
     this.focus(`nv-outline-select-${place.node._uid}`);
   }
 
@@ -610,6 +617,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
     const parent = this.outTarget();
     if (!place || !parent) return;
     this.moveTo({ from: place, to: parent.list, index: parent.index + 1 });
+    this.panelTab.set('order');
     this.focus(`nv-outline-select-${place.node._uid}`);
   }
 
@@ -638,6 +646,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
     this.commit(removeBlock(this.store.data(), place));
     this.store.selected.set(null);
     this.announcement.set(`Deleted the ${this.nameOf(place.node)} block. Undo brings it back.`);
+    this.panelTab.set('order');
     this.focus(`nv-outline-heading`);
   }
 

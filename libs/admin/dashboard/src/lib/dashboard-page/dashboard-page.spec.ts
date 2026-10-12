@@ -2,11 +2,11 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ContentApi } from '@novan/admin-content';
-import { Confirm } from '@novan/admin-shell';
+import { Confirm, Shortcuts } from '@novan/admin-shell';
 import { ManagementApi, SpaceContext } from '@novan/admin-spaces';
 import type { EntrySummary, Onboarding, PendingReview } from '@novan/shared-schemas';
 import { of } from 'rxjs';
-import { DashboardPage } from './dashboard-page';
+import { DashboardPage, timeAgo } from './dashboard-page';
 
 const spaceId = '00000000-0000-4000-8000-000000000200';
 
@@ -36,7 +36,14 @@ const entries = [
   page('4', 'Site settings', '2026-10-06T10:00:00Z', { kind: 'singleton', contentType: 'siteSettings' }),
 ];
 
-async function render({ canEdit = true, checklist = null as Onboarding | null, reviews = [] as PendingReview[], role = 'editor' as string | null } = {}) {
+async function render({
+  canEdit = true,
+  checklist = null as Onboarding | null,
+  reviews = [] as PendingReview[],
+  role = 'editor' as string | null,
+  permissions = ['space.read', 'media.read', 'forms.read'] as string[],
+  previewUrl = 'https://demo.example/' as string | null,
+} = {}) {
   const management = {
     onboarding: vi.fn(() => of({ checklist })),
     dismissOnboarding: vi.fn(() => of({ checklist: checklist && { ...checklist, dismissedAt: '2026-10-06T12:00:00Z' } })),
@@ -46,7 +53,15 @@ async function render({ canEdit = true, checklist = null as Onboarding | null, r
       provideRouter([]),
       { provide: ContentApi, useValue: { listEntries: vi.fn(() => of(entries)), reviews: vi.fn(() => of(reviews)) } },
       { provide: ManagementApi, useValue: management },
-      { provide: SpaceContext, useValue: { currentSpace: signal({ name: 'Demo site', role }), canEditCurrent: signal(canEdit) } },
+      {
+        provide: SpaceContext,
+        useValue: {
+          currentSpace: signal({ name: 'Demo site', role, previewUrl }),
+          canEditCurrent: signal(canEdit),
+          can: (permission: string) => permissions.includes(permission),
+        },
+      },
+      { provide: Shortcuts, useValue: shortcuts },
     ],
   });
   const fixture = TestBed.createComponent(DashboardPage);
@@ -63,6 +78,8 @@ async function render({ canEdit = true, checklist = null as Onboarding | null, r
   return { fixture, el, management, section, links, settle };
 }
 
+const shortcuts = { trigger: vi.fn(() => true) };
+
 const pending = (title: string, extra: Partial<PendingReview> = {}): PendingReview => ({
   id: `review-${title}`,
   entryId: title,
@@ -78,6 +95,15 @@ const pending = (title: string, extra: Partial<PendingReview> = {}): PendingRevi
   decidedAt: null,
   entry: page(title, title, '2026-10-07T09:00:00Z', { status: 'in_review' }),
   ...extra,
+});
+
+describe('timeAgo', () => {
+  it('says how long ago in plain words', () => {
+    const now = Date.parse('2026-10-12T10:00:00Z');
+    expect(timeAgo('2026-10-12T08:00:00Z', now)).toBe('2 hours ago');
+    expect(timeAgo('2026-10-11T09:00:00Z', now)).toBe('yesterday');
+    expect(timeAgo('2026-10-12T09:59:40Z', now)).toBe('just now');
+  });
 });
 
 describe('DashboardPage', () => {
@@ -97,10 +123,44 @@ describe('DashboardPage', () => {
     expect(quiet.el.querySelector('#reviews-heading')).toBeNull();
   });
 
+  it('leads with a search box that opens the search, as Ctrl+K does', async () => {
+    const { el } = await render();
+    expect(el.querySelector('h1')?.textContent).toBe('What are we working on?');
+    const search = [...el.querySelectorAll('button')].find((b) => b.textContent?.includes('Find a page, image or setting')) as HTMLButtonElement;
+    expect(search.getAttribute('aria-keyshortcuts')).toBe('Control+K Meta+K');
+    search.click();
+    expect(shortcuts.trigger).toHaveBeenCalledWith('search');
+  });
+
+  it('offers quick links only where the role allows', async () => {
+    const quick = (el: HTMLElement) => [...el.querySelectorAll('ul[aria-label="Quick links"] a')].map((a) => a.textContent?.trim());
+    const editor = await render();
+    expect(quick(editor.el)).toEqual(['Edit home page', 'Upload images', 'Read form replies', 'Site settings']);
+    expect(editor.el.querySelector('ul[aria-label="Quick links"] a')?.getAttribute('href')).toBe(`/spaces/${spaceId}/pages/1/edit`);
+    TestBed.resetTestingModule();
+
+    const viewer = await render({ canEdit: false, permissions: ['space.read', 'media.read'] });
+    expect(quick(viewer.el)).toEqual(['Upload images', 'Site settings']);
+  });
+
+  it('shows the site, whether its home page is live, and its address, with nothing invented', async () => {
+    const { section } = await render();
+    const site = section('site-heading');
+    expect(site.querySelector('h2')?.textContent).toBe('Demo site');
+    expect(site.textContent).toContain('Live');
+    const address = [...site.querySelectorAll('a')].find((a) => a.textContent === 'demo.example');
+    expect(address?.getAttribute('href')).toBe('https://demo.example');
+    expect(site.textContent).not.toContain('Last published');
+    TestBed.resetTestingModule();
+
+    const unaddressed = await render({ previewUrl: null });
+    expect(unaddressed.section('site-heading').textContent).toContain('This site has no address yet.');
+  });
+
   it('lists recently edited pages, newest first, and the changes not live yet', async () => {
     const { el, links } = await render();
-    expect(el.querySelector('h1')?.textContent).toBe('Dashboard');
     expect(links('recent-heading')).toEqual(['About', 'Contact', 'Home']);
+    expect(el.querySelector('section[aria-labelledby="recent-heading"]')?.textContent).toContain('/about');
     expect(links('drafts-heading')).toEqual(['About', 'Contact']);
     expect(el.querySelector('section[aria-labelledby="drafts-heading"]')?.textContent).toContain('Changes not published');
   });

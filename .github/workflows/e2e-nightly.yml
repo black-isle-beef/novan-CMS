@@ -1,0 +1,53 @@
+name: e2e nightly
+
+# CI runs the e2e journeys in chromium on every change (ci.yml); this runs them in firefox and webkit once a night.
+# Each browser gets its own runner and its own freshly seeded Supabase, so one browser's writes cannot break another's.
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  NX_NO_CLOUD: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+    env:
+      E2E_BROWSERS: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: e2e-${{ matrix.browser }}
+      - uses: ./.github/actions/e2e-stack
+        with:
+          browsers: ${{ matrix.browser }}
+      # Every browser project, one at a time (admin-e2e and starter-site-e2e share the API port). api-e2e has no
+      # browser, and chromium already runs it on every change.
+      - name: e2e (Playwright + axe)
+        run: npx nx run-many -t e2e --projects=admin-e2e,starter-site-e2e --parallel=1
+        # Nothing listens on the fake Cloudflare API outside api-e2e; the API's purge retries are expected (ci.yml).
+        env:
+          CLOUDFLARE_ZONE_ID: e2e-zone
+          CLOUDFLARE_API_TOKEN: e2e-token
+          CLOUDFLARE_API_URL: http://127.0.0.1:54399/client/v4
+      - name: Upload Playwright traces and reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-${{ github.run_id }}-${{ matrix.browser }}
+          path: dist/.playwright/
+          retention-days: 14
+          if-no-files-found: ignore

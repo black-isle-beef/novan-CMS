@@ -5,6 +5,28 @@ import { workspaceRoot } from '@nx/devkit';
 // For CI, you may want to set BASE_URL to the deployed application.
 const baseURL = process.env['BASE_URL'] || 'http://localhost:4300';
 
+const allBrowsers = {
+  chromium: devices['Desktop Chrome'],
+  firefox: devices['Desktop Firefox'],
+  webkit: devices['Desktop Safari'],
+};
+
+/**
+ * The browsers to run, from E2E_BROWSERS (comma-separated): CI runs chromium on every change and firefox and webkit
+ * nightly (.github/workflows/e2e-nightly.yml). All three when unset.
+ */
+const browsers = (process.env['E2E_BROWSERS'] || Object.keys(allBrowsers).join(','))
+  .split(',')
+  .map((name) => name.trim())
+  .filter(Boolean)
+  .map((name) => {
+    if (!(name in allBrowsers)) throw new Error(`E2E_BROWSERS: unknown browser "${name}" (use ${Object.keys(allBrowsers).join(', ')})`);
+    return name as keyof typeof allBrowsers;
+  });
+
+/** Journeys that publish seeded content: once, in chromium, after the read-only tests (below). */
+const publishing = /(gate-1|seo-publish|forms)\.spec\.ts/;
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -49,48 +71,38 @@ export default defineConfig({
     },
   ],
   projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-      testIgnore: /(gate-1|seo-publish|forms)\.spec\.ts/,
-    },
+    ...browsers.map((name) => ({ name, use: { ...allBrowsers[name] }, testIgnore: publishing })),
 
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-      testIgnore: /(gate-1|seo-publish|forms)\.spec\.ts/,
-    },
+    // The publishing journeys run only with chromium: the nightly firefox and webkit runs check the read-only
+    // pages, not publishing again.
+    ...(browsers.includes('chromium')
+      ? [
+          // Gate 1 publishes a change to seeded content, so it runs once, after the other tests have read it.
+          {
+            name: 'gate-1',
+            use: { ...devices['Desktop Chrome'] },
+            testMatch: /gate-1\.spec\.ts/,
+            dependencies: browsers,
+          },
 
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-      testIgnore: /(gate-1|seo-publish|forms)\.spec\.ts/,
-    },
+          // SEO journeys that publish (a new slug, new pages), likewise once and after the read-only tests.
+          {
+            name: 'seo-publish',
+            use: { ...devices['Desktop Chrome'] },
+            testMatch: /seo-publish\.spec\.ts/,
+            dependencies: browsers,
+          },
 
-    // Gate 1 publishes a change to seeded content, so it runs once, after the other tests have read it.
-    {
-      name: 'gate-1',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /gate-1\.spec\.ts/,
-      dependencies: ['chromium', 'firefox', 'webkit'],
-    },
-
-    // SEO journeys that publish (a new slug, new pages), likewise once and after the read-only tests.
-    {
-      name: 'seo-publish',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /seo-publish\.spec\.ts/,
-      dependencies: ['chromium', 'firefox', 'webkit'],
-    },
-
-    // Forms send submissions and publish a page (package 18), likewise once and after the read-only tests. After
-    // seo-publish too: it moves the contact page to /get-in-touch for a while, and the inbox records the form's path.
-    {
-      name: 'forms',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /forms\.spec\.ts/,
-      dependencies: ['chromium', 'firefox', 'webkit', 'seo-publish'],
-    },
+          // Forms send submissions and publish a page (package 18), likewise once and after the read-only tests. After
+          // seo-publish too: it moves the contact page to /get-in-touch for a while, and the inbox records the form's path.
+          {
+            name: 'forms',
+            use: { ...devices['Desktop Chrome'] },
+            testMatch: /forms\.spec\.ts/,
+            dependencies: [...browsers, 'seo-publish'],
+          },
+        ]
+      : []),
 
     // Uncomment for mobile browsers support
     /* {

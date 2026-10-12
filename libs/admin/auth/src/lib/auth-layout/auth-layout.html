@@ -1,6 +1,11 @@
 <!-- `#ds-main-content` is the target of the header's "Skip to main content" link. -->
-<ds-header [navItems]="navItems">
-  <strong dsBrand>Novan CMS</strong>
+<ds-header variant="app" [navItems]="navItems">
+  <span dsBrand class="nv-brand">
+    <img src="logos/compass-mark-white.svg" alt="" class="nv-brand__mark" />
+    <img src="logos/novan-word-white.png" alt="" class="nv-brand__word" />
+    <span class="nv-brand__tag" aria-hidden="true">CMS</span>
+    <span class="visually-hidden">Novan CMS</span>
+  </span>
 </ds-header>
 
 <main id="ds-main-content" class="container py-11">

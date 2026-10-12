@@ -267,8 +267,19 @@ describe('VisualEditorPage', () => {
       const { el, frame } = await render();
       expect(frame()?.getAttribute('src')).toBe(`${SITE}/?novan_preview=first`);
       expect(frame()?.title).toBe('Draft of Home');
-      expect(el.querySelector('h1')?.textContent).toBe('Home');
+      expect(el.querySelector('h1')?.textContent).toBe('Edit on the page: Home');
       expect(el.textContent).toContain('Connecting to your site');
+    });
+
+    it('leads with Edit in form and the page actions, and centres screen size and Show over the page', async () => {
+      const { el } = await render();
+      const toolbar = el.querySelector('.nv-editor-toolbar') as HTMLElement;
+      expect(toolbar.querySelector('nav[aria-label="Breadcrumb"]')).toBeNull();
+      expect(toolbar.querySelector(`a[href="/spaces/${spaceId}/content/${entryId}"]`)?.textContent?.trim()).toBe('Edit in form');
+      expect(toolbar.querySelector('[role="group"][aria-label="Page actions"]')?.textContent).toContain('Save draft');
+      const viewbar = el.querySelector('.nv-editor-centre .nv-editor-viewbar') as HTMLElement;
+      expect([...viewbar.querySelectorAll('legend')].map((legend) => legend.textContent?.trim())).toEqual(['Screen size', 'Show']);
+      expect(toolbar.querySelector('fieldset')).toBeNull();
     });
 
     it('opens other pages at their path', async () => {
@@ -445,13 +456,32 @@ describe('VisualEditorPage', () => {
 
     it('moves between tabs with the arrow keys, and back to the blocks when one is selected', async () => {
       const { fixture, el, bridge } = await render({ type: seoType });
+      expect([...el.querySelectorAll('[role="tab"]')].map((t) => t.textContent?.trim())).toEqual(['Blocks', 'Block order', 'SEO']);
       tab(el, 'Blocks')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      await settle(fixture);
+      expect(tab(el, 'Block order')?.getAttribute('aria-selected')).toBe('true');
+      tab(el, 'Block order')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
       await settle(fixture);
       expect(tab(el, 'SEO')?.getAttribute('aria-selected')).toBe('true');
       expect(tab(el, 'SEO')?.tabIndex).toBe(0);
       expect(tab(el, 'Blocks')?.tabIndex).toBe(-1);
 
       bridge.listener?.select(HERO);
+      await settle(fixture);
+      expect(tab(el, 'Blocks')?.getAttribute('aria-selected')).toBe('true');
+      expect(el.querySelector('aside')?.textContent).toContain('Hero banner');
+    });
+
+    it('lists the blocks in the Block order tab, and opens a block’s fields when it is selected there', async () => {
+      const { fixture, el } = await render();
+      expect(el.querySelector<HTMLElement>('#nv-panel-order')?.hidden).toBe(true);
+
+      tab(el, 'Block order')?.click();
+      await settle(fixture);
+      expect(el.querySelector<HTMLElement>('#nv-panel-order')?.hidden).toBe(false);
+      expect(el.querySelector<HTMLElement>('#nv-panel-blocks')?.hidden).toBe(true);
+
+      el.querySelector<HTMLButtonElement>(`#nv-panel-order #nv-outline-select-${HERO}`)?.click();
       await settle(fixture);
       expect(tab(el, 'Blocks')?.getAttribute('aria-selected')).toBe('true');
       expect(el.querySelector('aside')?.textContent).toContain('Hero banner');
