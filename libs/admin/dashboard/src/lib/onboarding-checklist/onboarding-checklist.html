@@ -1,38 +1,53 @@
-<section class="card mb-5" aria-labelledby="onboarding-heading">
-  <div class="card-body">
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-      <div>
-        <h2 id="onboarding-heading" class="h4 mb-1">Get started</h2>
-        <p id="onboarding-progress-text" class="text-body-secondary mb-0">{{ doneCount() }} of {{ steps().length }} done</p>
-      </div>
-      @if (canDismiss()) {
-        <ds-button variant="secondary" size="sm" (pressed)="dismiss.emit()">Dismiss checklist</ds-button>
-      }
-    </div>
-    <ds-progress class="d-block mb-4" [value]="doneCount()" [max]="steps().length" label="Getting started" />
-
-    <ol class="list-unstyled mb-0">
-      @for (step of steps(); track step.key) {
-        <li class="d-flex gap-3 py-2" [class.border-top]="!$first">
-          <i
-            class="bi fs-4"
-            [class.bi-check-circle-fill]="step.done"
-            [class.text-success]="step.done"
-            [class.bi-circle]="!step.done"
-            [class.text-body-secondary]="!step.done"
-            aria-hidden="true"
-          ></i>
-          <div class="flex-grow-1">
-            <h3 class="h6 mb-1">
-              {{ step.title }}<span class="visually-hidden">{{ step.done ? ' (done)' : ' (not done yet)' }}</span>
-            </h3>
-            <p class="small text-body-secondary mb-1">{{ step.hint }}</p>
-            @if (!step.done) {
-              <a [routerLink]="step.link" [queryParams]="step.queryParams">{{ step.action }}</a>
-            }
-          </div>
-        </li>
-      }
-    </ol>
+<section class="nv-card nv-checklist h-100" aria-labelledby="onboarding-heading">
+  <div class="nv-card__header">
+    <h2 id="onboarding-heading" class="h5 mb-0">Get started</h2>
+    <p id="onboarding-progress-text" class="small text-body-secondary mb-0">{{ doneCount() }} of {{ steps().length }} done</p>
   </div>
+
+  <!-- One segment per step; done steps are brushed copper. -->
+  <div
+    class="nv-checklist__progress"
+    role="progressbar"
+    aria-label="Getting started"
+    aria-valuemin="0"
+    [attr.aria-valuemax]="steps().length"
+    [attr.aria-valuenow]="doneCount()"
+    [attr.aria-valuetext]="doneCount() + ' of ' + steps().length + ' done'"
+  >
+    @for (step of steps(); track step.key) {
+      <span class="nv-checklist__segment" [class.nv-checklist__segment--done]="step.done"></span>
+    }
+  </div>
+
+  <ol class="list-unstyled mb-0 nv-checklist__steps">
+    @for (step of steps(); track step.key) {
+      <li
+        class="nv-checklist__step"
+        [class.nv-checklist__step--done]="step.done"
+        [class.nv-checklist__step--current]="step.key === currentKey()"
+      >
+        <i
+          class="bi nv-checklist__icon"
+          [class.bi-check-lg]="step.done"
+          [class.bi-circle]="!step.done"
+          aria-hidden="true"
+        ></i>
+        <div class="flex-grow-1">
+          <h3 class="nv-checklist__title">
+            {{ step.title }}<span class="visually-hidden">{{ step.done ? ' (done)' : ' (not done yet)' }}</span>
+          </h3>
+          @if (!step.done) {
+            <p class="small text-body-secondary mb-1">{{ step.hint }}</p>
+            <a class="small" [routerLink]="step.link" [queryParams]="step.queryParams">{{ step.action }}</a>
+          }
+        </div>
+      </li>
+    }
+  </ol>
+
+  @if (canDismiss()) {
+    <div class="mt-3">
+      <ds-button variant="secondary" size="sm" (pressed)="dismiss.emit()">Dismiss checklist</ds-button>
+    </div>
+  }
 </section>

@@ -1,31 +1,36 @@
-<nav aria-label="Breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'content']">{{ copy.pages }}</a></li>
-    @if (entry(); as e) {
-      <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'content', e.id]">{{ title() }}</a></li>
-    }
-    <li class="breadcrumb-item active" aria-current="page">Edit on the page</li>
-  </ol>
-</nav>
+<!-- Three regions on a dotted charcoal canvas: the toolbar, then the page with the blocks (left) and the panel (right). -->
+<div class="nv-editor-canvas">
+  <div class="nv-editor-toolbar">
+    <nav aria-label="Breadcrumb">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'content']">{{ copy.pages }}</a></li>
+        @if (entry(); as e) {
+          <li class="breadcrumb-item"><a [routerLink]="['/spaces', spaceId(), 'content', e.id]">{{ title() }}</a></li>
+        }
+        <li class="breadcrumb-item active" aria-current="page">Edit on the page</li>
+      </ol>
+    </nav>
 
-@if (loadError(); as message) {
-  <h1>Edit on the page</h1>
-  <ds-alert variant="danger">{{ message }}</ds-alert>
-} @else if (loading()) {
-  <nv-skeleton label="Loading the page" [lines]="8" [heading]="true" />
-} @else if (entry(); as e) {
-  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
-    <div>
-      <h1 class="mb-1">{{ title() }}</h1>
-      <p class="text-body-secondary mb-0">
-        Click a block on the page, or in the list of blocks, to edit it.
-        <a [routerLink]="['/spaces', spaceId(), 'content', e.id]" [queryParams]="form.locale() ? { locale: form.locale() } : {}">
-          Edit in the form instead
-        </a>
-      </p>
-    </div>
+    @if (!loadError() && !loading() && entry(); as e) {
+      <div class="nv-editor-toolbar__title">
+        <h1 class="h4 mb-0">{{ title() }}</h1>
+        <p class="small text-body-secondary mb-0">
+          Click a block on the page, or in the list of blocks, to edit it.
+          <a [routerLink]="['/spaces', spaceId(), 'content', e.id]" [queryParams]="form.locale() ? { locale: form.locale() } : {}">
+            Edit in the form instead
+          </a>
+        </p>
+      </div>
 
-    <div class="d-flex flex-wrap align-items-end gap-3">
+      @if (canEdit()) {
+        <div class="nv-editor-save">
+          @if (hasDraft()) {
+            <span class="nv-editor-save__draft"><span class="nv-editor-save__dot" aria-hidden="true"></span>Draft</span>
+          }
+          <p class="small text-body-secondary mb-0" role="status">{{ saveState() }}</p>
+        </div>
+      }
+
       @if (spaceLocales.multilingual()) {
         <nv-locale-switcher
           idPrefix="nv-editor-locale"
@@ -36,8 +41,8 @@
           (localeChange)="form.locale.set($event)"
         />
       }
-      <fieldset>
-        <legend class="form-label small mb-1">Screen size</legend>
+      <fieldset class="nv-editor-segmented">
+        <legend class="nv-editor-segmented__legend">Screen size</legend>
         <div class="btn-group" role="group">
           @for (d of devices; track d.id) {
             <input
@@ -48,7 +53,7 @@
               [checked]="device() === d.id"
               (change)="setDevice(d.id)"
             />
-            <label class="btn btn-secondary" [for]="'nv-editor-device-' + d.id">
+            <label class="btn btn-secondary btn-sm" [for]="'nv-editor-device-' + d.id">
               <i [class]="'bi bi-' + d.icon + ' me-1'" aria-hidden="true"></i>{{ d.label
               }}<span class="visually-hidden">, {{ d.width }} pixels wide</span>
             </label>
@@ -56,8 +61,8 @@
         </div>
       </fieldset>
 
-      <fieldset>
-        <legend class="form-label small mb-1">Show</legend>
+      <fieldset class="nv-editor-segmented">
+        <legend class="nv-editor-segmented__legend">Show</legend>
         <div class="btn-group" role="group">
           <input
             type="radio"
@@ -67,7 +72,7 @@
             [checked]="view() === 'draft'"
             (change)="setView('draft')"
           />
-          <label class="btn btn-secondary" for="nv-editor-view-draft">Draft</label>
+          <label class="btn btn-secondary btn-sm" for="nv-editor-view-draft">Draft</label>
           <input
             type="radio"
             class="btn-check"
@@ -78,215 +83,226 @@
             [attr.aria-describedby]="published() ? null : 'nv-editor-live-hint'"
             (change)="setView('live')"
           />
-          <label class="btn btn-secondary" for="nv-editor-view-live">Live</label>
+          <label class="btn btn-secondary btn-sm" for="nv-editor-view-live">Live</label>
         </div>
       </fieldset>
-    </div>
-  </div>
 
-  @if (presence.others(); as others) {
-    @if (others.length) {
-      <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-        <span class="small text-body-secondary" id="nv-editor-others">Also on this page:</span>
-        <ul class="list-unstyled d-flex flex-wrap gap-1 mb-0" aria-labelledby="nv-editor-others">
-          @for (person of others; track person.userId) {
-            <li class="nv-avatar" [class.nv-avatar-editing]="person.editing" [title]="person.name">
-              <span aria-hidden="true">{{ initials(person.name) }}</span>
-              <span class="visually-hidden">{{ person.name }}{{ person.editing ? ', editing' : '' }}</span>
-            </li>
-          }
-        </ul>
-      </div>
-    }
-  }
+      @if (canEdit()) {
+        <div class="d-flex flex-wrap align-items-center gap-1" role="group" aria-label="Page actions">
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            [disabled]="!store.canUndo()"
+            aria-keyshortcuts="Control+Z Meta+Z"
+            (click)="undo()"
+          >
+            <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Undo
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            [disabled]="!store.canRedo()"
+            aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
+            (click)="redo()"
+          >
+            <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Redo
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            [disabled]="busy() !== null"
+            [attr.aria-keyshortcuts]="shortcutKeys.save"
+            (click)="save()"
+          >
+            {{ copy.saveDraft }}
+          </button>
+        </div>
+      }
 
-  @if (canEdit()) {
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-2" role="group" aria-label="Page actions">
-      <button
-        type="button"
-        class="btn btn-secondary"
-        [disabled]="!store.canUndo()"
-        aria-keyshortcuts="Control+Z Meta+Z"
-        (click)="undo()"
-      >
-        <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Undo
-      </button>
-      <button
-        type="button"
-        class="btn btn-secondary"
-        [disabled]="!store.canRedo()"
-        aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
-        (click)="redo()"
-      >
-        <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Redo
-      </button>
-      <button
-        type="button"
-        class="btn btn-secondary"
-        [disabled]="busy() !== null"
-        [attr.aria-keyshortcuts]="shortcutKeys.save"
-        (click)="save()"
-      >
-        {{ copy.saveDraft }}
-      </button>
-      <p class="small text-body-secondary mb-0 ms-2" role="status">{{ saveState() }}</p>
-    </div>
-  }
-  @if (showWorkflow() && contentTypeOf(); as type) {
-    <nv-page-workflow
-      #workflow
-      class="d-block mb-3"
-      [spaceId]="spaceId()"
-      [entry]="e"
-      [contentType]="type"
-      [blockTypes]="blockTypes()"
-      [checks]="checks()"
-      [prepare]="prepare"
-      [disabled]="busy() !== null"
-      (changed)="workflowChanged($event)"
-      (done)="workflowDone($event)"
-      (goTo)="select($event)"
-    />
-  }
-  @if (roleCanEdit() && lockedBy(); as holder) {
-    <div role="status" class="mb-3">
-      <ds-alert variant="warning" [title]="holder.name + ' is changing this page'">
-        You can look around, but not change anything yet. You can edit once they leave, or a minute after their last
-        change, and you will then see what they changed.
-      </ds-alert>
-    </div>
-  } @else if (!context.canEditCurrent()) {
-    <ds-alert variant="info" class="mb-3">You can look at this page, but your role cannot change it.</ds-alert>
-  }
-
-  @if (!published()) {
-    <p id="nv-editor-live-hint" class="small text-body-secondary">This page is not live yet, so only the draft can be shown.</p>
-  }
-  @if (status(); as message) {
-    <ds-alert variant="success" class="mb-3">{{ message }}</ds-alert>
-  }
-  @if (problem(); as message) {
-    <ds-alert variant="warning" class="mb-3">{{ message }}</ds-alert>
-  }
-  <div class="visually-hidden" role="status">{{ announcement() }}</div>
-
-  @if (!siteUrl()) {
-    <ds-alert variant="info" title="This site has no address yet">
-      The page can be shown here once the site's address is set in Space settings.
-      <a [routerLink]="['/spaces', spaceId(), 'content', e.id]">Edit the page in the form</a> meanwhile.
-    </ds-alert>
-  } @else {
-    <div class="row g-3">
-      <div class="col-xl-8">
-        <p class="small text-body-secondary mb-2" role="status">
-          @if (view() === 'live') {
-            Showing the live page. Switch to the draft to select blocks.
-          } @else if (bridge.ready(); as ready) {
-            Showing the draft of {{ ready.path }}.
-          } @else {
-            Connecting to your site…
-          }
-        </p>
-        @if (siteSilent()) {
-          <div role="alert" class="mb-3">
-            <ds-alert variant="warning" title="Your site is not answering">
-              <p>
-                The page did not open for editing on the site within 10 seconds. You can still change everything in the
-                form, and publish from there.
-              </p>
-              <p class="mb-0">
-                <a class="btn btn-primary me-2" [routerLink]="['/spaces', spaceId(), 'content', e.id]">Edit in the form</a>
-                @if (canManage()) {
-                  <a [routerLink]="['/spaces', spaceId(), 'settings', 'space']">Check the site's address</a>
-                  (it must use the Novan SDK with previews turned on).
-                } @else {
-                  If this keeps happening, ask your developer to check the site's address in Space settings.
-                }
-              </p>
-            </ds-alert>
+      @if (presence.others(); as others) {
+        @if (others.length) {
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="small text-body-secondary" id="nv-editor-others">Also on this page:</span>
+            <ul class="list-unstyled d-flex flex-wrap gap-1 mb-0" aria-labelledby="nv-editor-others">
+              @for (person of others; track person.userId) {
+                <li class="nv-avatar" [class.nv-avatar-editing]="person.editing" [title]="person.name">
+                  <span aria-hidden="true">{{ initials(person.name) }}</span>
+                  <span class="visually-hidden">{{ person.name }}{{ person.editing ? ', editing' : '' }}</span>
+                </li>
+              }
+            </ul>
           </div>
         }
-        <!-- Focusable, so keyboard users can scroll a page wider than the screen. -->
-        <div class="nv-editor-stage" tabindex="0" role="region" aria-label="Page preview">
-          @if (frameUrl()) {
-            <!-- The address is set by the component (frameUrl). -->
-            <iframe
-              #frame
-              [class]="'nv-editor-frame nv-editor-frame-' + device()"
-              [title]="(view() === 'live' ? 'Live page: ' : 'Draft of ') + title()"
-            ></iframe>
-          }
-        </div>
+      }
+
+      @if (showWorkflow() && contentTypeOf(); as type) {
+        <nv-page-workflow
+          #workflow
+          class="nv-editor-toolbar__workflow"
+          [spaceId]="spaceId()"
+          [entry]="e"
+          [contentType]="type"
+          [blockTypes]="blockTypes()"
+          [checks]="checks()"
+          [prepare]="prepare"
+          [disabled]="busy() !== null"
+          (changed)="workflowChanged($event)"
+          (done)="workflowDone($event)"
+          (goTo)="select($event)"
+        />
+      }
+    }
+  </div>
+
+  @if (loadError(); as message) {
+    <h1>Edit on the page</h1>
+    <ds-alert variant="danger">{{ message }}</ds-alert>
+  } @else if (loading()) {
+    <nv-skeleton label="Loading the page" [lines]="8" [heading]="true" />
+  } @else if (entry(); as e) {
+    @if (roleCanEdit() && lockedBy(); as holder) {
+      <div role="status" class="mb-3">
+        <ds-alert variant="warning" [title]="holder.name + ' is changing this page'">
+          You can look around, but not change anything yet. You can edit once they leave, or a minute after their last
+          change, and you will then see what they changed.
+        </ds-alert>
       </div>
+    } @else if (!context.canEditCurrent()) {
+      <ds-alert variant="info" class="mb-3">You can look at this page, but your role cannot change it.</ds-alert>
+    }
 
-      <div class="col-xl-4">
-        <!-- Arrow keys move between the tabs (role="tablist" pattern). -->
-        <div class="nav nav-tabs mb-3" role="tablist" aria-label="Side panel">
-          @for (tab of panelTabs; track tab.id) {
-            <button
-              type="button"
-              role="tab"
-              class="nav-link"
-              [id]="'nv-panel-tab-' + tab.id"
-              [class.active]="panelTab() === tab.id"
-              [attr.aria-selected]="panelTab() === tab.id"
-              [attr.aria-controls]="'nv-panel-' + tab.id"
-              [tabindex]="panelTab() === tab.id ? 0 : -1"
-              (click)="showTab(tab.id)"
-              (keydown)="tabKey($event)"
-            >
-              {{ tab.label }}
-            </button>
-          }
-        </div>
+    @if (!published()) {
+      <p id="nv-editor-live-hint" class="small text-body-secondary">This page is not live yet, so only the draft can be shown.</p>
+    }
+    @if (status(); as message) {
+      <ds-alert variant="success" class="mb-3">{{ message }}</ds-alert>
+    }
+    @if (problem(); as message) {
+      <ds-alert variant="warning" class="mb-3">{{ message }}</ds-alert>
+    }
+    <div class="visually-hidden" role="status">{{ announcement() }}</div>
 
-        <div id="nv-panel-seo" role="tabpanel" aria-labelledby="nv-panel-tab-seo" [hidden]="panelTab() !== 'seo'">
-          <section class="mb-4" aria-labelledby="nv-seo-heading">
-            <h2 id="nv-seo-heading" class="h5">Search and sharing</h2>
-            @if (panelTab() === 'seo') {
-              <nv-seo-panel
-                [field]="seoField()"
-                [value]="store.data()['seo']"
-                [pageTitle]="shownTitle()"
-                [path]="shownPath()"
-                [siteUrl]="siteUrl()"
-                [defaults]="seoDefaults()"
-                (valueChange)="changeSeo($event)"
-              />
-            }
-          </section>
-        </div>
-
-        <div id="nv-panel-blocks" role="tabpanel" aria-labelledby="nv-panel-tab-blocks" [hidden]="panelTab() !== 'blocks'">
-        <aside class="nv-editor-panel mb-4" id="nv-editor-panel" aria-labelledby="nv-editor-panel-heading">
-          <h2 id="nv-editor-panel-heading" class="h5">Block</h2>
-          <!-- Selection can happen inside the frame; announce it here. -->
-          <div id="nv-editor-selection" role="status">
-            @if (selectionName(); as name) {
-              <p class="visually-hidden">{{ name }} selected.</p>
+    @if (!siteUrl()) {
+      <ds-alert variant="info" title="This site has no address yet">
+        The page can be shown here once the site's address is set in Space settings.
+        <a [routerLink]="['/spaces', spaceId(), 'content', e.id]">Edit the page in the form</a> meanwhile.
+      </ds-alert>
+    } @else {
+      <!-- Source order (page, panel, blocks, checklist) is the reading order, and the stacked order below 1200px. -->
+      <div class="nv-editor-layout">
+        <div class="nv-editor-centre">
+          <p class="small text-body-secondary mb-2" role="status">
+            @if (view() === 'live') {
+              Showing the live page. Switch to the draft to select blocks.
+            } @else if (bridge.ready(); as ready) {
+              Showing the draft of {{ ready.path }}.
             } @else {
-              <p class="text-body-secondary">Nothing selected. Click a block on the page, or in the list below, to select it.</p>
+              Connecting to your site…
+            }
+          </p>
+          @if (siteSilent()) {
+            <div role="alert" class="mb-3">
+              <ds-alert variant="warning" title="Your site is not answering">
+                <p>
+                  The page did not open for editing on the site within 10 seconds. You can still change everything in the
+                  form, and publish from there.
+                </p>
+                <p class="mb-0">
+                  <a class="btn btn-primary me-2" [routerLink]="['/spaces', spaceId(), 'content', e.id]">Edit in the form</a>
+                  @if (canManage()) {
+                    <a [routerLink]="['/spaces', spaceId(), 'settings', 'space']">Check the site's address</a>
+                    (it must use the Novan SDK with previews turned on).
+                  } @else {
+                    If this keeps happening, ask your developer to check the site's address in Space settings.
+                  }
+                </p>
+              </ds-alert>
+            </div>
+          }
+          <!-- Focusable, so keyboard users can scroll a page wider than the screen. -->
+          <div class="nv-editor-stage" tabindex="0" role="region" aria-label="Page preview">
+            @if (frameUrl()) {
+              <!-- The address is set by the component (frameUrl). -->
+              <iframe
+                #frame
+                [class]="'nv-editor-frame nv-editor-frame-' + device()"
+                [title]="(view() === 'live' ? 'Live page: ' : 'Draft of ') + title()"
+              ></iframe>
             }
           </div>
-          @if (selection(); as place) {
-            <nv-block-panel
-              [place]="place"
-              [type]="selectionType()"
-              [path]="selectionPath()"
-              [readonly]="!canEdit()"
-              [intoName]="intoName()"
-              [outOfName]="outOfName()"
-              (blockChange)="changeBlock($event)"
-              (moveInto)="moveInto()"
-              (moveOut)="moveOut()"
-              (duplicate)="duplicate()"
-              (toggleHidden)="toggleHidden()"
-              (remove)="remove()"
-            />
-          }
-        </aside>
+        </div>
 
-        <section class="mb-4" aria-labelledby="nv-outline-heading">
+        <div class="nv-editor-panel--right">
+          <!-- Arrow keys move between the tabs (role="tablist" pattern). -->
+          <div class="nav nav-tabs mb-3" role="tablist" aria-label="Side panel">
+            @for (tab of panelTabs; track tab.id) {
+              <button
+                type="button"
+                role="tab"
+                class="nav-link"
+                [id]="'nv-panel-tab-' + tab.id"
+                [class.active]="panelTab() === tab.id"
+                [attr.aria-selected]="panelTab() === tab.id"
+                [attr.aria-controls]="'nv-panel-' + tab.id"
+                [tabindex]="panelTab() === tab.id ? 0 : -1"
+                (click)="showTab(tab.id)"
+                (keydown)="tabKey($event)"
+              >
+                {{ tab.label }}
+              </button>
+            }
+          </div>
+
+          <div id="nv-panel-seo" role="tabpanel" aria-labelledby="nv-panel-tab-seo" [hidden]="panelTab() !== 'seo'">
+            <section aria-labelledby="nv-seo-heading">
+              <h2 id="nv-seo-heading" class="h5">Search and sharing</h2>
+              @if (panelTab() === 'seo') {
+                <nv-seo-panel
+                  [field]="seoField()"
+                  [value]="store.data()['seo']"
+                  [pageTitle]="shownTitle()"
+                  [path]="shownPath()"
+                  [siteUrl]="siteUrl()"
+                  [defaults]="seoDefaults()"
+                  (valueChange)="changeSeo($event)"
+                />
+              }
+            </section>
+          </div>
+
+          <div id="nv-panel-blocks" role="tabpanel" aria-labelledby="nv-panel-tab-blocks" [hidden]="panelTab() !== 'blocks'">
+            <aside class="nv-editor-panel" id="nv-editor-panel" aria-labelledby="nv-editor-panel-heading">
+              <h2 id="nv-editor-panel-heading" class="h5">Block</h2>
+              <!-- Selection can happen inside the frame; announce it here. -->
+              <div id="nv-editor-selection" role="status">
+                @if (selectionName(); as name) {
+                  <p class="visually-hidden">{{ name }} selected.</p>
+                } @else {
+                  <p class="text-body-secondary">Nothing selected. Click a block on the page, or in the list of blocks, to select it.</p>
+                }
+              </div>
+              @if (selection(); as place) {
+                <nv-block-panel
+                  [place]="place"
+                  [type]="selectionType()"
+                  [path]="selectionPath()"
+                  [readonly]="!canEdit()"
+                  [intoName]="intoName()"
+                  [outOfName]="outOfName()"
+                  (blockChange)="changeBlock($event)"
+                  (moveInto)="moveInto()"
+                  (moveOut)="moveOut()"
+                  (duplicate)="duplicate()"
+                  (toggleHidden)="toggleHidden()"
+                  (remove)="remove()"
+                />
+              }
+            </aside>
+          </div>
+        </div>
+
+        <!-- Out of the side tabs: always beside the page. -->
+        <section class="nv-editor-panel--left" aria-labelledby="nv-outline-heading">
           <h2 id="nv-outline-heading" class="h5" tabindex="-1">Blocks on this page</h2>
           <nv-block-outline
             [lists]="outline()"
@@ -298,21 +314,20 @@
             (add)="openPicker($event)"
           />
         </section>
-        </div>
 
         <!-- Outside the tabs: publishing focuses it, whichever tab is open. -->
         @if (canEdit()) {
-          <section aria-labelledby="nv-checklist-heading">
+          <section class="nv-editor-panel--checklist" aria-labelledby="nv-checklist-heading">
             <h2 id="nv-checklist-heading" class="h5" tabindex="-1">Before publishing</h2>
             <nv-publish-checklist [items]="checks()" (goTo)="select($event)" />
           </section>
         }
       </div>
-    </div>
-  }
+    }
 
-  <nv-block-picker [request]="picker()" [siteUrl]="siteUrl()" (picked)="addBlock($event)" (cancelled)="closePicker()" />
-}
+    <nv-block-picker [request]="picker()" [siteUrl]="siteUrl()" (picked)="addBlock($event)" (cancelled)="closePicker()" />
+  }
+</div>
 
 <!-- Opened by media fields to choose files from the library. -->
 <nv-media-picker />

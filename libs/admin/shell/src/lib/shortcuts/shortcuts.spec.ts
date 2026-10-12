@@ -53,6 +53,21 @@ describe('Shortcuts', () => {
     expect(save).not.toHaveBeenCalled();
   });
 
+  it('runs a shortcut for a button, as its keys would, and says when nothing handles it', () => {
+    const shell = vi.fn();
+    const screen = vi.fn();
+    shortcuts.register('search', shell, scope().ref);
+    const inner = scope();
+    shortcuts.register('search', screen, inner.ref);
+
+    expect(shortcuts.trigger('search')).toBe(true);
+    inner.destroy();
+    expect(shortcuts.trigger('search')).toBe(true);
+    expect(screen).toHaveBeenCalledTimes(1);
+    expect(shell).toHaveBeenCalledTimes(1);
+    expect(shortcuts.trigger('publish')).toBe(false);
+  });
+
   it('goes to the screen that registered last, and back when it is destroyed', () => {
     const page = vi.fn();
     const dialog = vi.fn();

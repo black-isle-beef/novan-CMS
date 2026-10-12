@@ -36,8 +36,18 @@ async function render(role: SpaceRole | null, { agencyStaff = false } = {}) {
   const api = { viewAs: vi.fn(() => of(undefined)) };
   TestBed.configureTestingModule({
     providers: [
-      provideRouter([{ path: '', component: AdminShell, children: [{ path: 'spaces/:spaceId', component: Screen }, { path: 'account', component: Screen }] }]),
-      { provide: AuthService, useValue: { agencyStaff: signal(agencyStaff), signOut: vi.fn() } },
+      provideRouter([
+        {
+          path: '',
+          component: AdminShell,
+          children: [
+            { path: 'spaces/:spaceId', component: Screen },
+            { path: 'spaces/:spaceId/pages/:entryId/edit', component: Screen, data: { layout: 'wide' } },
+            { path: 'account', component: Screen },
+          ],
+        },
+      ]),
+      { provide: AuthService, useValue: { agencyStaff: signal(agencyStaff), email: signal('sam.lee@example.com'), signOut: vi.fn() } },
       { provide: SpaceContext, useValue: context },
       { provide: ViewAs, useValue: viewAs },
       { provide: ManagementApi, useValue: api },
@@ -48,8 +58,10 @@ async function render(role: SpaceRole | null, { agencyStaff = false } = {}) {
   });
   const harness = await RouterTestingHarness.create(`/spaces/${spaceId}`);
   const el = harness.routeNativeElement?.ownerDocument.querySelector('nv-admin-shell') as HTMLElement;
+  // The space menu is in the sidebar; the top bar's navigation has Spaces and Account.
   const menu = () => [...el.querySelectorAll('nav[aria-label="Space"] a')].map((a) => a.textContent?.trim());
-  return { harness, el, context, viewAs, api, menu };
+  const nav = () => [...el.querySelectorAll('nav[aria-label="Primary"] a')].map((a) => a.textContent?.trim());
+  return { harness, el, context, viewAs, api, menu, nav };
 }
 
 // jsdom has no modal dialogs; the design system's modal opens one.
@@ -85,6 +97,38 @@ describe('AdminShell', () => {
     expect(menu()).toEqual(['Dashboard', 'Pages', 'Media', 'Forms', 'Settings']);
     expect(el.querySelector('nav[aria-label="Space"] [aria-current="page"]')?.textContent?.trim()).toBe('Dashboard');
     expect(el.querySelector('nv-view-as-menu')).toBeNull();
+  });
+
+  it('keeps the space menu in the sidebar, and Spaces and Account in a compact top bar with the brand', async () => {
+    const { el, nav } = await render('editor');
+    expect(el.querySelector('ds-sidebar')).not.toBeNull();
+    expect(el.querySelector('ds-header')?.classList).toContain('ds-header--app');
+    expect(nav()).toEqual(['Spaces', 'Account']);
+    const brand = el.querySelector('a.nv-brand') as HTMLAnchorElement;
+    expect(brand.getAttribute('aria-label')).toBe('Novan CMS, all spaces');
+    expect(brand.getAttribute('href')).toBe('/spaces');
+    expect([...brand.querySelectorAll('img')].every((img) => img.getAttribute('alt') === '')).toBe(true);
+    // Icons are decorative; the link text names each section.
+    expect(el.querySelector('nav[aria-label="Primary"] a i')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('gives wide screens (the visual editor) the whole window, and others the usual column', async () => {
+    const { harness, el } = await render('editor');
+    const frame = () => el.querySelector('main > div') as HTMLElement;
+    expect(frame().classList).toContain('container');
+    await harness.navigateByUrl(`/spaces/${spaceId}/pages/x/edit`);
+    expect(frame().classList).toContain('container-fluid');
+  });
+
+  it('offers Account and Sign out from the account button', async () => {
+    const { el } = await render('editor');
+    const trigger = el.querySelector('.nv-account-menu button[aria-haspopup="menu"]') as HTMLButtonElement;
+    expect(trigger.textContent).toContain('Account and sign out');
+    expect(trigger.querySelector('.nv-account-chip')?.textContent?.trim()).toBe('SL');
+    expect([...el.querySelectorAll('.nv-account-menu [role="menuitem"]')].map((item) => item.textContent?.trim())).toEqual([
+      'Account',
+      'Sign out',
+    ]);
   });
 
   it('adds Schema, API tokens and Webhooks for a developer, without the Forms inbox', async () => {

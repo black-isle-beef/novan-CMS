@@ -206,6 +206,11 @@ export class VisualEditorPage implements HasUnsavedChanges {
   });
   protected readonly deviceWidth = computed(() => DEVICES.find((d) => d.id === this.device())?.width ?? 1280);
   protected readonly published = computed(() => Boolean(this.entry()?.publishedPath));
+  /** The page has changes that are not live: marked "Draft" (with a copper dot) beside the save status. */
+  protected readonly hasDraft = computed(() => {
+    const entry = this.entry();
+    return !!entry && (this.store.dirty() || !this.published() || entry.hasUnpublishedChanges || entry.currentVersionId !== entry.publishedVersionId);
+  });
   /** Someone else changing the page: this tab looks but does not touch until they finish or leave. */
   protected readonly lockedBy = computed(() => this.presence.lockedBy());
   /** Archived pages are kept as they are until restored. */

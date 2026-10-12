@@ -13,8 +13,9 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import {
-  DsButtonComponent,
+  DsDropdownComponent,
   DsHeaderComponent,
+  DsMenuItemComponent,
   DsSidebarComponent,
   DsToastContainerComponent,
   type NavItem,
@@ -22,6 +23,7 @@ import {
 import { AuthService } from '@novan/admin-auth';
 import { SpaceContext, SpaceSwitcher } from '@novan/admin-spaces';
 import { filter, map } from 'rxjs';
+import { initialsFromEmail } from '../account/initials';
 import { ConfirmHost } from '../confirm/confirm-host';
 import { buildSpaceNav } from '../nav/space-nav';
 import { SearchPalette } from '../search/search-palette';
@@ -35,16 +37,18 @@ const narrowScreen = '(max-width: 767.98px)';
 const spaceInUrl = /^\/spaces\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[/?#]|$)/i;
 
 /**
- * Signed-in layout: the header (search, space switcher, "view as" for agency staff, sign out), the role-aware space
- * menu on the left, then the screen. Also hosts the toasts, the confirm dialog, the search dialog (Ctrl+K inside a space)
- * and the keyboard shortcuts.
+ * Signed-in layout: the top bar (Spaces and Account; search, space switcher, "view as" for agency staff and the
+ * account menu), the role-aware space menu in the sidebar on the left, then the screen. Below `md` the space menu
+ * moves into the top bar's menu button. Also hosts the toasts, the confirm dialog, the search dialog (Ctrl+K inside a
+ * space) and the keyboard shortcuts.
  */
 @Component({
   selector: 'nv-admin-shell',
   imports: [
     ConfirmHost,
-    DsButtonComponent,
+    DsDropdownComponent,
     DsHeaderComponent,
+    DsMenuItemComponent,
     DsSidebarComponent,
     DsToastContainerComponent,
     RouterLink,
@@ -92,14 +96,26 @@ export class AdminShell implements OnInit {
     return spaceId && access && this.context.currentSpaceId() === spaceId ? buildSpaceNav(spaceId, access, this.url()) : [];
   });
 
+  /** The top bar's navigation: Spaces and Account, led by the space menu on narrow screens (no sidebar there). */
   protected readonly headerNav = computed<NavItem[]>(() => {
     const url = this.url().split(/[?#]/)[0];
     return [
-      ...(this.narrow() ? this.spaceNav().map(({ label, href, active }) => ({ label, href, active })) : []),
-      { label: 'Spaces', href: '/spaces', active: url === '/spaces' || url === '/spaces/new' },
-      { label: 'Account', href: '/account', active: url.startsWith('/account') },
+      ...(this.narrow() ? this.spaceNav() : []),
+      { label: 'Spaces', href: '/spaces', icon: 'bi bi-grid', active: url === '/spaces' || url === '/spaces/new' },
+      { label: 'Account', href: '/account', icon: 'bi bi-person', active: url.startsWith('/account') },
     ];
   });
+
+  /** Screens whose route has `data: { layout: 'wide' }` (the visual editor) use the whole width of the window. */
+  protected readonly wide = computed(() => {
+    this.url();
+    let route = this.router.routerState.snapshot.root;
+    while (route.firstChild) route = route.firstChild;
+    return route.data['layout'] === 'wide';
+  });
+
+  /** Shown on the account button until profiles store a display name. */
+  protected readonly initials = computed(() => initialsFromEmail(this.auth.email()));
 
   /** Agency staff can view the space they are in as one of its roles. */
   protected readonly viewAsSpaceId = computed(() =>
@@ -141,6 +157,10 @@ export class AdminShell implements OnInit {
 
   ngOnInit(): void {
     void this.context.load();
+  }
+
+  protected openAccount(): void {
+    void this.router.navigate(['/account']);
   }
 
   protected async signOut(): Promise<void> {

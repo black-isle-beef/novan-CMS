@@ -70,10 +70,10 @@ test.describe('@api-tokens', () => {
   test('an editor has no API tokens link and is sent away from the page', async ({ page }) => {
     await signIn(page, client);
     await page.getByRole('link', { name: 'Demo site' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'What are we working on?' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Space' }).getByRole('link', { name: 'API tokens' })).toHaveCount(0);
 
     await page.goto(`/spaces/${demoSpaceId}/settings/api-tokens`);
-    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'What are we working on?' })).toBeVisible();
   });
 });

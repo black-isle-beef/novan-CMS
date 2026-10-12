@@ -22,7 +22,7 @@ test.describe('@auth', () => {
     await page.getByRole('button', { name: 'Create space' }).click();
 
     // A new space opens on its dashboard; its team is under Settings.
-    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'What are we working on?' })).toBeVisible();
     await page.getByRole('navigation', { name: 'Space' }).getByRole('link', { name: 'Settings', exact: true }).click();
     await page.getByRole('main').getByRole('link', { name: 'Team' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Team' })).toBeVisible();

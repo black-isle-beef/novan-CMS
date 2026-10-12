@@ -6,6 +6,8 @@ export const editorRoutes: Route[] = [
   {
     path: 'spaces/:spaceId/pages/:entryId/edit',
     title: 'Edit on the page | Novan CMS',
+    // The three-panel editor uses the whole width of the window (the shell reads this).
+    data: { layout: 'wide' },
     canDeactivate: [unsavedChangesGuard],
     loadComponent: () => import('./visual-editor-page/visual-editor-page').then((m) => m.VisualEditorPage),
   },

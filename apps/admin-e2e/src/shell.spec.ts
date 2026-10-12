@@ -34,7 +34,7 @@ test.describe('@shell', () => {
   test('an editor sees the client menu only, and never an agency word', async ({ page }) => {
     await signIn(page, client);
     await page.getByRole('link', { name: 'Demo site' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'What are we working on?' })).toBeVisible();
     await expect(spaceMenu(page).getByRole('link')).toHaveText(clientMenu);
     await expect(spaceMenu(page).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page');
     await expectNoAxeViolations(page);
@@ -55,7 +55,7 @@ test.describe('@shell', () => {
 
     // Every client screen, including a page in the editor, in plain language.
     const screens: [path: string, heading: string][] = [
-      ['', 'Dashboard'],
+      ['', 'What are we working on?'],
       ['/content', 'Pages'],
       [`/content/${homePageId}`, 'Home'],
       ['/media', 'Media'],
@@ -75,7 +75,7 @@ test.describe('@shell', () => {
     // Agency screens are not reachable by address either: the dashboard opens instead.
     for (const path of ['schema', 'settings/api-tokens', 'settings/space', 'webhooks', 'audit-log']) {
       await page.goto(`/spaces/${demoSpaceId}/${path}`);
-      await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: 'What are we working on?' })).toBeVisible();
     }
   });
 
@@ -102,7 +102,7 @@ test.describe('@shell', () => {
     await page.getByLabel('Short name').fill(slug);
     await page.getByRole('button', { name: 'Create space' }).click();
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'What are we working on?' })).toBeVisible();
     const checklist = page.getByRole('region', { name: 'Get started' });
     await expect(checklist).toContainText('0 of 4 done');
     await expect(checklist.getByRole('heading', { level: 3 })).toHaveText([
@@ -124,7 +124,7 @@ test.describe('@shell', () => {
     await expect(page.getByRole('status').filter({ hasText: 'Checklist dismissed.' })).toBeVisible();
     await expect(checklist).toHaveCount(0);
     await page.reload();
-    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'What are we working on?' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Get started' })).toHaveCount(0);
   });
 
@@ -190,7 +190,7 @@ test.describe('@shell', () => {
     // A short window, so the dashboard is taller than it.
     await page.setViewportSize({ width: 1280, height: 420 });
     await page.getByRole('link', { name: 'Demo site' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'What are we working on?' })).toBeVisible();
 
     const main = page.getByRole('main');
     expect(await main.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);

@@ -19,7 +19,7 @@ const spaceMenu = (page: Page) => page.getByRole('navigation', { name: 'Space' }
 async function openSpace(page: Page): Promise<void> {
   await signIn(page, spaceAdmin);
   await page.getByRole('link', { name: 'Demo site' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'What are we working on?' })).toBeVisible();
 }
 
 test.describe('@search-forms-audit', () => {

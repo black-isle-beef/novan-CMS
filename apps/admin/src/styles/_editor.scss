@@ -1,11 +1,155 @@
-// The visual editor (libs/admin/editor): the client site in a frame at the chosen screen width.
+// The visual editor (libs/admin/editor): the client site in a frame at the chosen screen width, between the blocks
+// on the page (left) and the block's panel (right), on a dotted charcoal canvas under a toolbar.
 
-// Grey surround, so the page's own edges are visible; a frame wider than the screen scrolls inside it.
+// The canvas fills the wide screen's column, edge to edge: a dotted grid of the line token on the canvas token.
+.nv-editor-canvas {
+  min-height: 100%;
+  margin: -1rem calc(var(--bs-gutter-x) * -0.5);
+  padding: 1rem;
+  background-color: var(--ds-color-copper-theme-canvas);
+  background-image: radial-gradient(var(--ds-color-copper-theme-line) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+// One wrapping row: where you are and the page's title, its save state, what to show, the actions, who else is
+// here and the workflow (Publish last).
+.nv-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: var(--bs-border-width) solid var(--ds-color-copper-theme-line);
+  border-radius: var(--bs-border-radius-xl);
+  background-color: var(--ds-color-copper-theme-surface);
+}
+
+.nv-editor-toolbar__title {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.nv-editor-toolbar__workflow {
+  display: block;
+  margin-inline-start: auto;
+}
+
+// The save state, with a copper dot and the word "Draft" while changes are not live.
+.nv-editor-save {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nv-editor-save__draft {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.nv-editor-save__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--ds-color-copper-500);
+}
+
+// Screen size and Show: each radio group is one segmented control; the checked option sits on the raised surface
+// with a copper edge (the design system's btn-check active state).
+.nv-editor-segmented {
+  display: flow-root;
+  margin: 0;
+}
+
+.nv-editor-segmented__legend {
+  float: left;
+  width: auto;
+  margin: 0 0.5rem 0 0;
+  padding: 0;
+  color: var(--bs-secondary-color);
+  font-size: 0.875rem;
+  line-height: 2rem;
+
+  + * {
+    clear: none;
+  }
+}
+
+.nv-editor-segmented .btn-group {
+  gap: 0.125rem;
+  padding: 0.125rem;
+  border: var(--bs-border-width) solid var(--ds-color-copper-theme-control);
+  border-radius: 999px;
+  background-color: var(--ds-color-copper-theme-canvas);
+
+  > .btn {
+    --bs-btn-border-color: transparent;
+
+    margin: 0;
+    // Bootstrap squares the inner corners of grouped buttons with more specific selectors.
+    border-radius: 999px !important;
+  }
+}
+
+// Page, panel, blocks and checklist in source order; side by side from 1200px.
+.nv-editor-layout {
+  display: grid;
+  grid-template-areas:
+    'centre'
+    'right'
+    'left'
+    'checklist';
+  gap: 1rem;
+
+  @media (min-width: 1200px) {
+    grid-template-columns: 15rem minmax(0, 1fr) 21rem;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'left centre right'
+      'left centre checklist';
+    align-items: start;
+  }
+}
+
+.nv-editor-centre {
+  grid-area: centre;
+  min-width: 0;
+}
+
+// Floating cards on the charcoal canvas.
+.nv-editor-panel--left,
+.nv-editor-panel--right,
+.nv-editor-panel--checklist {
+  min-width: 0;
+  padding: 1rem;
+  border: var(--bs-border-width) solid var(--ds-color-copper-theme-line);
+  border-radius: var(--bs-border-radius-xl);
+  background-color: var(--ds-color-copper-theme-surface);
+  box-shadow: var(--ds-elevation-component-card);
+}
+
+.nv-editor-panel--left {
+  grid-area: left;
+}
+
+.nv-editor-panel--right {
+  grid-area: right;
+}
+
+.nv-editor-panel--checklist {
+  grid-area: checklist;
+}
+
+// A charcoal hairline and a deep shadow around the page; a frame wider than the screen scrolls inside it.
 .nv-editor-stage {
   overflow: auto;
-  border: var(--bs-border-width) solid var(--bs-border-color);
-  border-radius: var(--bs-border-radius);
-  background-color: var(--ds-color-surface-muted);
+  border: var(--bs-border-width) solid var(--ds-color-copper-theme-line);
+  border-radius: var(--bs-border-radius-lg);
+  background-color: var(--ds-color-copper-theme-canvas);
+  box-shadow: var(--ds-elevation-component-modal);
 }
 
 .nv-editor-frame {
@@ -36,9 +180,19 @@
   border-radius: var(--bs-border-radius);
 }
 
+// Selected: a copper inset outline on the raised surface. Copper text fails on raised (4.3:1), so the block's name
+// turns white there; `aria-current` names the selection for screen readers.
 .nv-outline-row-selected {
-  border-inline-start-color: var(--ds-color-brand-primary);
-  background-color: var(--ds-color-surface-muted);
+  border-inline-start-color: var(--ds-color-copper-500);
+  background-color: var(--ds-color-copper-theme-raised);
+  box-shadow: inset 0 0 0 0.0625rem var(--ds-color-copper-500);
+
+  .nv-outline-select {
+    --bs-btn-color: var(--bs-body-color);
+    --bs-btn-hover-color: var(--bs-body-color);
+
+    font-weight: 600;
+  }
 }
 
 .nv-outline-children {
@@ -52,16 +206,18 @@
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border: 0.125rem dashed var(--bs-border-color);
+  border: 0.125rem dashed var(--ds-color-copper-theme-control);
   border-radius: 50%;
-  background-color: var(--ds-color-surface-muted);
-  font-size: var(--bs-body-font-size);
+  background-color: var(--ds-color-copper-900);
+  color: var(--ds-color-copper-100);
+  font-size: 0.8125rem;
   font-weight: 600;
 }
 
+// A copper ring marks someone editing.
 .nv-avatar-editing {
   border-style: solid;
-  border-color: var(--ds-color-brand-primary);
+  border-color: var(--ds-color-copper-500);
 }
 
 // A block type's preview image in the block picker.
@@ -109,8 +265,16 @@
 }
 
 @media (forced-colors: active) {
-  .nv-editor-stage {
+  .nv-editor-stage,
+  .nv-editor-toolbar,
+  .nv-editor-panel--left,
+  .nv-editor-panel--right,
+  .nv-editor-panel--checklist {
     border-color: CanvasText;
+  }
+
+  .nv-outline-row-selected {
+    outline: 0.125rem solid Highlight;
   }
 
   .nv-outline-row-selected {
