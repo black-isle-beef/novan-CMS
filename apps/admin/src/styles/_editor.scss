@@ -122,7 +122,6 @@
 
   @media (min-width: 1200px) {
     grid-template-columns: minmax(0, 1fr) 22rem;
-    align-items: start;
   }
 }
 
@@ -135,10 +134,21 @@
   flex-direction: column;
   gap: 1rem;
   min-width: 0;
+
+  // Side by side, the column is exactly as tall as the page beside it and scrolls on its own, so the page stays in
+  // view while editing. `contain: size` stops its content from growing the row; the grid stretches it to the
+  // page's height. The padding keeps the cards' shadows inside the scrolling box.
+  @media (min-width: 1200px) {
+    contain: size;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    margin: -0.5rem;
+    padding: 0.5rem;
+  }
 }
 
 // Floating cards on the charcoal canvas.
-.nv-editor-panel--left,
 .nv-editor-panel--right,
 .nv-editor-panel--checklist {
   min-width: 0;
@@ -273,7 +283,6 @@
 @media (forced-colors: active) {
   .nv-editor-stage,
   .nv-editor-toolbar,
-  .nv-editor-panel--left,
   .nv-editor-panel--right,
   .nv-editor-panel--checklist {
     border-color: CanvasText;
