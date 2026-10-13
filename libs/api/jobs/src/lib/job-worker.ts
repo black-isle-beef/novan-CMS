@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common';
 import { Mailer } from '@novan/api-common';
 import { DbService, jobDeadLetters } from '@novan/api-db';
+import * as Sentry from '@sentry/nestjs';
 import { sql } from 'drizzle-orm';
 import { type JobContext, JobHandlers, PermanentJobError } from './job-handlers';
 import { JOBS_CONFIG, type JobsConfig, retryDelaySeconds } from './jobs-config';
@@ -131,6 +132,8 @@ export class JobWorker implements OnApplicationShutdown {
       await tx.execute(sql`select pgmq.delete(${queue}, ${context.msgId}::bigint)`);
     });
     this.logger.error(`${what} gave up after ${context.attempt} attempt(s) and was dead-lettered: ${describe(error)}`);
+    // A no-op unless the process started Sentry (SENTRY_DSN, apps/api/src/instrument.ts).
+    Sentry.captureException(error, { tags: { queue, jobType: String(job.message?.type) }, extra: { msgId: context.msgId, attempts: context.attempt } });
     await this.mailer.send({
       to: this.config.alertEmails,
       subject: `Novan CMS: a ${queue} job failed`,

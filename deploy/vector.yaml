@@ -1,0 +1,34 @@
+# Ships the containers' logs to Better Stack (package 20). Runs with `docker compose --profile logs up -d`.
+# BETTER_STACK_SOURCE_TOKEN comes from .env (Better Stack > Sources > Vector). The ingest host is fixed: Vector refuses
+# a host read from the environment.
+
+sources:
+  docker:
+    type: docker_logs
+    # Only this Compose project, and not Vector itself.
+    include_labels: ['com.docker.compose.project=novan']
+    exclude_containers: ['novan-vector']
+
+transforms:
+  parsed:
+    type: remap
+    inputs: [docker]
+    source: |
+      # The API and Caddy log one JSON object a line; keep anything else as plain text.
+      parsed, err = parse_json(.message)
+      if err == null && is_object(parsed) { . = merge!(., parsed) }
+      .service = .label."com.docker.compose.service"
+      del(.label)
+
+sinks:
+  better_stack:
+    type: http
+    inputs: [parsed]
+    uri: 'https://in.logs.betterstack.com/'
+    method: post
+    encoding:
+      codec: json
+    compression: gzip
+    auth:
+      strategy: bearer
+      token: '${BETTER_STACK_SOURCE_TOKEN}'

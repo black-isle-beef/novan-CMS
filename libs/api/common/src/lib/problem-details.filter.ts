@@ -1,4 +1,5 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import type { Response } from 'express';
 import { ProblemDetails, ProblemException } from './problem';
 
@@ -38,6 +39,8 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     }
 
     this.logger.error(exception instanceof Error ? (exception.stack ?? exception.message) : String(exception));
+    // Unexpected errors only; a no-op unless the API started Sentry (SENTRY_DSN, apps/api/src/instrument.ts).
+    Sentry.captureException(exception);
     return {
       type: 'about:blank',
       title: 'Internal server error',

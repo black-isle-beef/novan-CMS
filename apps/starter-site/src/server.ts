@@ -13,13 +13,19 @@ import { fileURLToPath } from 'node:url';
 import { allowedHosts, novanServerOptions, redirectsMaxAge, siteUrl } from './novan.server';
 import { CMS_PAGE_CACHE_CONTROL, NO_STORE, withCachePolicy } from './server/cache-policy';
 import { withoutFontPreloads } from './server/font-preloads';
+import { reportServerErrors, startMonitoring } from './server/monitoring';
 import { type RssPost, rssXml } from './server/rss';
 import { robotsTxt, sitemapXml } from './server/sitemap';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
 
+const monitored = startMonitoring();
 const app = express();
+// Behind Caddy and Cloudflare (package 20): the visitor's address, which the proxy passes on to the API's form spam
+// checks, comes from X-Forwarded-For. TRUST_PROXY is the number of proxies in front (2 for Cloudflare and Caddy).
+const trustProxy = process.env['TRUST_PROXY'];
+if (trustProxy) app.set('trust proxy', Number(trustProxy) || trustProxy);
 // Pages, scripts and styles are sent compressed; the CDN keeps (and passes on) the compressed copy.
 app.use(compression());
 const angularApp = new AngularNodeAppEngine({ allowedHosts: allowedHosts() });
@@ -129,6 +135,9 @@ app.use('/**', (req, res, next) => {
     })
     .catch(next);
 });
+
+// Errors the routes above pass on go to Sentry, then to Express's own handler.
+if (monitored) reportServerErrors(app);
 
 /**
  * Start the server if this module is the main entry point, or it is ran via PM2.

@@ -1,0 +1,31 @@
+# Serves the admin's static files inside its container (package 20). TLS ends at the host's Caddy (deploy/Caddyfile).
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+:8080 {
+	root * /srv
+	encode zstd gzip
+
+	respond /health `{"status":"ok"}` 200
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		# The admin is never framed; client sites frame nothing of it either (the visual editor frames the site).
+		X-Frame-Options DENY
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
+	# Hashed bundles never change; the page and its runtime settings always come fresh.
+	@hashed path_regexp \.[A-Z0-9]{8}\.(js|css)$
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+	@fresh path / /index.html /config.js
+	header @fresh Cache-Control "no-cache"
+
+	# Client-side routes fall back to the app.
+	try_files {path} /index.html
+	file_server
+}
