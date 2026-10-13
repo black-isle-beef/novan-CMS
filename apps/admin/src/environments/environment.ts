@@ -2,8 +2,8 @@ import type { AdminConfig } from '@novan/admin-auth';
 
 /**
  * Local development (`npx supabase start`, `nx serve api`). These are public values: the anon key
- * is the Supabase CLI's fixed local key. Staging and production replace this file at build time
- * (package 20). Never put the service-role key here.
+ * is the Supabase CLI's fixed local key. Staging and production keep them and override them at runtime with the
+ * container's config.js (runtime-config.ts, package 20). Never put the service-role key here.
  */
 export const environment: AdminConfig = {
   supabaseUrl: 'http://127.0.0.1:54321',

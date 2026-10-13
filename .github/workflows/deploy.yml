@@ -1,0 +1,203 @@
+# Deployments (package 20, docs/ops/deploy.md).
+#   - CI passes on `main`        → build the affected images, tag them with the commit SHA, deploy to staging.
+#   - Tag `v*` on a `main` commit → promote that commit's images (no rebuild) to production, after approval.
+#   - Run by hand                 → redeploy a version already built to either environment, without migrations: the
+#                                   rollback path (docs/ops/rollback.md).
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment
+        type: choice
+        options: [staging, production]
+        required: true
+      version:
+        description: Full commit SHA whose images to run (the API's /health shows the current one)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  NX_NO_CLOUD: true
+  # Images: ghcr.io/<owner>/novan-<app>:<sha>
+  APPS: api admin starter-site
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Staging only from a green CI run on a push to main (not a PR's run).
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    outputs:
+      environment: ${{ steps.plan.outputs.environment }}
+      version: ${{ steps.plan.outputs.version }}
+      build: ${{ steps.plan.outputs.build }}
+      migrate: ${{ steps.plan.outputs.migrate }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          case "$EVENT" in
+            workflow_run) environment=staging; version="$RUN_SHA"; build=true; migrate=true ;;
+            push) environment=production; version="$GITHUB_SHA"; build=false; migrate=true ;;
+            workflow_dispatch) environment="$INPUT_ENVIRONMENT"; version="$(git rev-parse --verify "$INPUT_VERSION^{commit}")"; build=false; migrate=false ;;
+          esac
+          if [ "$environment" = production ] && [ "$EVENT" = push ]; then
+            git merge-base --is-ancestor "$version" origin/main \
+              || { echo "::error::$GITHUB_REF_NAME is not on main. Tag a commit that has been merged and deployed to staging."; exit 1; }
+            ci="$(gh run list --workflow ci.yml --commit "$version" --status success --json databaseId --jq length)"
+            [ "$ci" -gt 0 ] || { echo "::error::CI has not passed on $version."; exit 1; }
+          fi
+          {
+            echo "environment=$environment"
+            echo "version=$version"
+            echo "build=$build"
+            echo "migrate=$migrate"
+          } >> "$GITHUB_OUTPUT"
+          echo "Deploying $version to $environment (build: $build, migrations: $migrate)." >> "$GITHUB_STEP_SUMMARY"
+
+  # Builds the images Nx says changed since the last staging deploy (git tag `deployed/staging`) and gives the others
+  # the new tag without rebuilding, so every release has all images under one SHA.
+  images:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.plan.outputs.version }}
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: deploy
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Build or retag
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          git fetch --tags --force
+          base="$(git rev-parse -q --verify 'refs/tags/deployed/staging^{commit}' || true)"
+          affected=""
+          if [ -n "$base" ]; then
+            affected="$(npx nx show projects --affected --base="$base" --head="$VERSION" | tr '\n' ' ')"
+            echo "Changed since $base: ${affected:-nothing}"
+          fi
+          for app in $APPS; do
+            image="ghcr.io/$owner/novan-$app"
+            if [ -n "$base" ] && [[ " $affected " != *" $app "* ]] && docker buildx imagetools inspect "$image:$base" >/dev/null 2>&1; then
+              echo "::group::$app unchanged: $image:$base → $VERSION"
+              docker buildx imagetools create -t "$image:$VERSION" "$image:$base"
+            else
+              echo "::group::$app: build $image:$VERSION"
+              docker buildx build --push -f "apps/$app/Dockerfile" -t "$image:$VERSION" \
+                --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+                --label "org.opencontainers.image.revision=$VERSION" \
+                --cache-from "type=gha,scope=$app" --cache-to "type=gha,scope=$app,mode=max" .
+            fi
+            echo "::endgroup::"
+          done
+
+  # Production promotes the images staging already ran; check they are there before asking anyone to approve.
+  images-exist:
+    needs: plan
+    if: needs.plan.outputs.build != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          for app in $APPS; do
+            docker buildx imagetools inspect "ghcr.io/$owner/novan-$app:$VERSION" >/dev/null \
+              || { echo "::error::ghcr.io/$owner/novan-$app:$VERSION does not exist. Deploy $VERSION to staging first."; exit 1; }
+          done
+
+  deploy:
+    needs: [plan, images, images-exist]
+    # One of images / images-exist runs; the other is skipped.
+    if: always() && needs.plan.result == 'success' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+    uses: ./.github/workflows/deploy-environment.yml
+    permissions:
+      contents: read
+      packages: read
+    with:
+      environment: ${{ needs.plan.outputs.environment }}
+      version: ${{ needs.plan.outputs.version }}
+      migrate: ${{ needs.plan.outputs.migrate == 'true' }}
+    secrets: inherit
+
+  # Records what is live: the base for the next staging build, and a production release with notes.
+  record:
+    needs: [plan, deploy]
+    if: needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      packages: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      ENVIRONMENT: ${{ needs.plan.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Tag what is live
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          for app in $APPS; do
+            image="ghcr.io/$owner/novan-$app"
+            tags=(-t "$image:$ENVIRONMENT")
+            if [ "$GITHUB_EVENT_NAME" = push ]; then tags+=(-t "$image:$GITHUB_REF_NAME"); fi
+            docker buildx imagetools create "${tags[@]}" "$image:$VERSION"
+          done
+          if [ "$ENVIRONMENT" = staging ]; then
+            git tag -f deployed/staging "$VERSION"
+            git push -f origin refs/tags/deployed/staging
+          fi
+      - name: Release notes
+        if: github.event_name == 'push'
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
