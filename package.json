@@ -129,6 +129,7 @@
       "@nestjs/core": "$@nestjs/core"
     },
     "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0",
+    "brace-expansion@5": "^5.0.12",
     "babel-plugin-istanbul": {
       "test-exclude": "^8.0.0"
     },
