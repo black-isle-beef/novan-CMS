@@ -1,0 +1,206 @@
+{
+  "apiId": "form",
+  "name": "Form",
+  "icon": "ui-checks",
+  "previewImagePath": null,
+  "fields": [
+    {
+      "id": "heading",
+      "apiId": "heading",
+      "label": "Heading",
+      "required": false,
+      "localised": true,
+      "type": "text",
+      "multiline": false,
+      "max": 120
+    },
+    {
+      "id": "intro",
+      "apiId": "intro",
+      "label": "Introduction",
+      "required": false,
+      "localised": true,
+      "type": "text",
+      "multiline": true,
+      "max": 300
+    },
+    {
+      "id": "fields",
+      "apiId": "fields",
+      "label": "Fields",
+      "required": true,
+      "localised": false,
+      "type": "group",
+      "multiple": true,
+      "min": 1,
+      "max": 20,
+      "fields": [
+        {
+          "id": "label",
+          "apiId": "label",
+          "label": "Label",
+          "required": true,
+          "localised": true,
+          "type": "text",
+          "multiline": false,
+          "max": 200
+        },
+        {
+          "id": "name",
+          "apiId": "name",
+          "label": "Name in the inbox",
+          "help": "A short name for this answer in the inbox and the export, like email or message.",
+          "required": true,
+          "localised": false,
+          "type": "text",
+          "multiline": false,
+          "max": 40,
+          "pattern": "[a-z0-9]+(-[a-z0-9]+)*"
+        },
+        {
+          "id": "type",
+          "apiId": "type",
+          "label": "Type",
+          "required": true,
+          "localised": false,
+          "type": "select",
+          "options": [
+            {
+              "value": "text",
+              "label": "Short text"
+            },
+            {
+              "value": "email",
+              "label": "Email address"
+            },
+            {
+              "value": "textarea",
+              "label": "Long text"
+            },
+            {
+              "value": "select",
+              "label": "Choice from a list"
+            },
+            {
+              "value": "checkbox",
+              "label": "Tick box"
+            },
+            {
+              "value": "consent",
+              "label": "Consent"
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "id": "required",
+          "apiId": "required",
+          "label": "Must be filled in",
+          "required": false,
+          "localised": false,
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "help",
+          "apiId": "help",
+          "label": "Hint",
+          "required": false,
+          "localised": true,
+          "type": "text",
+          "multiline": false,
+          "max": 200
+        },
+        {
+          "id": "options",
+          "apiId": "options",
+          "label": "Choices",
+          "help": "For a choice from a list: one choice per line.",
+          "required": false,
+          "localised": true,
+          "type": "text",
+          "multiline": true,
+          "max": 2000
+        }
+      ]
+    },
+    {
+      "id": "submitLabel",
+      "apiId": "submitLabel",
+      "label": "Button text",
+      "required": true,
+      "localised": true,
+      "type": "text",
+      "multiline": false,
+      "max": 60
+    },
+    {
+      "id": "successMessage",
+      "apiId": "successMessage",
+      "label": "Thank-you message",
+      "required": true,
+      "localised": true,
+      "type": "text",
+      "multiline": true,
+      "max": 500
+    }
+  ],
+  "allowedChildren": [],
+  "styleOptions": {
+    "tone": {
+      "kind": "radio",
+      "label": "Tone",
+      "hint": "Background and text colours.",
+      "options": [
+        {
+          "value": "light",
+          "label": "Light"
+        },
+        {
+          "value": "brand",
+          "label": "Brand"
+        },
+        {
+          "value": "dark",
+          "label": "Dark"
+        }
+      ],
+      "default": "light"
+    },
+    "width": {
+      "kind": "radio",
+      "label": "Width",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "Narrow"
+        },
+        {
+          "value": "wide",
+          "label": "Wide"
+        }
+      ],
+      "default": "narrow"
+    },
+    "headingLevel": {
+      "kind": "select",
+      "label": "Heading level",
+      "hint": "Keep headings in order on the page.",
+      "options": [
+        {
+          "value": "h2",
+          "label": "H2"
+        },
+        {
+          "value": "h3",
+          "label": "H3"
+        },
+        {
+          "value": "h4",
+          "label": "H4"
+        }
+      ],
+      "default": "h2"
+    }
+  }
+}

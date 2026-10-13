@@ -1,0 +1,58 @@
+{
+  "apiId": "image",
+  "name": "Image",
+  "icon": "image",
+  "previewImagePath": null,
+  "fields": [
+    {
+      "id": "image",
+      "apiId": "image",
+      "label": "Image",
+      "required": true,
+      "localised": false,
+      "type": "media",
+      "accept": [
+        "image"
+      ],
+      "multiple": false,
+      "requireAlt": true
+    },
+    {
+      "id": "caption",
+      "apiId": "caption",
+      "label": "Caption",
+      "required": false,
+      "localised": true,
+      "type": "text",
+      "multiline": false,
+      "max": 200
+    }
+  ],
+  "allowedChildren": [],
+  "styleOptions": {
+    "width": {
+      "kind": "select",
+      "label": "Width",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "Narrow"
+        },
+        {
+          "value": "wide",
+          "label": "Wide"
+        },
+        {
+          "value": "full",
+          "label": "Full width"
+        }
+      ],
+      "default": "wide"
+    },
+    "rounded": {
+      "kind": "toggle",
+      "label": "Rounded corners",
+      "default": false
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "novan-cli",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "tools/novan-cli/src",
+  "projectType": "application",
+  "tags": ["scope:tools", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["default", "^default", "{workspaceRoot}/kits/**/*", "{workspaceRoot}/libs/blocks/block-types.json"],
+      "outputs": ["{workspaceRoot}/dist/tools/novan-cli"],
+      "options": {
+        "command": "node tools/novan-cli/build.mjs"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p tools/novan-cli/tsconfig.app.json --noEmit"
+      }
+    }
+  }
+}

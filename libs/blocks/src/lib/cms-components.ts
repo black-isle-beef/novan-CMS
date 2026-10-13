@@ -3,6 +3,7 @@ import { FEATURE_GRID_DEFINITION } from './components/feature-grid';
 import { FORM_DEFINITION } from './components/form';
 import { HERO_DEFINITION } from './components/hero';
 import { IMAGE_DEFINITION } from './components/image';
+import { LISTING_DEFINITION } from './components/listing';
 import { RICH_TEXT_DEFINITION } from './components/rich-text';
 
 /** Every block this library provides, in the order an editor lists them. */
@@ -13,4 +14,5 @@ export const CMS_COMPONENT_DEFINITIONS = [
   FEATURE_GRID_DEFINITION,
   CTA_DEFINITION,
   FORM_DEFINITION,
+  LISTING_DEFINITION,
 ] as const;

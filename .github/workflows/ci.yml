@@ -77,6 +77,41 @@ jobs:
         shell: pwsh
         run: ./tools/ci/audit-angular.ps1 -Affected
 
+  # The starter site's content model (apps/starter-site/novan/schema) against the staging starter space, so code and
+  # CMS models stay in sync (package 19). Signs in as a CI account with the developer role and no second factor.
+  # When a change adds to the model, push it to staging (`novan schema push`, docs/clients/new-site.md) in the same PR.
+  schema-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NOVAN_API_URL: ${{ vars.NOVAN_STAGING_API_URL }}
+      NOVAN_SPACE: ${{ vars.NOVAN_STAGING_STARTER_SPACE_ID }}
+      NOVAN_EMAIL: ${{ secrets.NOVAN_CI_EMAIL }}
+      NOVAN_PASSWORD: ${{ secrets.NOVAN_CI_PASSWORD }}
+    steps:
+      - name: Staging is configured
+        id: configured
+        run: |
+          if [ -n "$NOVAN_API_URL" ] && [ -n "$NOVAN_SPACE" ] && [ -n "$NOVAN_EMAIL" ] && [ -n "$NOVAN_PASSWORD" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=schema drift::Skipped: set NOVAN_STAGING_API_URL and NOVAN_STAGING_STARTER_SPACE_ID (variables) and NOVAN_CI_EMAIL and NOVAN_CI_PASSWORD (secrets)."
+          fi
+      - uses: actions/checkout@v7
+        if: steps.configured.outputs.ok == 'true'
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+        if: steps.configured.outputs.ok == 'true'
+        with:
+          cache-name: schema-drift
+      - run: npx nx build novan-cli
+        if: steps.configured.outputs.ok == 'true'
+      - name: novan schema diff (starter site against staging)
+        if: steps.configured.outputs.ok == 'true'
+        working-directory: apps/starter-site
+        run: node ../../dist/tools/novan-cli/main.cjs schema diff --exit-code
+
   # Chromium only on every change; firefox and webkit run nightly (e2e-nightly.yml).
   e2e:
     needs: database

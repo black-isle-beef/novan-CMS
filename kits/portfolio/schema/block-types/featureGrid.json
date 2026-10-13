@@ -1,0 +1,158 @@
+{
+  "apiId": "featureGrid",
+  "name": "Feature grid",
+  "icon": "grid-3x3-gap",
+  "previewImagePath": null,
+  "fields": [
+    {
+      "id": "heading",
+      "apiId": "heading",
+      "label": "Heading",
+      "required": false,
+      "localised": true,
+      "type": "text",
+      "multiline": false,
+      "max": 120
+    },
+    {
+      "id": "intro",
+      "apiId": "intro",
+      "label": "Introduction",
+      "required": false,
+      "localised": true,
+      "type": "text",
+      "multiline": true,
+      "max": 300
+    },
+    {
+      "id": "features",
+      "apiId": "features",
+      "label": "Features",
+      "required": true,
+      "localised": false,
+      "type": "group",
+      "multiple": true,
+      "min": 1,
+      "max": 12,
+      "fields": [
+        {
+          "id": "icon",
+          "apiId": "icon",
+          "label": "Icon",
+          "required": false,
+          "localised": false,
+          "type": "select",
+          "options": [
+            {
+              "value": "check-circle",
+              "label": "Tick"
+            },
+            {
+              "value": "star",
+              "label": "Star"
+            },
+            {
+              "value": "lightning",
+              "label": "Lightning"
+            },
+            {
+              "value": "shield-check",
+              "label": "Shield"
+            },
+            {
+              "value": "heart",
+              "label": "Heart"
+            },
+            {
+              "value": "chat-dots",
+              "label": "Speech bubble"
+            }
+          ],
+          "multiple": false
+        },
+        {
+          "id": "title",
+          "apiId": "title",
+          "label": "Title",
+          "required": true,
+          "localised": true,
+          "type": "text",
+          "multiline": false,
+          "max": 80
+        },
+        {
+          "id": "text",
+          "apiId": "text",
+          "label": "Text",
+          "required": false,
+          "localised": true,
+          "type": "text",
+          "multiline": true,
+          "max": 240
+        }
+      ]
+    }
+  ],
+  "allowedChildren": [],
+  "styleOptions": {
+    "tone": {
+      "kind": "radio",
+      "label": "Tone",
+      "hint": "Background and text colours.",
+      "options": [
+        {
+          "value": "light",
+          "label": "Light"
+        },
+        {
+          "value": "brand",
+          "label": "Brand"
+        },
+        {
+          "value": "dark",
+          "label": "Dark"
+        }
+      ],
+      "default": "light"
+    },
+    "columns": {
+      "kind": "radio",
+      "label": "Columns",
+      "options": [
+        {
+          "value": "two",
+          "label": "2"
+        },
+        {
+          "value": "three",
+          "label": "3"
+        },
+        {
+          "value": "four",
+          "label": "4"
+        }
+      ],
+      "default": "three"
+    },
+    "headingLevel": {
+      "kind": "select",
+      "label": "Heading level",
+      "hint": "Keep headings in order on the page.",
+      "options": [
+        {
+          "value": "h2",
+          "label": "H2"
+        },
+        {
+          "value": "h3",
+          "label": "H3"
+        },
+        {
+          "value": "h4",
+          "label": "H4"
+        }
+      ],
+      "default": "h2"
+    }
+  }
+}

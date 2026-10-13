@@ -6,6 +6,7 @@ import { ContentModule } from '@novan/api-content';
 import { ContentModelModule } from '@novan/api-content-model';
 import { DbModule } from '@novan/api-db';
 import { DeliveryModule } from '@novan/api-delivery';
+import { DeviceAuthModule } from '@novan/api-device-auth';
 import { FormsModule } from '@novan/api-forms';
 import { JobsModule } from '@novan/api-jobs';
 import { MediaModule } from '@novan/api-media';
@@ -18,7 +19,7 @@ import { DocsController } from './docs/docs.controller';
 import { HealthController } from './health/health.controller';
 
 @Module({
-  imports: [DbModule, JobsModule, DiscoveryModule, SpacesModule, ContentModelModule, ContentModule, MediaModule, SiteModule, DeliveryModule, WebhooksModule, SearchModule, FormsModule, AuditLogModule],
+  imports: [DbModule, JobsModule, DiscoveryModule, SpacesModule, ContentModelModule, ContentModule, MediaModule, SiteModule, DeliveryModule, WebhooksModule, SearchModule, FormsModule, AuditLogModule, DeviceAuthModule],
   controllers: [HealthController, DocsController],
   providers: [
     { provide: APP_VERSION, useFactory: () => resolveAppVersion() },

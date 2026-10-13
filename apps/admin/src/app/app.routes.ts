@@ -1,5 +1,5 @@
 import { Route } from '@angular/router';
-import { accountRoute, authRoutes, requireSignedIn } from '@novan/admin-auth';
+import { accountRoute, authRoutes, deviceRoute, requireSignedIn } from '@novan/admin-auth';
 
 export const appRoutes: Route[] = [
   ...authRoutes,
@@ -10,6 +10,7 @@ export const appRoutes: Route[] = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'spaces' },
       accountRoute,
+      deviceRoute,
       // Every feature library loads on first use. Order matters: spaces/new comes before a space's dashboard
       // (spaces/:spaceId).
       { path: '', loadChildren: () => import('@novan/admin-spaces').then((m) => m.spacesRoutes) },

@@ -149,6 +149,19 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"device_authorizations": {
+                  Row: {
+                    "client_name": string,"created_at": string,"decided_at": string | null,"device_code_hash": string,"expires_at": string,"id": string,"last_polled_at": string | null,"status": string,"user_code": string,"user_id": string | null
+                  }
+                  Insert: {
+                    "client_name": string,"created_at"?: string,"decided_at"?: string | null,"device_code_hash": string,"expires_at": string,"id"?: string,"last_polled_at"?: string | null,"status"?: string,"user_code": string,"user_id"?: string | null
+                  }
+                  Update: {
+                    "client_name"?: string,"created_at"?: string,"decided_at"?: string | null,"device_code_hash"?: string,"expires_at"?: string,"id"?: string,"last_polled_at"?: string | null,"status"?: string,"user_code"?: string,"user_id"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"entries": {
                   Row: {
                     "content_type_id": string,"created_at": string,"created_by": string | null,"current_version_id": string | null,"deleted_at": string | null,"environment_id": string,"folder_id": string | null,"id": string,"published_at": string | null,"published_version_id": string | null,"slug": string,"space_id": string,"status": string,"updated_at": string
@@ -732,6 +745,9 @@ isOneToOne: false
                            },
 "custom_access_token_hook":
 { Args: { "event": Json }; Returns: Json
+                           },
+"decide_device_authorization":
+{ Args: { "approve": boolean,"code": string }; Returns: string
                            },
 "dismiss_onboarding":
 { Args: { "p_space_id": string }; Returns: undefined

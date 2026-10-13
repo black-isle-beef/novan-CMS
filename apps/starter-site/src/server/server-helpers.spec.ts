@@ -1,5 +1,6 @@
 import { CMS_PAGE_CACHE_CONTROL, withCachePolicy } from './cache-policy';
 import { withoutFontPreloads } from './font-preloads';
+import { rssXml } from './rss';
 import { robotsTxt, sitemapXml } from './sitemap';
 
 describe('withCachePolicy', () => {
@@ -116,5 +117,37 @@ describe('withoutFontPreloads', () => {
     const json = new Response(head, { headers: { 'Content-Type': 'application/json' } });
 
     expect(await withoutFontPreloads(json)).toBe(json);
+  });
+});
+describe('rssXml', () => {
+  const channel = { title: 'Salon & Spa', path: '/blog', locale: 'en-GB' };
+  const post = (path: string, data: object, updatedAt = '2026-03-02T10:00:00.123456Z') => ({ path, locale: 'en-GB', updatedAt, data });
+
+  it('lists each post with its title, address, date and summary', () => {
+    const xml = rssXml('https://www.example.com/', channel, [
+      post('/blog/coats', { title: 'Summer <coat> care', summary: 'Keep "double" coats cool.', publishedOn: '2026-06-02' }),
+    ]);
+
+    expect(xml).toContain('<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">');
+    expect(xml).toContain('<title>Salon &amp; Spa</title>');
+    expect(xml).toContain('<link>https://www.example.com/blog</link>');
+    expect(xml).toContain('<atom:link href="https://www.example.com/rss.xml" rel="self" type="application/rss+xml"/>');
+    expect(xml).toContain('<title>Summer &lt;coat&gt; care</title>');
+    expect(xml).toContain('<guid isPermaLink="true">https://www.example.com/blog/coats</guid>');
+    expect(xml).toContain('<pubDate>Tue, 02 Jun 2026 00:00:00 GMT</pubDate>');
+    expect(xml).toContain('<description>Keep &quot;double&quot; coats cool.</description>');
+  });
+
+  it('falls back to the path and the publish time, and leaves out an empty summary', () => {
+    const xml = rssXml('https://www.example.com', channel, [post('/blog/untitled', { title: 7, publishedOn: 'soon' })]);
+
+    expect(xml).toContain('<title>/blog/untitled</title>');
+    expect(xml).toContain('<pubDate>Mon, 02 Mar 2026 10:00:00 GMT</pubDate>');
+    expect(xml).not.toContain('<description>/blog');
+    expect(xml.match(/<description>/g)).toHaveLength(1);
+  });
+
+  it('makes an empty but valid feed with no posts', () => {
+    expect(rssXml('https://www.example.com', channel, [])).not.toContain('<item>');
   });
 });

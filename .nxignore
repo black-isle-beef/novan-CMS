@@ -1,0 +1,4 @@
+# Schema-as-code folders (docs/build/19-schema-cli-starter-kits.md): a content type called `project` is a file named
+# project.json, which Nx would otherwise read as a project of its own.
+kits/*/schema/
+**/novan/schema/

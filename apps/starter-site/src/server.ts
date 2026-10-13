@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { allowedHosts, novanServerOptions, redirectsMaxAge, siteUrl } from './novan.server';
 import { CMS_PAGE_CACHE_CONTROL, NO_STORE, withCachePolicy } from './server/cache-policy';
 import { withoutFontPreloads } from './server/font-preloads';
+import { type RssPost, rssXml } from './server/rss';
 import { robotsTxt, sitemapXml } from './server/sitemap';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
@@ -46,6 +47,41 @@ app.get('/sitemap.xml', async (req, res) => {
   } catch (error) {
     console.error('sitemap.xml could not be built.', error);
     res.status(503).set('Cache-Control', NO_STORE).type('text/plain').send('The sitemap is not available right now.');
+  }
+});
+
+/**
+ * The blog's feed (the blog starter kit, kits/blog): the 20 newest `post` entries. A site without posts answers 404.
+ * Cached under the API's tags, so publishing a post refreshes it.
+ */
+app.get('/rss.xml', async (req, res) => {
+  const api = novanServerOptions.apiUrl.replace(/\/+$/, '');
+  const get = (path: string) =>
+    fetch(`${api}/v1/delivery/${path}`, { headers: { Accept: 'application/json', Authorization: `Bearer ${novanServerOptions.deliveryToken}` } });
+  try {
+    const [posts, settings] = await Promise.all([
+      get('entries?type=post&sort=-fields.publishedOn&limit=20&select=fields.title,fields.summary,fields.publishedOn'),
+      get('singletons/siteSettings?select=fields.siteName'),
+    ]);
+    // A space without the `post` type has no blog.
+    if (posts.status === 404) {
+      res.status(404).set('Cache-Control', NO_STORE).type('text/plain').send('This site has no blog feed.');
+      return;
+    }
+    if (!posts.ok) throw new Error(`The Delivery API answered ${posts.status}.`);
+    const page = (await posts.json()) as { items: RssPost[] };
+    const site = settings.ok ? ((await settings.json()) as { locale?: string; data?: { siteName?: unknown } }) : null;
+    const url = siteUrl(`${req.protocol}://${req.get('host')}`);
+    const siteName = typeof site?.data?.siteName === 'string' && site.data.siteName.trim() ? site.data.siteName.trim() : url;
+    const xml = rssXml(url, { title: siteName, path: '/blog', locale: site?.locale ?? page.items[0]?.locale ?? 'en-GB' }, page.items);
+    const tags = [...new Set([posts, settings].flatMap((answer) => answer.headers.get('Cache-Tag')?.split(',') ?? []))].join(',');
+    res.set('Content-Type', 'application/rss+xml; charset=utf-8');
+    res.set('Cache-Control', tags ? CMS_PAGE_CACHE_CONTROL : NO_STORE);
+    if (tags) res.set('Cache-Tag', tags);
+    res.send(xml);
+  } catch (error) {
+    console.error('rss.xml could not be built.', error);
+    res.status(503).set('Cache-Control', NO_STORE).type('text/plain').send('The feed is not available right now.');
   }
 });
 

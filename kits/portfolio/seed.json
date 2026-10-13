@@ -1,0 +1,945 @@
+{
+  "folders": [
+    {
+      "key": "work",
+      "name": "Our work",
+      "slug": "work"
+    }
+  ],
+  "entries": [
+    {
+      "key": "home",
+      "contentType": "page",
+      "slug": "home",
+      "data": {
+        "title": "Home",
+        "slug": "home",
+        "seo": {
+          "metaDescription": "Replace this with one or two sentences on what your business offers and who it is for.",
+          "noindex": false
+        },
+        "body": [
+          {
+            "_block": "hero",
+            "heading": "A clear promise about what you do",
+            "subheading": "One or two sentences on who you help and why they choose you. Change this text in the visual editor.",
+            "action": {
+              "type": "internal",
+              "entryId": {
+                "$entry": "services"
+              },
+              "text": "See our services"
+            }
+          },
+          {
+            "_block": "featureGrid",
+            "heading": "Why people choose us",
+            "intro": "Three short reasons. Keep each one to a sentence or two.",
+            "features": [
+              {
+                "icon": "heart",
+                "title": "Personal service",
+                "text": "Say what working with you feels like, in your customers’ words."
+              },
+              {
+                "icon": "shield-check",
+                "title": "Qualified and insured",
+                "text": "The reassurance people look for before they get in touch."
+              },
+              {
+                "icon": "lightning",
+                "title": "Quick to respond",
+                "text": "How soon people hear back, and how they can reach you."
+              }
+            ]
+          },
+          {
+            "_block": "listing",
+            "_style": {},
+            "heading": "Recent work",
+            "intro": "A few projects we are proud of.",
+            "source": "project",
+            "limit": 3
+          },
+          {
+            "_block": "cta",
+            "_style": {
+              "tone": "dark"
+            },
+            "heading": "Ready to talk?",
+            "text": "Tell us what you need and we will get back to you.",
+            "action": {
+              "type": "internal",
+              "entryId": {
+                "$entry": "contact"
+              },
+              "text": "Get in touch"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "about",
+      "contentType": "page",
+      "slug": "about",
+      "data": {
+        "title": "About us",
+        "slug": "about",
+        "seo": {
+          "metaDescription": "Who we are, how we started and how we work.",
+          "noindex": false
+        },
+        "body": [
+          {
+            "_block": "hero",
+            "_style": {
+              "tone": "light",
+              "height": "compact"
+            },
+            "heading": "About us",
+            "subheading": "The people behind the business, and what matters to them."
+          },
+          {
+            "_block": "richText",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "heading",
+                  "attrs": {
+                    "level": 2
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "How we started"
+                    }
+                  ]
+                },
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Tell the story in a few short paragraphs: when you started, why, and what has changed since. Plain words work best."
+                    }
+                  ]
+                },
+                {
+                  "type": "heading",
+                  "attrs": {
+                    "level": 2
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "How we work"
+                    }
+                  ]
+                },
+                {
+                  "type": "bulletList",
+                  "content": [
+                    {
+                      "type": "listItem",
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "content": [
+                            {
+                              "type": "text",
+                              "text": "What happens when someone first gets in touch"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "listItem",
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "content": [
+                            {
+                              "type": "text",
+                              "text": "What they can expect from you"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "listItem",
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "content": [
+                            {
+                              "type": "text",
+                              "text": "What happens afterwards"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Questions? "
+                    },
+                    {
+                      "type": "text",
+                      "text": "Contact us",
+                      "marks": [
+                        {
+                          "type": "link",
+                          "attrs": {
+                            "href": "/contact"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": "."
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "_block": "cta",
+            "_style": {
+              "tone": "light"
+            },
+            "heading": "See what we offer",
+            "action": {
+              "type": "internal",
+              "entryId": {
+                "$entry": "services"
+              },
+              "text": "Our services"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "services",
+      "contentType": "page",
+      "slug": "services",
+      "data": {
+        "title": "Services",
+        "slug": "services",
+        "seo": {
+          "metaDescription": "What we offer, who it is for and what it costs.",
+          "noindex": false
+        },
+        "body": [
+          {
+            "_block": "hero",
+            "_style": {
+              "tone": "light",
+              "height": "compact"
+            },
+            "heading": "Services",
+            "subheading": "What we offer, and who each service is for."
+          },
+          {
+            "_block": "featureGrid",
+            "_style": {
+              "columns": "two"
+            },
+            "heading": "What we do",
+            "features": [
+              {
+                "icon": "star",
+                "title": "Your main service",
+                "text": "What it is, who it suits and roughly what it costs."
+              },
+              {
+                "icon": "check-circle",
+                "title": "A second service",
+                "text": "Describe the result people get, not just the work."
+              },
+              {
+                "icon": "chat-dots",
+                "title": "Advice and support",
+                "text": "How people can get help after the job is done."
+              },
+              {
+                "icon": "shield-check",
+                "title": "Guarantees",
+                "text": "Anything that makes it easier to say yes."
+              }
+            ]
+          },
+          {
+            "_block": "richText",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "heading",
+                  "attrs": {
+                    "level": 2
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Prices"
+                    }
+                  ]
+                },
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Give a starting price or a range where you can. People are more likely to get in touch when they know roughly what to expect."
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "_block": "cta",
+            "heading": "Not sure which you need?",
+            "text": "Ask us. We will tell you honestly.",
+            "action": {
+              "type": "internal",
+              "entryId": {
+                "$entry": "contact"
+              },
+              "text": "Ask a question"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "contact",
+      "contentType": "page",
+      "slug": "contact",
+      "data": {
+        "title": "Contact",
+        "slug": "contact",
+        "seo": {
+          "metaDescription": "How to get in touch with us.",
+          "noindex": false
+        },
+        "body": [
+          {
+            "_block": "hero",
+            "_style": {
+              "tone": "dark",
+              "height": "compact",
+              "alignment": "center"
+            },
+            "heading": "Contact us",
+            "subheading": "Send us a message and we will reply by email."
+          },
+          {
+            "_block": "form",
+            "heading": "Send us a message",
+            "intro": "We reply within two working days.",
+            "fields": [
+              {
+                "label": "Your name",
+                "name": "name",
+                "type": "text",
+                "required": true
+              },
+              {
+                "label": "Email address",
+                "name": "email",
+                "type": "email",
+                "required": true,
+                "help": "We only use it to reply to you."
+              },
+              {
+                "label": "Message",
+                "name": "message",
+                "type": "textarea",
+                "required": true
+              },
+              {
+                "label": "I agree that you may keep my message to reply to it.",
+                "name": "consent",
+                "type": "consent",
+                "required": true
+              }
+            ],
+            "submitLabel": "Send message",
+            "successMessage": "Thank you. Your message has been sent, and we will reply by email."
+          }
+        ]
+      }
+    },
+    {
+      "key": "work",
+      "contentType": "page",
+      "slug": "work",
+      "data": {
+        "title": "Our work",
+        "slug": "work",
+        "seo": {
+          "metaDescription": "Projects we are proud of, and what they achieved.",
+          "noindex": false
+        },
+        "body": [
+          {
+            "_block": "hero",
+            "_style": {
+              "tone": "light",
+              "height": "compact"
+            },
+            "heading": "Our work",
+            "subheading": "Projects we are proud of, and what they achieved."
+          },
+          {
+            "_block": "listing",
+            "_style": {
+              "columns": "three"
+            },
+            "heading": "All projects",
+            "intro": "",
+            "source": "project",
+            "limit": 12
+          }
+        ]
+      }
+    },
+    {
+      "key": "project-1",
+      "contentType": "project",
+      "folder": "work",
+      "slug": "shop-refit",
+      "data": {
+        "title": "A shop refit in four weeks",
+        "slug": "shop-refit",
+        "summary": "A full refit for a local bakery, finished in time for the busy season.",
+        "client": "Sample Bakery",
+        "publishedOn": "2026-01-30",
+        "seo": {
+          "noindex": false
+        },
+        "body": [
+          {
+            "_block": "hero",
+            "_style": {
+              "tone": "light",
+              "height": "compact"
+            },
+            "heading": "A shop refit in four weeks",
+            "subheading": "A full refit for a local bakery, finished in time for the busy season."
+          },
+          {
+            "_block": "richText",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "heading",
+                  "attrs": {
+                    "level": 2
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "The brief"
+                    }
+                  ]
+                },
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "What the client needed, and why. Two or three sentences are enough."
+                    }
+                  ]
+                },
+                {
+                  "type": "heading",
+                  "attrs": {
+                    "level": 2
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "What we did"
+                    }
+                  ]
+                },
+                {
+                  "type": "bulletList",
+                  "content": [
+                    {
+                      "type": "listItem",
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "content": [
+                            {
+                              "type": "text",
+                              "text": "Planned the work around opening hours"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "listItem",
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "content": [
+                            {
+                              "type": "text",
+                              "text": "Kept the shop open for all but three days"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "listItem",
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "content": [
+                            {
+                              "type": "text",
+                              "text": "Finished a week early"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "_block": "cta",
+            "heading": "Want something similar?",
+            "action": {
+              "type": "internal",
+              "entryId": {
+                "$entry": "contact"
+              },
+              "text": "Tell us about your project"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "project-2",
+      "contentType": "project",
+      "folder": "work",
+      "slug": "new-brand",
+      "data": {
+        "title": "A new look for a family firm",
+        "slug": "new-brand",
+        "summary": "A fresh brand and signage for a business celebrating 50 years.",
+        "client": "Sample & Sons",
+        "publishedOn": "2025-11-18",
+        "seo": {
+          "noindex": false
+        },
+        "body": [
+          {
+            "_block": "hero",
+            "_style": {
+              "tone": "light",
+              "height": "compact"
+            },
+            "heading": "A new look for a family firm",
+            "subheading": "A fresh brand and signage for a business celebrating 50 years."
+          },
+          {
+            "_block": "richText",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "heading",
+                  "attrs": {
+                    "level": 2
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "The brief"
+                    }
+                  ]
+                },
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "What the client needed, and why. Two or three sentences are enough."
+                    }
+                  ]
+                },
+                {
+                  "type": "heading",
+                  "attrs": {
+                    "level": 2
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "What we did"
+                    }
+                  ]
+                },
+                {
+                  "type": "bulletList",
+                  "content": [
+                    {
+                      "type": "listItem",
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "content": [
+                            {
+                              "type": "text",
+                              "text": "Ran a workshop with the whole family"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "listItem",
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "content": [
+                            {
+                              "type": "text",
+                              "text": "Designed a logo that works on vans and receipts"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "listItem",
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "content": [
+                            {
+                              "type": "text",
+                              "text": "Replaced the signs on three sites"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "_block": "cta",
+            "heading": "Want something similar?",
+            "action": {
+              "type": "internal",
+              "entryId": {
+                "$entry": "contact"
+              },
+              "text": "Tell us about your project"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "project-3",
+      "contentType": "project",
+      "folder": "work",
+      "slug": "community-garden",
+      "data": {
+        "title": "A garden for the whole street",
+        "slug": "community-garden",
+        "summary": "Turning an empty plot into a garden that neighbours look after together.",
+        "client": "Sample Residents’ Association",
+        "publishedOn": "2025-09-05",
+        "seo": {
+          "noindex": false
+        },
+        "body": [
+          {
+            "_block": "hero",
+            "_style": {
+              "tone": "light",
+              "height": "compact"
+            },
+            "heading": "A garden for the whole street",
+            "subheading": "Turning an empty plot into a garden that neighbours look after together."
+          },
+          {
+            "_block": "richText",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "heading",
+                  "attrs": {
+                    "level": 2
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "The brief"
+                    }
+                  ]
+                },
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "What the client needed, and why. Two or three sentences are enough."
+                    }
+                  ]
+                },
+                {
+                  "type": "heading",
+                  "attrs": {
+                    "level": 2
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "What we did"
+                    }
+                  ]
+                },
+                {
+                  "type": "bulletList",
+                  "content": [
+                    {
+                      "type": "listItem",
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "content": [
+                            {
+                              "type": "text",
+                              "text": "Asked neighbours what they wanted"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "listItem",
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "content": [
+                            {
+                              "type": "text",
+                              "text": "Built raised beds that are easy to reach"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "listItem",
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "content": [
+                            {
+                              "type": "text",
+                              "text": "Wrote a simple guide to looking after it"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "_block": "cta",
+            "heading": "Want something similar?",
+            "action": {
+              "type": "internal",
+              "entryId": {
+                "$entry": "contact"
+              },
+              "text": "Tell us about your project"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "navigation",
+      "contentType": "navigation",
+      "slug": "navigation",
+      "data": {
+        "items": [
+          {
+            "label": "Home",
+            "link": {
+              "type": "internal",
+              "entryId": {
+                "$entry": "home"
+              }
+            }
+          },
+          {
+            "label": "Services",
+            "link": {
+              "type": "internal",
+              "entryId": {
+                "$entry": "services"
+              }
+            }
+          },
+          {
+            "label": "Our work",
+            "link": {
+              "type": "internal",
+              "entryId": {
+                "$entry": "work"
+              }
+            }
+          },
+          {
+            "label": "About",
+            "link": {
+              "type": "internal",
+              "entryId": {
+                "$entry": "about"
+              }
+            }
+          },
+          {
+            "label": "Contact",
+            "link": {
+              "type": "internal",
+              "entryId": {
+                "$entry": "contact"
+              }
+            }
+          }
+        ],
+        "footerGroups": [
+          {
+            "title": "About us",
+            "links": [
+              {
+                "label": "About",
+                "link": {
+                  "type": "internal",
+                  "entryId": {
+                    "$entry": "about"
+                  }
+                }
+              },
+              {
+                "label": "Services",
+                "link": {
+                  "type": "internal",
+                  "entryId": {
+                    "$entry": "services"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "title": "Get in touch",
+            "links": [
+              {
+                "label": "Contact",
+                "link": {
+                  "type": "internal",
+                  "entryId": {
+                    "$entry": "contact"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "siteSettings",
+      "contentType": "siteSettings",
+      "slug": "site-settings",
+      "data": {
+        "siteName": "Your business",
+        "organisationName": "Your business Ltd",
+        "contact": {
+          "email": "hello@example.com"
+        }
+      }
+    },
+    {
+      "key": "notFound",
+      "contentType": "notFound",
+      "slug": "not-found",
+      "data": {
+        "title": "Page not found",
+        "body": [
+          {
+            "_block": "richText",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "There is no page at this address. It may have moved, or the link may be mistyped."
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "_block": "cta",
+            "_style": {
+              "tone": "light"
+            },
+            "heading": "Start again from the home page",
+            "action": {
+              "type": "internal",
+              "entryId": {
+                "$entry": "home"
+              },
+              "text": "Go to the home page"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

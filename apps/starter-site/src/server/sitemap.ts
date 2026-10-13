@@ -50,6 +50,6 @@ function lastmod(value: string): string {
   return Number.isNaN(time) ? value : new Date(time).toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
-function escapeXml(value: string): string {
+export function escapeXml(value: string): string {
   return value.replace(/[<>&'"]/g, (char) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[char] ?? char);
 }

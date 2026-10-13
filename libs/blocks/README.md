@@ -1,7 +1,8 @@
 # @novan/blocks
 
-The Novan CMS blocks client sites render: `hero`, `richText`, `image`, `featureGrid` and `cta`
-(docs/build/10-blocks-starter-site.md). Each was made with the `create-angular-cms-component` skill.
+The Novan CMS blocks client sites render: `hero`, `richText`, `image`, `featureGrid`, `cta` and `form`
+(docs/build/10-blocks-starter-site.md, 18), and `listing`, the newest blog posts or projects of the blog and portfolio
+starter kits (docs/build/19-schema-cli-starter-kits.md). Each was made with the `create-angular-cms-component` skill.
 
 ## Use in a site
 
@@ -43,13 +44,16 @@ options with a live preview.
 
 ## Keeping blocks and block types in step
 
-The block types live in the database (seeded by `supabase/seed.sql`). `block-types.spec.ts` reads the seed
-and fails when a component's inputs, field types or style options differ from its block type's, so change
-both together.
+`block-types.json` is every block as a block type: name, icon, preview image, field definitions and style options.
+It ships with the package (`@novan/blocks/block-types.json`), and `novan blocks sync` pushes it to spaces
+(tools/novan-cli). `block-types.spec.ts` fails when a component's inputs, field types or style options differ from
+its entry there, and when `supabase/seed.sql` seeds a block type differently, so change all three together. The
+starter kits copy the entries they use (`kits/*/schema/block-types`), and the CLI's `kits.spec.ts` keeps them equal.
 
 ## Tests
 
 `npx nx test blocks`. jsdom cannot measure colour contrast, so the unit axe checks leave it out; the starter
 site's Playwright tests (`npx nx e2e starter-site-e2e`) run axe in real browsers over the seeded pages, which
-between them show every tone with headings, text, links and buttons. The tones are one shared mixin
+between them show every tone with headings, text, links and buttons. The demo space has no blog, so `listing.spec.ts` adds
+the blog kit's `post` type and the `listing` block for its run and shows the listing in every tone. The tones are one shared mixin
 (`_tones.scss`), so a tone has the same colours in every block.

@@ -40,3 +40,10 @@ export const accountRoute: Route = {
   title: 'Your account | Novan CMS',
   loadComponent: () => import('./account/account-page').then((m) => m.AccountPage),
 };
+
+/** Approving a sign-in from the Novan CLI (`novan login`), shown inside the signed-in layout. */
+export const deviceRoute: Route = {
+  path: 'device',
+  title: 'Sign in to the Novan CLI | Novan CMS',
+  loadComponent: () => import('./device/device-page').then((m) => m.DevicePage),
+};

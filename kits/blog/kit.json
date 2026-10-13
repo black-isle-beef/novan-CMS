@@ -1,0 +1,4 @@
+{
+  "name": "blog",
+  "description": "A brochure site with a blog: posts under /blog, a listing of the latest, and an RSS feed."
+}

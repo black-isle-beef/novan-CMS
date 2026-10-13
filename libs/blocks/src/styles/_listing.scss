@@ -1,0 +1,77 @@
+// _listing.scss — ListingBlock (libs/blocks/src/lib/components/listing). Design-system tokens only: Sass spacing tokens, colour custom properties, rem.
+@use '@black-isle-beef/novan-design-system/styles/tokens' as ds;
+@use 'tones';
+
+@include tones.tones('novan-listing-block');
+@include tones.block-spacing('novan-listing-block');
+
+.novan-listing-block {
+  --novan-listing-block-columns: 3;
+}
+
+.novan-listing-block--columns-two {
+  --novan-listing-block-columns: 2;
+}
+
+.novan-listing-block__inner {
+  display: grid;
+  gap: ds.$ds-spacing-scale-4;
+}
+
+.novan-listing-block__heading {
+  margin: 0;
+}
+
+.novan-listing-block__intro,
+.novan-listing-block__empty {
+  max-inline-size: 60ch;
+  margin: 0;
+}
+
+.novan-listing-block__list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ds.$ds-spacing-scale-6;
+  margin: ds.$ds-spacing-scale-5 0 0;
+  padding: 0;
+  list-style: none;
+
+  @media (min-width: 36rem) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 62rem) {
+    grid-template-columns: repeat(var(--novan-listing-block-columns), 1fr);
+  }
+}
+
+.novan-listing-block__item {
+  display: grid;
+  align-content: start;
+  gap: ds.$ds-spacing-scale-2;
+}
+
+.novan-listing-block__title {
+  margin: 0;
+}
+
+.novan-listing-block__link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+
+  &:hover {
+    text-decoration-thickness: 0.15em;
+  }
+
+  &:focus-visible {
+    outline: 0.125rem solid currentcolor;
+    outline-offset: 0.125rem;
+  }
+}
+
+.novan-listing-block__date,
+.novan-listing-block__summary {
+  margin: 0;
+  color: var(--novan-listing-block-muted);
+}

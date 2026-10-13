@@ -10,3 +10,4 @@ export * from './lib/components/image';
 export * from './lib/components/feature-grid';
 export * from './lib/components/cta';
 export * from './lib/components/form';
+export * from './lib/components/listing';
