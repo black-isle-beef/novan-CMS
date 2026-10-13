@@ -1,0 +1,185 @@
+# Ships one release to one environment (package 20): migrations, then containers, then smoke tests. Called by
+# deploy.yml; never run on its own. The images for `version` must already be in GHCR.
+name: Deploy environment
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: staging or production
+        type: string
+        required: true
+      version:
+        description: Image tag (the commit SHA) to run
+        type: string
+        required: true
+      migrate:
+        description: Run `supabase db push` first. Off for rollbacks, which never touch the database.
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  # The host pulls the images with this run's token.
+  packages: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Production waits here for a reviewer's approval (Settings > Environments > production > Required reviewers).
+    environment:
+      name: ${{ inputs.environment }}
+      url: https://${{ vars.ADMIN_HOST }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      VERSION: ${{ inputs.version }}
+      DEPLOY_DIR: /opt/novan
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.version }}
+
+      # --- Database -------------------------------------------------------------------------------------------------
+      # Migrations are expand-only for a release (docs/ops/deploy.md): the previous containers keep working against the
+      # new schema, so a rollback never needs a database rollback.
+      - name: Supabase CLI version from package-lock.json
+        if: inputs.migrate
+        id: supabase-version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/supabase'].version")" >> "$GITHUB_OUTPUT"
+      - uses: supabase/setup-cli@v3
+        if: inputs.migrate
+        with:
+          version: ${{ steps.supabase-version.outputs.version }}
+      - name: Migrate
+        if: inputs.migrate
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          supabase migration list --password "$SUPABASE_DB_PASSWORD"
+          supabase db push --password "$SUPABASE_DB_PASSWORD"
+
+      # --- Host -----------------------------------------------------------------------------------------------------
+      - name: SSH key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          # Pinned host keys (ssh-keyscan once, by hand): never trust whatever answers on first use.
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf 'Host deploy-host\n  HostName %s\n  User %s\n  IdentityFile ~/.ssh/id_deploy\n  IdentitiesOnly yes\n' \
+            "${{ secrets.DEPLOY_HOST }}" "${{ vars.DEPLOY_USER || 'deploy' }}" > ~/.ssh/config
+
+      # Every value the containers read, from this environment's secrets and variables. Written with a 077 umask and
+      # copied to the host as mode 600; the service-role key goes to api.env only.
+      - name: Environment files
+        env:
+          IMAGE_OWNER: ${{ github.repository_owner }}
+          NOVAN_DOMAIN: ${{ vars.NOVAN_DOMAIN }}
+          API_HOST: ${{ vars.API_HOST }}
+          ADMIN_HOST: ${{ vars.ADMIN_HOST }}
+          STARTER_SITE_HOST: ${{ vars.STARTER_SITE_HOST }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+          SUPABASE_IMAGE_TRANSFORMS: ${{ vars.SUPABASE_IMAGE_TRANSFORMS || 'false' }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_JWT_SECRET: ${{ secrets.SUPABASE_JWT_SECRET }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          PREVIEW_SIGNING_SECRET: ${{ secrets.PREVIEW_SIGNING_SECRET }}
+          MAIL_PROVIDER: ${{ vars.MAIL_PROVIDER || 'log' }}
+          MAIL_FROM: ${{ vars.MAIL_FROM }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          POSTMARK_SERVER_TOKEN: ${{ secrets.POSTMARK_SERVER_TOKEN }}
+          JOBS_ALERT_EMAILS: ${{ vars.JOBS_ALERT_EMAILS }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          STARTER_SITE_DELIVERY_TOKEN: ${{ secrets.STARTER_SITE_DELIVERY_TOKEN }}
+          STARTER_SITE_PREVIEW_TOKEN: ${{ secrets.STARTER_SITE_PREVIEW_TOKEN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_DSN_ADMIN: ${{ vars.SENTRY_DSN_ADMIN }}
+          BETTER_STACK_SOURCE_TOKEN: ${{ secrets.BETTER_STACK_SOURCE_TOKEN }}
+          SENTRY_ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          umask 077
+          mkdir -p out/env
+          line() { printf '%s=%s\n' "$1" "${!1}"; }
+          {
+            echo "IMAGE_OWNER=${IMAGE_OWNER,,}"
+            echo "TAG=$VERSION"
+            for name in NOVAN_DOMAIN API_HOST ADMIN_HOST STARTER_SITE_HOST BETTER_STACK_SOURCE_TOKEN; do line "$name"; done
+          } > out/.env
+          {
+            echo "NODE_ENV=production"
+            echo "PUBLIC_API_URL=https://$API_HOST"
+            echo "ADMIN_URL=https://$ADMIN_HOST"
+            echo "SUPABASE_JWKS_URL=$SUPABASE_URL/auth/v1/.well-known/jwks.json"
+            for name in DATABASE_URL SUPABASE_URL SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY SUPABASE_JWT_SECRET \
+              SUPABASE_IMAGE_TRANSFORMS CLOUDFLARE_ZONE_ID CLOUDFLARE_API_TOKEN PREVIEW_SIGNING_SECRET MAIL_PROVIDER \
+              MAIL_FROM RESEND_API_KEY POSTMARK_SERVER_TOKEN JOBS_ALERT_EMAILS TURNSTILE_SECRET_KEY SENTRY_DSN \
+              SENTRY_ENVIRONMENT; do line "$name"; done
+          } > out/env/api.env
+          {
+            echo "PUBLIC_API_URL=https://$API_HOST"
+            for name in SUPABASE_URL SUPABASE_ANON_KEY SENTRY_DSN_ADMIN SENTRY_ENVIRONMENT; do line "$name"; done
+          } > out/env/admin.env
+          {
+            echo "SITE_URL=https://$STARTER_SITE_HOST"
+            echo "NOVAN_DELIVERY_TOKEN=$STARTER_SITE_DELIVERY_TOKEN"
+            echo "NOVAN_PREVIEW_TOKEN=$STARTER_SITE_PREVIEW_TOKEN"
+            for name in TURNSTILE_SITE_KEY SENTRY_DSN SENTRY_ENVIRONMENT; do line "$name"; done
+          } > out/env/starter-site.env
+          # The admin and the site never see the service-role key.
+          if grep -l SUPABASE_SERVICE_ROLE_KEY out/env/admin.env out/env/starter-site.env; then exit 1; fi
+          cp deploy/compose.yml deploy/Caddyfile deploy/vector.yaml out/
+
+      - name: Ship
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+          LOGS: ${{ secrets.BETTER_STACK_SOURCE_TOKEN != '' }}
+        run: |
+          ssh deploy-host "mkdir -p $DEPLOY_DIR/env $DEPLOY_DIR/certs && chmod 700 $DEPLOY_DIR/env"
+          scp -q out/compose.yml out/Caddyfile out/vector.yaml "deploy-host:$DEPLOY_DIR/"
+          scp -q out/.env "deploy-host:$DEPLOY_DIR/.env"
+          scp -q out/env/*.env "deploy-host:$DEPLOY_DIR/env/"
+          ssh deploy-host "chmod 600 $DEPLOY_DIR/.env $DEPLOY_DIR/env/*.env"
+          # The run's token can read this repository's packages for as long as the job runs; the host logs out after.
+          printf '%s' "$GHCR_TOKEN" | ssh deploy-host "docker login ghcr.io -u '${{ github.actor }}' --password-stdin >/dev/null"
+          ssh deploy-host "cd $DEPLOY_DIR && docker compose pull --quiet; status=\$?; docker logout ghcr.io >/dev/null; exit \$status"
+          ssh deploy-host "cd $DEPLOY_DIR && docker compose up -d --remove-orphans && docker compose ps"
+          # Log shipping runs when Better Stack is set up.
+          if [ "$LOGS" = true ]; then ssh deploy-host "cd $DEPLOY_DIR && docker compose --profile logs up -d vector"; fi
+          ssh deploy-host "docker image prune -af --filter until=168h >/dev/null"
+
+      - name: Smoke tests
+        run: |
+          bash deploy/smoke.sh "$VERSION" "https://${{ vars.API_HOST }}" "https://${{ vars.ADMIN_HOST }}" \
+            "https://${{ vars.STARTER_SITE_HOST }}"
+
+      # The admin's page and config.js are no-cache, but purge anyway so Cloudflare holds nothing from the last release.
+      - name: Purge Cloudflare cache for the admin
+        env:
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_ZONE_ID" ]; then echo "No Cloudflare zone: skipped."; exit 0; fi
+          curl -fsS -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/purge_cache" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' \
+            --data "{\"hosts\":[\"${{ vars.ADMIN_HOST }}\"]}" | jq -e '.success'
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### ${{ inputs.environment }}: ${{ job.status }}"
+            echo "Version \`$VERSION\`, migrations: ${{ inputs.migrate }}."
+            echo "Rollback: run the Deploy workflow with environment ${{ inputs.environment }} and the previous version (docs/ops/rollback.md)."
+          } >> "$GITHUB_STEP_SUMMARY"

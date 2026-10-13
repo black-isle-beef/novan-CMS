@@ -1,0 +1,100 @@
+# Novan on one host (package 20): Caddy in front, the API, its worker, the admin and the client sites behind it on an
+# internal network. Only Caddy publishes ports. The deploy workflow (.github/workflows/deploy.yml) copies this folder to
+# the host, writes .env and env/*.env (mode 600) and runs `docker compose pull && docker compose up -d`.
+#
+# Rollback: TAG=<previous sha> docker compose up -d (docs/ops/rollback.md).
+
+name: novan
+
+x-app: &app
+  restart: unless-stopped
+  networks: [internal]
+  read_only: true
+  tmpfs: [/tmp]
+  security_opt: [no-new-privileges:true]
+  # One JSON object a line, rotated; the `logs` profile ships them (vector.yaml).
+  logging:
+    driver: json-file
+    options: { max-size: 20m, max-file: '5', tag: '{{.Name}}' }
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ['80:80', '443:443', '443:443/udp']
+    networks: [internal]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Cloudflare origin certificates (docs/ops/add-client-domain.md); never committed.
+      - ./certs:/etc/caddy/certs:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    env_file: [.env]
+    depends_on:
+      api: { condition: service_healthy }
+      admin: { condition: service_healthy }
+    logging:
+      driver: json-file
+      options: { max-size: 20m, max-file: '5', tag: '{{.Name}}' }
+
+  api:
+    <<: *app
+    image: ghcr.io/${IMAGE_OWNER}/novan-api:${TAG}
+    env_file: [env/api.env]
+    environment:
+      APP_VERSION: ${TAG}
+      # Cloudflare, then Caddy.
+      TRUST_PROXY: '2'
+
+  worker:
+    <<: *app
+    image: ghcr.io/${IMAGE_OWNER}/novan-api:${TAG}
+    command: ['node', '--enable-source-maps', 'main.js', '--worker']
+    env_file: [env/api.env]
+    environment:
+      APP_VERSION: ${TAG}
+    # No HTTP server: the image's /health check does not apply.
+    healthcheck: { disable: true }
+    # Finishes the jobs in hand before stopping (JobWorker.stop).
+    stop_grace_period: 2m
+
+  admin:
+    <<: *app
+    image: ghcr.io/${IMAGE_OWNER}/novan-admin:${TAG}
+    env_file: [env/admin.env]
+    environment:
+      APP_VERSION: ${TAG}
+    # Writes config.js at start.
+    read_only: false
+
+  # The starter site. Each client site is a service like this one with its own image, env file and host block in the
+  # Caddyfile (docs/ops/add-client-domain.md).
+  starter-site:
+    <<: *app
+    image: ghcr.io/${IMAGE_OWNER}/novan-starter-site:${TAG}
+    env_file: [env/starter-site.env]
+    environment:
+      APP_VERSION: ${TAG}
+      TRUST_PROXY: '2'
+      # The API over the internal network: no TLS, Cloudflare or Caddy in between.
+      NOVAN_API_URL: http://api:3000
+    depends_on:
+      api: { condition: service_healthy }
+
+  # Ships every container's logs to Better Stack: `docker compose --profile logs up -d` (docs/ops/deploy.md).
+  vector:
+    image: timberio/vector:0.59.0-alpine
+    profiles: [logs]
+    restart: unless-stopped
+    volumes:
+      - ./vector.yaml:/etc/vector/vector.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    env_file: [.env]
+    command: ['--config', '/etc/vector/vector.yaml']
+
+networks:
+  internal: {}
+
+volumes:
+  caddy_data: {}
+  caddy_config: {}
