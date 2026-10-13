@@ -1,0 +1,75 @@
+# Nightly off-site backup of the production database (package 20, docs/ops/restore.md): roles, schema and data dumped
+# with the Supabase CLI, uploaded to Cloudflare R2, and anything older than 30 days deleted. Supabase's own daily
+# backups stay the first line; this one survives losing the Supabase project or account.
+name: Backup
+
+on:
+  schedule:
+    # 02:30 UTC, after the day's editing.
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+    env:
+      # Session pooler URL (IPv4: GitHub runners have no IPv6 for the direct host).
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+      R2_BUCKET: ${{ vars.R2_BACKUP_BUCKET }}
+      RETENTION_DAYS: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Supabase CLI version from package-lock.json
+        id: supabase-version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/supabase'].version")" >> "$GITHUB_OUTPUT"
+      - uses: supabase/setup-cli@v3
+        with:
+          version: ${{ steps.supabase-version.outputs.version }}
+
+      - name: Dump
+        run: |
+          umask 077
+          mkdir -p backup
+          supabase db dump --db-url "$DATABASE_URL" --role-only -f backup/roles.sql
+          supabase db dump --db-url "$DATABASE_URL" -f backup/schema.sql
+          supabase db dump --db-url "$DATABASE_URL" --data-only --use-copy -f backup/data.sql
+          name="novan-prod-$(date -u +%Y-%m-%dT%H%MZ).tar.gz"
+          tar -czf "$name" -C backup roles.sql schema.sql data.sql
+          sha256sum "$name" > "$name.sha256"
+          echo "NAME=$name" >> "$GITHUB_ENV"
+          ls -l "$name"
+
+      - name: Upload to R2
+        run: |
+          aws s3 cp --endpoint-url "$R2_ENDPOINT" --only-show-errors "$NAME" "s3://$R2_BUCKET/postgres/$NAME"
+          aws s3 cp --endpoint-url "$R2_ENDPOINT" --only-show-errors "$NAME.sha256" "s3://$R2_BUCKET/postgres/$NAME.sha256"
+          echo "Uploaded postgres/$NAME ($(du -h "$NAME" | cut -f1))." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Delete backups older than ${{ env.RETENTION_DAYS }} days
+        run: |
+          cutoff="$(date -u -d "-$RETENTION_DAYS days" +%Y-%m-%dT%H:%M:%S)"
+          aws s3api list-objects-v2 --endpoint-url "$R2_ENDPOINT" --bucket "$R2_BUCKET" --prefix postgres/ \
+            --query "Contents[?LastModified<'$cutoff'].Key" --output text |
+            tr '\t' '\n' | grep -v -e '^None$' -e '^$' | while read -r key; do
+              echo "Deleting $key"
+              aws s3 rm --endpoint-url "$R2_ENDPOINT" --only-show-errors "s3://$R2_BUCKET/$key"
+            done
+
+      # A heartbeat monitor (Better Stack) alerts when a night passes without this ping.
+      - name: Heartbeat
+        env:
+          HEARTBEAT_URL: ${{ secrets.BACKUP_HEARTBEAT_URL }}
+        run: if [ -n "$HEARTBEAT_URL" ]; then curl -fsS --retry 3 "$HEARTBEAT_URL" > /dev/null; fi

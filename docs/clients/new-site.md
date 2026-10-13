@@ -90,7 +90,7 @@ In the admin, under the space's **Settings**: set the site address (it opens pag
 
 ## 6. Deploy
 
-Follow `docs/build/20-deployment.md`: add the site's container and host block, point the client's DNS at Cloudflare, and deploy. Check `/health`, the home page, `/sitemap.xml`, and for the blog kit `/rss.xml`.
+Follow `docs/ops/add-client-domain.md`: add the site's image, container and host block, point the client's DNS at Cloudflare, and deploy. Check `/health`, the home page, `/sitemap.xml`, and for the blog kit `/rss.xml`.
 
 ## 7. Hand over
 

@@ -1,0 +1,73 @@
+# Monthly restore drill (package 20, docs/ops/restore.md): the newest production backup is restored into an empty
+# Supabase database started on the runner, then the pgTAP tests run against it. A failure means last night's backup
+# could not be restored: treat it as an incident.
+name: Restore drill
+
+on:
+  schedule:
+    # 06:00 UTC on the 1st.
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+    inputs:
+      key:
+        description: Backup to restore (e.g. postgres/novan-prod-2026-10-13T0230Z.tar.gz); empty for the newest
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # Reads the production backup bucket only; never connects to production itself.
+    environment: production
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+      R2_BUCKET: ${{ vars.R2_BACKUP_BUCKET }}
+      KEY: ${{ inputs.key }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # The migrations and pgTAP tests production runs: those of the newest release tag (main's before the first one).
+      - name: Supabase folder of the live release
+        run: |
+          ref="$(git tag --list 'v*' --sort=-v:refname | head -n 1)"
+          # Removed first, so migrations added after the release go too.
+          if [ -n "$ref" ]; then rm -rf supabase && git checkout -q "$ref" -- supabase; fi
+          echo "Migrations and tests from ${ref:-main}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Supabase CLI version from package-lock.json
+        id: supabase-version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/supabase'].version")" >> "$GITHUB_OUTPUT"
+      - uses: supabase/setup-cli@v3
+        with:
+          version: ${{ steps.supabase-version.outputs.version }}
+
+      - name: Download the backup
+        run: |
+          if [ -z "$KEY" ]; then
+            KEY="$(aws s3api list-objects-v2 --endpoint-url "$R2_ENDPOINT" --bucket "$R2_BUCKET" --prefix postgres/ \
+              --query 'sort_by(Contents[?ends_with(Key, `.tar.gz`)], &LastModified)[-1].Key' --output text)"
+          fi
+          echo "Restoring $KEY" | tee -a "$GITHUB_STEP_SUMMARY"
+          mkdir -p "$RUNNER_TEMP/drill"
+          aws s3 cp --endpoint-url "$R2_ENDPOINT" --only-show-errors "s3://$R2_BUCKET/$KEY" "$RUNNER_TEMP/drill/backup.tar.gz"
+          aws s3 cp --endpoint-url "$R2_ENDPOINT" --only-show-errors "s3://$R2_BUCKET/$KEY.sha256" "$RUNNER_TEMP/drill/sha256" || true
+          if [ -s "$RUNNER_TEMP/drill/sha256" ]; then
+            (cd "$RUNNER_TEMP/drill" && sed "s/ .*/  backup.tar.gz/" sha256 > backup.tar.gz.sha256)
+          fi
+
+      # The schema from the migrations, as every deploy applies it; the backup brings only the data.
+      - name: Start Supabase with the migrations and no seed
+        run: |
+          supabase start -x realtime,imgproxy,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+          supabase db reset --no-seed
+
+      # As the local superuser: the backup has rows for the auth and storage schemas too.
+      - name: Restore and test
+        run: bash deploy/restore-drill.sh "$RUNNER_TEMP/drill/backup.tar.gz" 'postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres?sslmode=disable'
