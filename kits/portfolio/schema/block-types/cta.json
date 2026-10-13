@@ -1,0 +1,96 @@
+{
+  "apiId": "cta",
+  "name": "Call to action",
+  "icon": "megaphone",
+  "previewImagePath": null,
+  "fields": [
+    {
+      "id": "heading",
+      "apiId": "heading",
+      "label": "Heading",
+      "required": true,
+      "localised": true,
+      "type": "text",
+      "multiline": false,
+      "max": 120
+    },
+    {
+      "id": "text",
+      "apiId": "text",
+      "label": "Text",
+      "required": false,
+      "localised": true,
+      "type": "text",
+      "multiline": true,
+      "max": 300
+    },
+    {
+      "id": "action",
+      "apiId": "action",
+      "label": "Button",
+      "required": true,
+      "localised": true,
+      "type": "link",
+      "allowExternal": true,
+      "allowEmail": true
+    }
+  ],
+  "allowedChildren": [],
+  "styleOptions": {
+    "tone": {
+      "kind": "radio",
+      "label": "Tone",
+      "hint": "Background and text colours.",
+      "options": [
+        {
+          "value": "light",
+          "label": "Light"
+        },
+        {
+          "value": "brand",
+          "label": "Brand"
+        },
+        {
+          "value": "dark",
+          "label": "Dark"
+        }
+      ],
+      "default": "brand"
+    },
+    "alignment": {
+      "kind": "radio",
+      "label": "Alignment",
+      "options": [
+        {
+          "value": "start",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Centre"
+        }
+      ],
+      "default": "center"
+    },
+    "headingLevel": {
+      "kind": "select",
+      "label": "Heading level",
+      "hint": "Keep headings in order on the page.",
+      "options": [
+        {
+          "value": "h2",
+          "label": "H2"
+        },
+        {
+          "value": "h3",
+          "label": "H3"
+        },
+        {
+          "value": "h4",
+          "label": "H4"
+        }
+      ],
+      "default": "h2"
+    }
+  }
+}

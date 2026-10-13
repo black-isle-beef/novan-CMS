@@ -1,0 +1,66 @@
+{
+  "apiId": "richText",
+  "name": "Rich text",
+  "icon": "text-paragraph",
+  "previewImagePath": null,
+  "fields": [
+    {
+      "id": "body",
+      "apiId": "body",
+      "label": "Text",
+      "required": true,
+      "localised": true,
+      "type": "richText",
+      "marks": [
+        "bold",
+        "italic",
+        "underline",
+        "link"
+      ],
+      "nodes": [
+        "heading",
+        "bulletList",
+        "orderedList",
+        "blockquote"
+      ]
+    }
+  ],
+  "allowedChildren": [],
+  "styleOptions": {
+    "tone": {
+      "kind": "radio",
+      "label": "Tone",
+      "hint": "Background and text colours.",
+      "options": [
+        {
+          "value": "light",
+          "label": "Light"
+        },
+        {
+          "value": "brand",
+          "label": "Brand"
+        },
+        {
+          "value": "dark",
+          "label": "Dark"
+        }
+      ],
+      "default": "light"
+    },
+    "width": {
+      "kind": "radio",
+      "label": "Width",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "Narrow"
+        },
+        {
+          "value": "wide",
+          "label": "Wide"
+        }
+      ],
+      "default": "narrow"
+    }
+  }
+}

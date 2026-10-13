@@ -45,7 +45,8 @@
       "@novan/admin-settings": ["./libs/admin/settings/src/index.ts"],
       "@novan/admin-shell": ["./libs/admin/shell/src/index.ts"],
       "@novan/admin-spaces": ["./libs/admin/spaces/src/index.ts"],
-      "@novan/api-delivery": ["./libs/api/delivery/src/index.ts"]
+      "@novan/api-delivery": ["./libs/api/delivery/src/index.ts"],
+      "@novan/api-device-auth": ["./libs/api/device-auth/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

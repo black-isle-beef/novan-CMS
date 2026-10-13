@@ -1,0 +1,118 @@
+{
+  "apiId": "listing",
+  "name": "Listing",
+  "icon": "card-list",
+  "previewImagePath": null,
+  "allowedChildren": [],
+  "fields": [
+    {
+      "id": "heading",
+      "apiId": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": false,
+      "localised": true,
+      "multiline": false,
+      "max": 120
+    },
+    {
+      "id": "intro",
+      "apiId": "intro",
+      "label": "Introduction",
+      "type": "text",
+      "required": false,
+      "localised": true,
+      "multiline": true,
+      "max": 300
+    },
+    {
+      "id": "source",
+      "apiId": "source",
+      "label": "Show",
+      "help": "The newest of these, newest first.",
+      "type": "select",
+      "required": true,
+      "localised": false,
+      "multiple": false,
+      "options": [
+        {
+          "value": "post",
+          "label": "Blog posts"
+        },
+        {
+          "value": "project",
+          "label": "Projects"
+        }
+      ]
+    },
+    {
+      "id": "limit",
+      "apiId": "limit",
+      "label": "How many",
+      "help": "From 1 to 12. Leave empty for 6.",
+      "type": "number",
+      "required": false,
+      "localised": false,
+      "min": 1,
+      "max": 12,
+      "integer": true
+    }
+  ],
+  "styleOptions": {
+    "columns": {
+      "kind": "radio",
+      "label": "Columns",
+      "default": "three",
+      "options": [
+        {
+          "value": "two",
+          "label": "2"
+        },
+        {
+          "value": "three",
+          "label": "3"
+        }
+      ]
+    },
+    "tone": {
+      "kind": "radio",
+      "label": "Tone",
+      "hint": "Background and text colours.",
+      "default": "light",
+      "options": [
+        {
+          "value": "light",
+          "label": "Light"
+        },
+        {
+          "value": "brand",
+          "label": "Brand"
+        },
+        {
+          "value": "dark",
+          "label": "Dark"
+        }
+      ]
+    },
+    "headingLevel": {
+      "kind": "select",
+      "label": "Heading level",
+      "hint": "Keep headings in order on the page.",
+      "default": "h2",
+      "options": [
+        {
+          "value": "h2",
+          "label": "H2"
+        },
+        {
+          "value": "h3",
+          "label": "H3"
+        },
+        {
+          "value": "h4",
+          "label": "H4"
+        }
+      ]
+    }
+  }
+}

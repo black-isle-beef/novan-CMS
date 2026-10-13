@@ -1,0 +1,124 @@
+{
+  "apiId": "hero",
+  "name": "Hero",
+  "icon": "window-fullscreen",
+  "previewImagePath": null,
+  "fields": [
+    {
+      "id": "heading",
+      "apiId": "heading",
+      "label": "Heading",
+      "required": true,
+      "localised": true,
+      "type": "text",
+      "multiline": false,
+      "max": 120
+    },
+    {
+      "id": "subheading",
+      "apiId": "subheading",
+      "label": "Subheading",
+      "required": false,
+      "localised": true,
+      "type": "text",
+      "multiline": true,
+      "max": 300
+    },
+    {
+      "id": "image",
+      "apiId": "image",
+      "label": "Background image",
+      "required": false,
+      "localised": false,
+      "type": "media",
+      "accept": [
+        "image"
+      ],
+      "multiple": false,
+      "requireAlt": true
+    },
+    {
+      "id": "action",
+      "apiId": "action",
+      "label": "Button",
+      "required": false,
+      "localised": true,
+      "type": "link",
+      "allowExternal": true,
+      "allowEmail": false
+    }
+  ],
+  "allowedChildren": [],
+  "styleOptions": {
+    "tone": {
+      "kind": "radio",
+      "label": "Tone",
+      "hint": "Background and text colours.",
+      "options": [
+        {
+          "value": "light",
+          "label": "Light"
+        },
+        {
+          "value": "brand",
+          "label": "Brand"
+        },
+        {
+          "value": "dark",
+          "label": "Dark"
+        }
+      ],
+      "default": "brand"
+    },
+    "height": {
+      "kind": "select",
+      "label": "Height",
+      "options": [
+        {
+          "value": "compact",
+          "label": "Compact"
+        },
+        {
+          "value": "standard",
+          "label": "Standard"
+        },
+        {
+          "value": "tall",
+          "label": "Tall"
+        }
+      ],
+      "default": "standard"
+    },
+    "alignment": {
+      "kind": "radio",
+      "label": "Alignment",
+      "options": [
+        {
+          "value": "start",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Centre"
+        }
+      ],
+      "default": "start"
+    },
+    "headingLevel": {
+      "kind": "select",
+      "label": "Heading level",
+      "hint": "Use H1 only for the first block on a page.",
+      "options": [
+        {
+          "value": "h1",
+          "label": "H1"
+        },
+        {
+          "value": "h2",
+          "label": "H2"
+        }
+      ],
+      "default": "h1"
+    }
+  }
+}

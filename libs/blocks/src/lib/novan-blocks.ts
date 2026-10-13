@@ -5,6 +5,7 @@ import { FeatureGridBlock } from './components/feature-grid';
 import { FormBlock } from './components/form';
 import { HeroBlock } from './components/hero';
 import { ImageBlock } from './components/image';
+import { ListingBlock } from './components/listing';
 import { RichTextBlock } from './components/rich-text';
 
 /**
@@ -19,4 +20,5 @@ export const novanBlocks = defineBlocks({
   featureGrid: FeatureGridBlock,
   cta: CtaBlock,
   form: FormBlock,
+  listing: ListingBlock,
 });

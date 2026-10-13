@@ -25,7 +25,7 @@ const browsers = (process.env['E2E_BROWSERS'] || Object.keys(allBrowsers).join('
   });
 
 /** Journeys that publish seeded content: once, in chromium, after the read-only tests (below). */
-const publishing = /(gate-1|seo-publish|forms)\.spec\.ts/;
+const publishing = /(gate-1|seo-publish|forms|listing)\.spec\.ts/;
 
 /**
  * Read environment variables from file.
@@ -100,6 +100,15 @@ export default defineConfig({
             use: { ...devices['Desktop Chrome'] },
             testMatch: /forms\.spec\.ts/,
             dependencies: [...browsers, 'seo-publish'],
+          },
+
+          // The blog kit's listing block and feed (package 19) add a content type and a block type for a while, so they
+          // run last.
+          {
+            name: 'kits',
+            use: { ...devices['Desktop Chrome'] },
+            testMatch: /listing\.spec\.ts/,
+            dependencies: [...browsers, 'gate-1', 'seo-publish', 'forms'],
           },
         ]
       : []),

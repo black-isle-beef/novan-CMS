@@ -1,0 +1,817 @@
+{
+  "$comment": "Every block in @novan/blocks as a block type. `novan blocks sync` pushes these to a space; block-types.spec.ts keeps them equal to the components and to supabase/seed.sql.",
+  "blockTypes": [
+    {
+      "apiId": "hero",
+      "name": "Hero",
+      "icon": "window-fullscreen",
+      "previewImagePath": null,
+      "allowedChildren": [],
+      "fields": [
+        {
+          "id": "heading",
+          "apiId": "heading",
+          "label": "Heading",
+          "type": "text",
+          "required": true,
+          "localised": true,
+          "multiline": false,
+          "max": 120
+        },
+        {
+          "id": "subheading",
+          "apiId": "subheading",
+          "label": "Subheading",
+          "type": "text",
+          "required": false,
+          "localised": true,
+          "multiline": true,
+          "max": 300
+        },
+        {
+          "id": "image",
+          "apiId": "image",
+          "label": "Background image",
+          "type": "media",
+          "required": false,
+          "localised": false,
+          "accept": ["image"],
+          "multiple": false,
+          "requireAlt": true
+        },
+        {
+          "id": "action",
+          "apiId": "action",
+          "label": "Button",
+          "type": "link",
+          "required": false,
+          "localised": true,
+          "allowExternal": true,
+          "allowEmail": false
+        }
+      ],
+      "styleOptions": {
+        "tone": {
+          "kind": "radio",
+          "label": "Tone",
+          "hint": "Background and text colours.",
+          "default": "brand",
+          "options": [
+            {
+              "value": "light",
+              "label": "Light"
+            },
+            {
+              "value": "brand",
+              "label": "Brand"
+            },
+            {
+              "value": "dark",
+              "label": "Dark"
+            }
+          ]
+        },
+        "alignment": {
+          "kind": "radio",
+          "label": "Alignment",
+          "default": "start",
+          "options": [
+            {
+              "value": "start",
+              "label": "Left"
+            },
+            {
+              "value": "center",
+              "label": "Centre"
+            }
+          ]
+        },
+        "height": {
+          "kind": "select",
+          "label": "Height",
+          "default": "standard",
+          "options": [
+            {
+              "value": "compact",
+              "label": "Compact"
+            },
+            {
+              "value": "standard",
+              "label": "Standard"
+            },
+            {
+              "value": "tall",
+              "label": "Tall"
+            }
+          ]
+        },
+        "headingLevel": {
+          "kind": "select",
+          "label": "Heading level",
+          "hint": "Use H1 only for the first block on a page.",
+          "default": "h1",
+          "options": [
+            {
+              "value": "h1",
+              "label": "H1"
+            },
+            {
+              "value": "h2",
+              "label": "H2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "apiId": "richText",
+      "name": "Rich text",
+      "icon": "text-paragraph",
+      "previewImagePath": null,
+      "allowedChildren": [],
+      "fields": [
+        {
+          "id": "body",
+          "apiId": "body",
+          "label": "Text",
+          "type": "richText",
+          "required": true,
+          "localised": true,
+          "marks": ["bold", "italic", "underline", "link"],
+          "nodes": ["heading", "bulletList", "orderedList", "blockquote"]
+        }
+      ],
+      "styleOptions": {
+        "width": {
+          "kind": "radio",
+          "label": "Width",
+          "default": "narrow",
+          "options": [
+            {
+              "value": "narrow",
+              "label": "Narrow"
+            },
+            {
+              "value": "wide",
+              "label": "Wide"
+            }
+          ]
+        },
+        "tone": {
+          "kind": "radio",
+          "label": "Tone",
+          "hint": "Background and text colours.",
+          "default": "light",
+          "options": [
+            {
+              "value": "light",
+              "label": "Light"
+            },
+            {
+              "value": "brand",
+              "label": "Brand"
+            },
+            {
+              "value": "dark",
+              "label": "Dark"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "apiId": "image",
+      "name": "Image",
+      "icon": "image",
+      "previewImagePath": null,
+      "allowedChildren": [],
+      "fields": [
+        {
+          "id": "image",
+          "apiId": "image",
+          "label": "Image",
+          "type": "media",
+          "required": true,
+          "localised": false,
+          "accept": ["image"],
+          "multiple": false,
+          "requireAlt": true
+        },
+        {
+          "id": "caption",
+          "apiId": "caption",
+          "label": "Caption",
+          "type": "text",
+          "required": false,
+          "localised": true,
+          "multiline": false,
+          "max": 200
+        }
+      ],
+      "styleOptions": {
+        "width": {
+          "kind": "select",
+          "label": "Width",
+          "default": "wide",
+          "options": [
+            {
+              "value": "narrow",
+              "label": "Narrow"
+            },
+            {
+              "value": "wide",
+              "label": "Wide"
+            },
+            {
+              "value": "full",
+              "label": "Full width"
+            }
+          ]
+        },
+        "rounded": {
+          "kind": "toggle",
+          "label": "Rounded corners",
+          "default": false
+        }
+      }
+    },
+    {
+      "apiId": "featureGrid",
+      "name": "Feature grid",
+      "icon": "grid-3x3-gap",
+      "previewImagePath": null,
+      "allowedChildren": [],
+      "fields": [
+        {
+          "id": "heading",
+          "apiId": "heading",
+          "label": "Heading",
+          "type": "text",
+          "required": false,
+          "localised": true,
+          "multiline": false,
+          "max": 120
+        },
+        {
+          "id": "intro",
+          "apiId": "intro",
+          "label": "Introduction",
+          "type": "text",
+          "required": false,
+          "localised": true,
+          "multiline": true,
+          "max": 300
+        },
+        {
+          "id": "features",
+          "apiId": "features",
+          "label": "Features",
+          "type": "group",
+          "required": true,
+          "localised": false,
+          "multiple": true,
+          "min": 1,
+          "max": 12,
+          "fields": [
+            {
+              "id": "icon",
+              "apiId": "icon",
+              "label": "Icon",
+              "type": "select",
+              "required": false,
+              "localised": false,
+              "multiple": false,
+              "options": [
+                {
+                  "value": "check-circle",
+                  "label": "Tick"
+                },
+                {
+                  "value": "star",
+                  "label": "Star"
+                },
+                {
+                  "value": "lightning",
+                  "label": "Lightning"
+                },
+                {
+                  "value": "shield-check",
+                  "label": "Shield"
+                },
+                {
+                  "value": "heart",
+                  "label": "Heart"
+                },
+                {
+                  "value": "chat-dots",
+                  "label": "Speech bubble"
+                }
+              ]
+            },
+            {
+              "id": "title",
+              "apiId": "title",
+              "label": "Title",
+              "type": "text",
+              "required": true,
+              "localised": true,
+              "multiline": false,
+              "max": 80
+            },
+            {
+              "id": "text",
+              "apiId": "text",
+              "label": "Text",
+              "type": "text",
+              "required": false,
+              "localised": true,
+              "multiline": true,
+              "max": 240
+            }
+          ]
+        }
+      ],
+      "styleOptions": {
+        "columns": {
+          "kind": "radio",
+          "label": "Columns",
+          "default": "three",
+          "options": [
+            {
+              "value": "two",
+              "label": "2"
+            },
+            {
+              "value": "three",
+              "label": "3"
+            },
+            {
+              "value": "four",
+              "label": "4"
+            }
+          ]
+        },
+        "tone": {
+          "kind": "radio",
+          "label": "Tone",
+          "hint": "Background and text colours.",
+          "default": "light",
+          "options": [
+            {
+              "value": "light",
+              "label": "Light"
+            },
+            {
+              "value": "brand",
+              "label": "Brand"
+            },
+            {
+              "value": "dark",
+              "label": "Dark"
+            }
+          ]
+        },
+        "headingLevel": {
+          "kind": "select",
+          "label": "Heading level",
+          "hint": "Keep headings in order on the page.",
+          "default": "h2",
+          "options": [
+            {
+              "value": "h2",
+              "label": "H2"
+            },
+            {
+              "value": "h3",
+              "label": "H3"
+            },
+            {
+              "value": "h4",
+              "label": "H4"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "apiId": "cta",
+      "name": "Call to action",
+      "icon": "megaphone",
+      "previewImagePath": null,
+      "allowedChildren": [],
+      "fields": [
+        {
+          "id": "heading",
+          "apiId": "heading",
+          "label": "Heading",
+          "type": "text",
+          "required": true,
+          "localised": true,
+          "multiline": false,
+          "max": 120
+        },
+        {
+          "id": "text",
+          "apiId": "text",
+          "label": "Text",
+          "type": "text",
+          "required": false,
+          "localised": true,
+          "multiline": true,
+          "max": 300
+        },
+        {
+          "id": "action",
+          "apiId": "action",
+          "label": "Button",
+          "type": "link",
+          "required": true,
+          "localised": true,
+          "allowExternal": true,
+          "allowEmail": true
+        }
+      ],
+      "styleOptions": {
+        "tone": {
+          "kind": "radio",
+          "label": "Tone",
+          "hint": "Background and text colours.",
+          "default": "brand",
+          "options": [
+            {
+              "value": "light",
+              "label": "Light"
+            },
+            {
+              "value": "brand",
+              "label": "Brand"
+            },
+            {
+              "value": "dark",
+              "label": "Dark"
+            }
+          ]
+        },
+        "alignment": {
+          "kind": "radio",
+          "label": "Alignment",
+          "default": "center",
+          "options": [
+            {
+              "value": "start",
+              "label": "Left"
+            },
+            {
+              "value": "center",
+              "label": "Centre"
+            }
+          ]
+        },
+        "headingLevel": {
+          "kind": "select",
+          "label": "Heading level",
+          "hint": "Keep headings in order on the page.",
+          "default": "h2",
+          "options": [
+            {
+              "value": "h2",
+              "label": "H2"
+            },
+            {
+              "value": "h3",
+              "label": "H3"
+            },
+            {
+              "value": "h4",
+              "label": "H4"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "apiId": "form",
+      "name": "Form",
+      "icon": "ui-checks",
+      "previewImagePath": null,
+      "allowedChildren": [],
+      "fields": [
+        {
+          "id": "heading",
+          "apiId": "heading",
+          "label": "Heading",
+          "type": "text",
+          "required": false,
+          "localised": true,
+          "multiline": false,
+          "max": 120
+        },
+        {
+          "id": "intro",
+          "apiId": "intro",
+          "label": "Introduction",
+          "type": "text",
+          "required": false,
+          "localised": true,
+          "multiline": true,
+          "max": 300
+        },
+        {
+          "id": "fields",
+          "apiId": "fields",
+          "label": "Fields",
+          "type": "group",
+          "required": true,
+          "localised": false,
+          "multiple": true,
+          "min": 1,
+          "max": 20,
+          "fields": [
+            {
+              "id": "label",
+              "apiId": "label",
+              "label": "Label",
+              "type": "text",
+              "required": true,
+              "localised": true,
+              "multiline": false,
+              "max": 200
+            },
+            {
+              "id": "name",
+              "apiId": "name",
+              "label": "Name in the inbox",
+              "help": "A short name for this answer in the inbox and the export, like email or message.",
+              "type": "text",
+              "required": true,
+              "localised": false,
+              "multiline": false,
+              "max": 40,
+              "pattern": "[a-z0-9]+(-[a-z0-9]+)*"
+            },
+            {
+              "id": "type",
+              "apiId": "type",
+              "label": "Type",
+              "type": "select",
+              "required": true,
+              "localised": false,
+              "multiple": false,
+              "options": [
+                {
+                  "value": "text",
+                  "label": "Short text"
+                },
+                {
+                  "value": "email",
+                  "label": "Email address"
+                },
+                {
+                  "value": "textarea",
+                  "label": "Long text"
+                },
+                {
+                  "value": "select",
+                  "label": "Choice from a list"
+                },
+                {
+                  "value": "checkbox",
+                  "label": "Tick box"
+                },
+                {
+                  "value": "consent",
+                  "label": "Consent"
+                }
+              ]
+            },
+            {
+              "id": "required",
+              "apiId": "required",
+              "label": "Must be filled in",
+              "type": "boolean",
+              "required": false,
+              "localised": false,
+              "default": false
+            },
+            {
+              "id": "help",
+              "apiId": "help",
+              "label": "Hint",
+              "type": "text",
+              "required": false,
+              "localised": true,
+              "multiline": false,
+              "max": 200
+            },
+            {
+              "id": "options",
+              "apiId": "options",
+              "label": "Choices",
+              "help": "For a choice from a list: one choice per line.",
+              "type": "text",
+              "required": false,
+              "localised": true,
+              "multiline": true,
+              "max": 2000
+            }
+          ]
+        },
+        {
+          "id": "submitLabel",
+          "apiId": "submitLabel",
+          "label": "Button text",
+          "type": "text",
+          "required": true,
+          "localised": true,
+          "multiline": false,
+          "max": 60
+        },
+        {
+          "id": "successMessage",
+          "apiId": "successMessage",
+          "label": "Thank-you message",
+          "type": "text",
+          "required": true,
+          "localised": true,
+          "multiline": true,
+          "max": 500
+        }
+      ],
+      "styleOptions": {
+        "tone": {
+          "kind": "radio",
+          "label": "Tone",
+          "hint": "Background and text colours.",
+          "default": "light",
+          "options": [
+            {
+              "value": "light",
+              "label": "Light"
+            },
+            {
+              "value": "brand",
+              "label": "Brand"
+            },
+            {
+              "value": "dark",
+              "label": "Dark"
+            }
+          ]
+        },
+        "width": {
+          "kind": "radio",
+          "label": "Width",
+          "default": "narrow",
+          "options": [
+            {
+              "value": "narrow",
+              "label": "Narrow"
+            },
+            {
+              "value": "wide",
+              "label": "Wide"
+            }
+          ]
+        },
+        "headingLevel": {
+          "kind": "select",
+          "label": "Heading level",
+          "hint": "Keep headings in order on the page.",
+          "default": "h2",
+          "options": [
+            {
+              "value": "h2",
+              "label": "H2"
+            },
+            {
+              "value": "h3",
+              "label": "H3"
+            },
+            {
+              "value": "h4",
+              "label": "H4"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "apiId": "listing",
+      "name": "Listing",
+      "icon": "card-list",
+      "previewImagePath": null,
+      "allowedChildren": [],
+      "fields": [
+        {
+          "id": "heading",
+          "apiId": "heading",
+          "label": "Heading",
+          "type": "text",
+          "required": false,
+          "localised": true,
+          "multiline": false,
+          "max": 120
+        },
+        {
+          "id": "intro",
+          "apiId": "intro",
+          "label": "Introduction",
+          "type": "text",
+          "required": false,
+          "localised": true,
+          "multiline": true,
+          "max": 300
+        },
+        {
+          "id": "source",
+          "apiId": "source",
+          "label": "Show",
+          "help": "The newest of these, newest first.",
+          "type": "select",
+          "required": true,
+          "localised": false,
+          "multiple": false,
+          "options": [
+            {
+              "value": "post",
+              "label": "Blog posts"
+            },
+            {
+              "value": "project",
+              "label": "Projects"
+            }
+          ]
+        },
+        {
+          "id": "limit",
+          "apiId": "limit",
+          "label": "How many",
+          "help": "From 1 to 12. Leave empty for 6.",
+          "type": "number",
+          "required": false,
+          "localised": false,
+          "min": 1,
+          "max": 12,
+          "integer": true
+        }
+      ],
+      "styleOptions": {
+        "columns": {
+          "kind": "radio",
+          "label": "Columns",
+          "default": "three",
+          "options": [
+            {
+              "value": "two",
+              "label": "2"
+            },
+            {
+              "value": "three",
+              "label": "3"
+            }
+          ]
+        },
+        "tone": {
+          "kind": "radio",
+          "label": "Tone",
+          "hint": "Background and text colours.",
+          "default": "light",
+          "options": [
+            {
+              "value": "light",
+              "label": "Light"
+            },
+            {
+              "value": "brand",
+              "label": "Brand"
+            },
+            {
+              "value": "dark",
+              "label": "Dark"
+            }
+          ]
+        },
+        "headingLevel": {
+          "kind": "select",
+          "label": "Heading level",
+          "hint": "Keep headings in order on the page.",
+          "default": "h2",
+          "options": [
+            {
+              "value": "h2",
+              "label": "H2"
+            },
+            {
+              "value": "h3",
+              "label": "H3"
+            },
+            {
+              "value": "h4",
+              "label": "H4"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
