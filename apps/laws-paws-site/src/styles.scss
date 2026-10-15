@@ -1,0 +1,104 @@
+// Law's Paws brand on the Novan design system. The palette (styles/tokens/_brand.scss) is set as the design system's
+// tokens: they are `!default` variables, so `with` re-brands everything compiled from them, Bootstrap's theme colours,
+// focus rings and the `--ds-*` properties the blocks read.
+@use 'styles/tokens/brand' as lp;
+
+// The tokens are their own module, which the design system's stylesheet loads, so they are configured first.
+@use '@black-isle-beef/novan-design-system/styles/tokens' with (
+  $ds-font-family-sans: lp.$font,
+  $ds-font-family-heading: lp.$font,
+  $ds-color-brand-primary: lp.$sage-700,
+  $ds-color-brand-secondary: lp.$rose-700,
+  $ds-color-brand-accent: lp.$rose-700,
+  $ds-color-semantic-success: lp.$success,
+  $ds-color-semantic-warning: lp.$warning,
+  $ds-color-semantic-danger: lp.$danger,
+  $ds-color-semantic-info: lp.$sage-700,
+  $ds-color-neutral-gray-100: lp.$blush-100,
+  $ds-color-neutral-gray-300: lp.$ink-200,
+  $ds-color-neutral-gray-400: lp.$ink-400,
+  $ds-color-neutral-gray-500: lp.$ink-400,
+  $ds-color-neutral-gray-700: lp.$ink-600,
+  $ds-color-neutral-gray-900: lp.$ink-900,
+  $ds-color-neutral-black: lp.$ink-950,
+  $ds-color-surface-body: lp.$blush-50,
+  $ds-color-surface-muted: lp.$blush-100,
+  $ds-color-text-body: lp.$ink-900,
+  $ds-color-text-muted: lp.$ink-600
+);
+// The site serves its own fonts (below), not Google Fonts: that import would hold back the first paint of every page.
+@use '@black-isle-beef/novan-design-system/styles/styles' with (
+  $ds-enable-web-fonts: false,
+  $border-radius-sm: 0.375rem,
+  $border-radius: 0.75rem,
+  $border-radius-lg: 1.25rem
+);
+// The CMS blocks (libs/blocks/src/styles, on the build's stylePreprocessorOptions.includePaths).
+@use 'novan-blocks';
+
+// Nunito Sans variable fonts from public/fonts (SIL Open Font License, public/fonts/OFL.txt). Root-relative URLs
+// so the build leaves them as they are.
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('/fonts/NunitoSans-Variable.ttf') format('truetype');
+  font-weight: 200 1000;
+  font-stretch: 75% 125%;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('/fonts/NunitoSans-Italic-Variable.ttf') format('truetype');
+  font-weight: 200 1000;
+  font-stretch: 75% 125%;
+  font-style: italic;
+  font-display: swap;
+}
+
+// Footer social links (site-layout.html): icon-only, named by visually hidden text. 2.75rem keeps a comfortable
+// touch target (WCAG 2.2 target size). `a[...][href]` outranks the design system's `a[href]` link colours.
+a.lp-social-link[href] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  color: var(--ds-color-text-body);
+  text-decoration: none;
+  transition:
+    background-color 0.15s ease-in-out,
+    color 0.15s ease-in-out;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--ds-color-brand-primary);
+    color: var(--ds-color-text-inverse);
+    text-decoration: none;
+  }
+
+  &:focus-visible {
+    outline: 0.1875rem solid var(--ds-color-brand-primary);
+    outline-offset: 0.125rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  a.lp-social-link[href] {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  a.lp-social-link[href] {
+    border: 0.0625rem solid LinkText;
+  }
+}
+
+// Icons are `<i class="bi">`, which is italic by default and would otherwise pull in the 550 kB italic font on
+// pages with no italic text.
+i.bi {
+  font-style: normal;
+}

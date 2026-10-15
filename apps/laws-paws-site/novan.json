@@ -1,0 +1,6 @@
+{
+  "environment": "main",
+  "schemaDir": "novan/schema",
+  "apiUrl": "http://localhost:3000",
+  "space": "3833ee25-c4ff-4038-b34e-592b17d68275"
+}

@@ -68,6 +68,26 @@
         </div>
       </fieldset>
 
+      @if (staff()) {
+        <fieldset class="mb-4">
+          <legend class="form-label fs-6">Media library</legend>
+          <div class="form-check form-switch">
+            <input
+              id="space-settings-svg"
+              type="checkbox"
+              role="switch"
+              class="form-check-input"
+              formControlName="allowSvg"
+              aria-describedby="space-settings-svg-hint"
+            />
+            <label for="space-settings-svg" class="form-check-label">Allow SVG uploads</label>
+          </div>
+          <div id="space-settings-svg-hint" class="form-text">
+            For logos and icons. Uploaded SVG files are cleaned of scripts and links. Only agency staff see and change this.
+          </div>
+        </fieldset>
+      }
+
       <dl class="mb-4">
         <dt>Short name</dt>
         <dd><code>{{ current.slug }}</code> <span class="text-body-secondary small">(cannot be changed)</span></dd>

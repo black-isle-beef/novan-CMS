@@ -47,6 +47,8 @@ export const spaceSummarySchema = z.object({
   previewUrl: z.string().nullable(),
   /** Publishing needs a space admin's approval (docs/build/13-workflow-publishing.md). */
   requireApproval: z.boolean(),
+  /** The media library takes SVG files, sanitised on upload (`settings.media.allowSvg`, docs/build/07-media-library.md). */
+  allowSvg: z.boolean(),
   /** The caller's role, or null when they see the space as agency staff without being a member. */
   role: spaceRoleSchema.nullable(),
   createdAt: z.string(),
@@ -66,10 +68,13 @@ export const updateSpaceRequestSchema = z
       .optional(),
     /** Authors, editors and developers send pages for review; space admins approve. */
     requireApproval: z.boolean().optional(),
+    /** Agency staff only (0023_space_media_settings.sql): let the media library take sanitised SVG files. */
+    allowSvg: z.boolean().optional(),
   })
   .refine(
-    (body) => body.name !== undefined || body.previewUrl !== undefined || body.requireApproval !== undefined,
-    'Change the name, the site address or approval.',
+    (body) =>
+      body.name !== undefined || body.previewUrl !== undefined || body.requireApproval !== undefined || body.allowSvg !== undefined,
+    'Change the name, the site address, approval or SVG uploads.',
   );
 export type UpdateSpaceRequest = z.input<typeof updateSpaceRequestSchema>;
 

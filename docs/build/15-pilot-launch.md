@@ -6,6 +6,9 @@
 
 One real client site runs on Novan CMS in production, and the client publishes a page without help. This closes Gate 2.
 
+The pilot client is Law's Paws: scope, setup and the launch checklist are in
+[docs/clients/laws-paws-launch.md](../clients/laws-paws-launch.md).
+
 ## Tasks
 
 1. Choose the pilot client and agree scope: pages, blocks needed beyond the five, launch date, who edits.

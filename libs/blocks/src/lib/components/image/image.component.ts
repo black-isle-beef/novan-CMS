@@ -1,7 +1,8 @@
 // components/image/image.component.ts — styles: src/styles/_image.scss.
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { type NovanAsset, type NovanBlock, novanImage } from '@black-isle-beef/cms-angular';
+import type { NovanAsset, NovanBlock } from '@black-isle-beef/cms-angular';
 
+import { blockPicture } from '../../block-picture';
 import { blockText } from '../../block-text';
 import { type CmsStoredSettings, modifierClasses, resolveSettings } from '../../cms-schema';
 import { IMAGE_SCHEMA, type ImageFields, type ImageSettings } from './image.schema';
@@ -50,21 +51,8 @@ export class ImageBlock implements NovanBlock<ImageFields> {
   protected readonly resolved = computed(() => resolveSettings(IMAGE_SCHEMA, this.settings()));
   protected readonly captionText = computed(() => blockText(this.caption()));
   protected readonly picture = computed(() => {
-    const image = this.image();
     const { widths, sizes } = SIZES[this.resolved().width];
-    const src = novanImage(image, { width: widths[widths.length - 1] });
-    if (!image || !src) return null;
-    const candidates = widths.map((width) => ({ width, url: novanImage(image, { width }) }));
-    // Files the API cannot resize (preview URLs, other hosts) come back unchanged: no srcset for those.
-    const resizable = new Set(candidates.map((candidate) => candidate.url)).size === candidates.length;
-    return {
-      src,
-      srcset: resizable ? candidates.map((candidate) => `${candidate.url} ${candidate.width}w`).join(', ') : null,
-      sizes,
-      alt: image.alt ?? '',
-      width: image.width,
-      height: image.height,
-    };
+    return blockPicture(this.image(), widths, sizes);
   });
   protected readonly hostClasses = computed(() =>
     ['novan-image-block', ...modifierClasses('novan-image-block', IMAGE_SCHEMA, this.resolved())].join(' '),

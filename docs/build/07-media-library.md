@@ -41,7 +41,9 @@ Editors upload, organise and pick images and files; images are resized on reques
 - **Accepted types are an allow-list** (images, MP4/WebM/MOV, PDF, Office, text, CSV, ZIP), checked by
   extension and by magic bytes; programs, scripts and HTML in disguise are refused. **SVG is off by
   default**; a space turns it on with `settings.media.allowSvg = true`, and uploads are then sanitised
-  with DOMPurify (no scripts, handlers, embedded HTML or links out of the file). The bucket also refuses
+  with DOMPurify (no scripts, handlers, embedded HTML or links out of the file). Agency staff switch it in the
+  space's **Settings** (*Media library > Allow SVG uploads*), which sends `allowSvg` to `PATCH /spaces/:spaceId`;
+  a trigger (0023) refuses the change from anyone else, space admins included. The bucket also refuses
   other MIME types and anything over 50 MB.
 - **Authors upload and describe their own files** (alt text, title, tags, folder, focal point), so they
   can fill in what publishing asks for; editors describe any file, replace files and use the bin. RLS and

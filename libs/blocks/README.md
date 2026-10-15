@@ -1,8 +1,11 @@
 # @novan/blocks
 
 The Novan CMS blocks client sites render: `hero`, `richText`, `image`, `featureGrid`, `cta` and `form`
-(docs/build/10-blocks-starter-site.md, 18), and `listing`, the newest blog posts or projects of the blog and portfolio
-starter kits (docs/build/19-schema-cli-starter-kits.md). Each was made with the `create-angular-cms-component` skill.
+(docs/build/10-blocks-starter-site.md, 18), `listing`, the newest blog posts or projects of the blog and portfolio
+starter kits (docs/build/19-schema-cli-starter-kits.md), and `mediaText` (an image beside text), `cardGrid` (photo
+cards) and `badgeList` (short labels such as qualifications), added for the pilot client
+(docs/build/15-pilot-launch.md). No starter kit uses those three yet: a site adds them with `novan blocks sync <name>`
+and lists them in its page type's `allowedBlocks`. Each was made with the `create-angular-cms-component` skill.
 
 ## Use in a site
 

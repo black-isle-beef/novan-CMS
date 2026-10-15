@@ -28,8 +28,19 @@ function specOf(fields: SeededField[]): Record<string, CmsFieldSpec> {
 const blockTypes = manifestBlockTypes();
 
 describe('blocks and their block types', () => {
-  it('reads the seven block types of the manifest', () => {
-    expect(blockTypes.map((type) => type.apiId).sort()).toEqual(['cta', 'featureGrid', 'form', 'hero', 'image', 'listing', 'richText']);
+  it('reads the ten block types of the manifest', () => {
+    expect(blockTypes.map((type) => type.apiId).sort()).toEqual([
+      'badgeList',
+      'cardGrid',
+      'cta',
+      'featureGrid',
+      'form',
+      'hero',
+      'image',
+      'listing',
+      'mediaText',
+      'richText',
+    ]);
   });
 
   it('lists the block types in the order an editor lists the blocks', () => {

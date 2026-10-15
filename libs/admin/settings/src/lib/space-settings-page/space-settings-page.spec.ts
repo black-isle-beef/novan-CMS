@@ -14,14 +14,19 @@ const space: SpaceSummary = {
   organisationId: '00000000-0000-4000-8000-000000000100',
   previewUrl: 'http://localhost:4300',
   requireApproval: false,
+  allowSvg: false,
   role: 'admin',
   createdAt: '2026-10-01T00:00:00Z',
 };
 
-async function render(updateSpace = vi.fn((_id: string, body: { name?: string; previewUrl?: string | null }) => of({ ...space, ...body }))) {
+async function render(
+  updateSpace = vi.fn((_id: string, body: { name?: string; previewUrl?: string | null }) => of({ ...space, ...body })),
+  agencyStaff = false,
+) {
   const spaces = signal([space]);
   const context = {
     currentSpace: computed(() => spaces()[0]),
+    currentAccess: computed(() => ({ role: spaces()[0].role, agencyStaff })),
     replace: vi.fn((updated: SpaceSummary) => spaces.set([updated])),
   };
   TestBed.configureTestingModule({
@@ -81,6 +86,26 @@ describe('SpaceSettingsPage', () => {
     expect(fixture.componentInstance.hasUnsavedChanges()).toBe(true);
     await save();
     expect(updateSpace).toHaveBeenCalledWith(spaceId, expect.objectContaining({ requireApproval: true }));
+  });
+
+  it('lets agency staff allow SVG uploads, as a labelled switch', async () => {
+    const { el, save, updateSpace, fixture } = await render(undefined, true);
+    const toggle = el.querySelector<HTMLInputElement>('#space-settings-svg') as HTMLInputElement;
+    expect(toggle.getAttribute('role')).toBe('switch');
+    expect(el.querySelector(`label[for="space-settings-svg"]`)?.textContent).toContain('Allow SVG uploads');
+    toggle.click();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.hasUnsavedChanges()).toBe(true);
+    await save();
+    expect(updateSpace).toHaveBeenCalledWith(spaceId, expect.objectContaining({ allowSvg: true }));
+  });
+
+  it('neither shows nor sends the SVG setting for space admins', async () => {
+    const { el, fill, save, updateSpace } = await render();
+    expect(el.querySelector('#space-settings-svg')).toBeNull();
+    await fill('space-settings-name', 'Demo Ltd');
+    await save();
+    expect(updateSpace.mock.calls[0][1]).not.toHaveProperty('allowSvg');
   });
 
   it('checks the fields before saving, and ties the message to each', async () => {

@@ -1,0 +1,44 @@
+// _badge-list.scss — BadgeListBlock (libs/blocks/src/lib/components/badge-list). Design-system tokens only: Sass spacing tokens, colour custom properties, rem.
+@use '@black-isle-beef/novan-design-system/styles/tokens' as ds;
+@use 'tones';
+
+@include tones.tones('novan-badge-list-block');
+@include tones.block-spacing('novan-badge-list-block');
+
+.novan-badge-list-block__inner {
+  display: grid;
+  gap: ds.$ds-spacing-scale-4;
+  justify-items: start;
+}
+
+.novan-badge-list-block__heading {
+  margin: 0;
+}
+
+.novan-badge-list-block__intro {
+  max-inline-size: 60ch;
+  margin: 0;
+}
+
+.novan-badge-list-block__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: ds.$ds-spacing-scale-3;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// The badge keeps its own surface and text pair on every tone; long labels wrap rather than overflow.
+.novan-badge-list-block__badge {
+  white-space: normal;
+}
+
+.novan-badge-list-block--alignment-center .novan-badge-list-block__inner {
+  justify-items: center;
+  text-align: center;
+}
+
+.novan-badge-list-block--alignment-center .novan-badge-list-block__list {
+  justify-content: center;
+}
