@@ -1,0 +1,103 @@
+{
+  "name": "laws-paws-site",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "site",
+  "sourceRoot": "apps/laws-paws-site/src",
+  "tags": ["scope:site", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/laws-paws-site",
+        "browser": "apps/laws-paws-site/src/main.ts",
+        "tsConfig": "apps/laws-paws-site/tsconfig.app.json",
+        "inlineStyleLanguage": "scss",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/laws-paws-site/public"
+          }
+        ],
+        "styles": ["apps/laws-paws-site/src/styles.scss"],
+        "stylePreprocessorOptions": {
+          "includePaths": ["libs/blocks/src/styles"]
+        },
+        "server": "apps/laws-paws-site/src/main.server.ts",
+        "ssr": {
+          "entry": "apps/laws-paws-site/src/server.ts"
+        },
+        "outputMode": "server"
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "850kb",
+              "maximumError": "1.5mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kb",
+              "maximumError": "8kb"
+            }
+          ],
+          "outputHashing": "all",
+          "optimization": {
+            "scripts": true,
+            "styles": { "minify": true, "inlineCritical": true },
+            "fonts": false
+          }
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "port": 4310
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "laws-paws-site:build:production"
+        },
+        "development": {
+          "buildTarget": "laws-paws-site:build:development"
+        }
+      }
+    },
+    "test": {
+      "executor": "@angular/build:unit-test",
+      "options": {
+        "watch": false
+      }
+    },
+    "test-bundle": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "cache": false,
+      "options": {
+        "command": "node --test apps/laws-paws-site/tools/browser-bundle.test.mjs"
+      }
+    },
+    "serve-static": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "buildTarget": "laws-paws-site:build",
+        "port": 4310,
+        "staticFilePath": "dist/apps/laws-paws-site/browser",
+        "spa": true
+      }
+    }
+  }
+}

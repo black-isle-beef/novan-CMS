@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { conflict, forbidden, notFound, ProblemException } from '@novan/api-common';
-import type { AuthUser } from '@novan/api-auth';
+import { type AuthUser, hasStaffAccess } from '@novan/api-auth';
 import {
   DbService,
   type DbTransaction,
@@ -23,7 +23,7 @@ import {
   type SpaceSummary,
   type updateSpaceRequestSchema,
 } from '@novan/shared-schemas';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 
 type UpdateSpaceBody = z.output<typeof updateSpaceRequestSchema>;
@@ -36,6 +36,7 @@ const summaryColumns = {
   organisationId: spaces.organisationId,
   previewUrl: spaces.previewUrl,
   requireApproval: spaces.requireApproval,
+  allowSvg: sql<boolean>`coalesce((${spaces.settings} #>> '{media,allowSvg}')::boolean, false)`,
   createdAt: spaces.createdAt,
 };
 
@@ -93,8 +94,14 @@ export class SpacesService {
     }
   }
 
-  /** Renames the space, changes its site address or turns approval on or off. RLS lets only its admins and agency staff (0004). */
+  /**
+   * Renames the space, changes its site address, turns approval on or off, or (agency staff only) allows SVG uploads.
+   * RLS lets only its admins and agency staff (0004); a trigger keeps the media settings to agency staff (0023).
+   */
   async update(user: AuthUser, spaceId: string, body: UpdateSpaceBody): Promise<SpaceSummary> {
+    if (body.allowSvg !== undefined && !hasStaffAccess(user)) {
+      throw forbidden('agency_staff_only', 'Only agency staff can turn SVG uploads on or off.');
+    }
     try {
       return await this.db.userDb(user.claims, async (tx) => {
         const [before] = await tx.select(summaryColumns).from(spaces).where(eq(spaces.id, spaceId));
@@ -104,8 +111,20 @@ export class SpacesService {
           ...(body.previewUrl !== undefined ? { previewUrl: body.previewUrl } : {}),
           ...(body.requireApproval !== undefined ? { requireApproval: body.requireApproval } : {}),
         };
-        const [space] = await tx.update(spaces).set(changes).where(eq(spaces.id, spaceId)).returning(summaryColumns);
+        // Only `settings.media.allowSvg` changes: the rest of the settings (the onboarding checklist) stay as they are.
+        const settings =
+          body.allowSvg === undefined
+            ? {}
+            : {
+                settings: sql`${spaces.settings} || jsonb_build_object('media', coalesce(${spaces.settings} -> 'media', '{}'::jsonb) || jsonb_build_object('allowSvg', ${body.allowSvg}::boolean))`,
+              };
+        const [space] = await tx
+          .update(spaces)
+          .set({ ...changes, ...settings })
+          .where(eq(spaces.id, spaceId))
+          .returning(summaryColumns);
         if (!space) throw forbidden('insufficient_role', 'Only space admins can change the space settings.');
+        const changed = { ...changes, ...(body.allowSvg !== undefined ? { allowSvg: body.allowSvg } : {}) };
         await recordAudit(tx, {
           spaceId,
           actorId: user.id,
@@ -113,7 +132,7 @@ export class SpacesService {
           targetType: 'space',
           targetId: spaceId,
           diff: Object.fromEntries(
-            Object.entries(changes).map(([key, value]) => [key, { from: before[key as keyof typeof changes], to: value }]),
+            Object.entries(changed).map(([key, value]) => [key, { from: before[key as keyof typeof changed], to: value }]),
           ),
         });
         return { ...space, role: roleIn(user, space.id) };

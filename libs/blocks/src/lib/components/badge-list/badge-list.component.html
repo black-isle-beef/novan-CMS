@@ -1,0 +1,26 @@
+<section class="novan-badge-list-block__inner container" [attr.aria-labelledby]="headingText() ? headingId : null">
+  @if (headingText(); as heading) {
+    @switch (resolved().headingLevel) {
+      @case ('h3') {
+        <h3 class="novan-badge-list-block__heading" [id]="headingId">{{ heading }}</h3>
+      }
+      @case ('h4') {
+        <h4 class="novan-badge-list-block__heading" [id]="headingId">{{ heading }}</h4>
+      }
+      @default {
+        <h2 class="novan-badge-list-block__heading" [id]="headingId">{{ heading }}</h2>
+      }
+    }
+  }
+  @if (introText(); as intro) {
+    <p class="novan-badge-list-block__intro lead">{{ intro }}</p>
+  }
+
+  @if (labels().length) {
+    <ul class="novan-badge-list-block__list">
+      @for (label of labels(); track $index) {
+        <li class="ds-badge ds-badge--neutral novan-badge-list-block__badge">{{ label }}</li>
+      }
+    </ul>
+  }
+</section>

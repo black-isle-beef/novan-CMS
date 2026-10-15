@@ -1,0 +1,50 @@
+// _media-text.scss — MediaTextBlock (libs/blocks/src/lib/components/media-text). Design-system tokens only: Sass spacing tokens, colour custom properties, rem.
+@use '@black-isle-beef/novan-design-system/styles/tokens' as ds;
+@use 'tones';
+
+@include tones.tones('novan-media-text-block');
+@include tones.block-spacing('novan-media-text-block');
+
+.novan-media-text-block__inner {
+  display: grid;
+  gap: ds.$ds-spacing-scale-6;
+  align-items: center;
+
+  @media (min-width: 48rem) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: ds.$ds-spacing-scale-8;
+  }
+}
+
+.novan-media-text-block--no-image .novan-media-text-block__inner {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+// The text stays first in the reading order; only the image's place on the screen changes.
+@media (min-width: 48rem) {
+  .novan-media-text-block--image-position-start .novan-media-text-block__media {
+    order: -1;
+  }
+}
+
+.novan-media-text-block__body {
+  display: grid;
+  gap: ds.$ds-spacing-scale-4;
+  justify-items: start;
+}
+
+.novan-media-text-block__heading {
+  margin: 0;
+}
+
+.novan-media-text-block__text {
+  max-inline-size: 60ch;
+  margin: 0;
+}
+
+.novan-media-text-block__image {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  border-radius: 1rem;
+}

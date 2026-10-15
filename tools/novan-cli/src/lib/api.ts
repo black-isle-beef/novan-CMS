@@ -1,5 +1,8 @@
 import type {
+  Asset,
+  AssetDetail,
   BlockType,
+  CompleteUploadRequest,
   ContentType,
   CreateApiTokenRequest,
   CreateBlockTypeRequest,
@@ -19,6 +22,8 @@ import type {
   SpaceSummary,
   UpdateBlockTypeRequest,
   UpdateContentTypeRequest,
+  UploadUrlRequest,
+  UploadUrlResponse,
 } from '@novan/shared-schemas';
 import { ApiError, CliError } from './errors';
 
@@ -138,6 +143,34 @@ export class NovanApi {
 
   publishEntry(t: Target, id: string, message: string): Promise<Entry> {
     return this.request('POST', `${env(t)}/entries/${id}/publish`, { body: { message } });
+  }
+
+  // --- Media library ----------------------------------------------------------------------------
+
+  /** Live files in a folder (its subfolders included), newest first. */
+  assets(spaceId: string, folder: string): Promise<Asset[]> {
+    return this.request('GET', `/v1/management/spaces/${spaceId}/assets`, { query: { folder } });
+  }
+
+  /** Step 1 of an upload: a signed URL to `PUT` the file to (see {@link putFile}). */
+  assetUploadUrl(spaceId: string, body: UploadUrlRequest): Promise<UploadUrlResponse> {
+    return this.request('POST', `/v1/management/spaces/${spaceId}/assets/upload-url`, { body });
+  }
+
+  /** Step 3: the API checks the uploaded file and adds it to the library. */
+  completeAssetUpload(spaceId: string, body: CompleteUploadRequest): Promise<AssetDetail> {
+    return this.request('POST', `/v1/management/spaces/${spaceId}/assets/complete`, { body });
+  }
+
+  /** Step 2: the file itself, to storage (the signed URL needs no other credentials). */
+  async putFile(target: UploadUrlResponse, file: Blob): Promise<void> {
+    let res: Response;
+    try {
+      res = await this.fetchImpl(target.uploadUrl, { method: 'PUT', headers: { 'Content-Type': target.mime }, body: file });
+    } catch (error) {
+      throw new CliError(`Could not upload ${target.filename}: ${(error as Error).message}`);
+    }
+    if (!res.ok) throw new CliError(`Uploading ${target.filename} failed: storage answered ${res.status} ${res.statusText}.`);
   }
 
   // --- Plumbing ---------------------------------------------------------------------------------

@@ -29,7 +29,9 @@ npm run dev
 | `admin`        | http://localhost:4200        | CMS admin and visual editor              |
 | `starter-site` | http://localhost:4300        | Template client site (Angular SSR)       |
 
-The marketing site runs separately with `npx nx serve web` (port 4200, so stop `admin` first).
+The marketing site runs separately with `npx nx serve web` (port 4200, so stop `admin` first), and the pilot client's
+site with `npx nx serve laws-paws-site` (port 4310; tokens in `apps/laws-paws-site/.env.serve.local`, see
+`docs/clients/laws-paws-launch.md`).
 
 ## Scripts
 

@@ -1,0 +1,93 @@
+// _card-grid.scss — CardGridBlock (libs/blocks/src/lib/components/card-grid). Design-system tokens only: Sass spacing tokens, colour custom properties, rem.
+@use '@black-isle-beef/novan-design-system/styles/tokens' as ds;
+@use 'tones';
+
+@include tones.tones('novan-card-grid-block');
+@include tones.block-spacing('novan-card-grid-block');
+
+.novan-card-grid-block {
+  --novan-card-grid-block-columns: 3;
+}
+
+.novan-card-grid-block--columns-two {
+  --novan-card-grid-block-columns: 2;
+}
+
+.novan-card-grid-block--columns-four {
+  --novan-card-grid-block-columns: 4;
+}
+
+.novan-card-grid-block__inner {
+  display: grid;
+  gap: ds.$ds-spacing-scale-4;
+}
+
+.novan-card-grid-block__heading {
+  margin: 0;
+}
+
+.novan-card-grid-block__intro {
+  max-inline-size: 60ch;
+  margin: 0;
+}
+
+.novan-card-grid-block__list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: ds.$ds-spacing-scale-5;
+  margin: ds.$ds-spacing-scale-5 0 0;
+  padding: 0;
+  list-style: none;
+
+  @media (min-width: 36rem) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 62rem) {
+    grid-template-columns: repeat(var(--novan-card-grid-block-columns), 1fr);
+  }
+}
+
+// Cards keep the page's own surface and text on every tone, so the badge and text inside stay readable.
+.novan-card-grid-block__card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 0.0625rem solid var(--ds-color-neutral-gray-300);
+  border-radius: 1rem;
+  background-color: var(--ds-color-surface-body);
+  color: var(--ds-color-text-body);
+}
+
+.novan-card-grid-block__image {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.novan-card-grid-block__body {
+  display: grid;
+  align-content: start;
+  gap: ds.$ds-spacing-scale-2;
+  padding: ds.$ds-spacing-scale-5;
+}
+
+.novan-card-grid-block__title,
+.novan-card-grid-block__subtitle,
+.novan-card-grid-block__tag {
+  margin: 0;
+}
+
+.novan-card-grid-block__subtitle {
+  color: var(--ds-color-text-muted);
+}
+
+.novan-card-grid-block__tag {
+  margin-block-start: ds.$ds-spacing-scale-2;
+
+  .ds-badge {
+    white-space: normal;
+  }
+}

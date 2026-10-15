@@ -1,0 +1,27 @@
+{
+  "apiId": "notFound",
+  "name": "Page not found",
+  "kind": "singleton",
+  "description": "What people see at an address with no page.",
+  "fields": [
+    {
+      "id": "title",
+      "apiId": "title",
+      "label": "Title",
+      "required": true,
+      "localised": true,
+      "type": "text",
+      "multiline": false,
+      "max": 120
+    },
+    {
+      "id": "body",
+      "apiId": "body",
+      "label": "Content",
+      "required": false,
+      "localised": false,
+      "type": "blocks",
+      "allowedBlocks": ["richText", "cta"]
+    }
+  ]
+}

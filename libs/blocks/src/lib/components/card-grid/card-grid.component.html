@@ -1,0 +1,68 @@
+<section class="novan-card-grid-block__inner container" [attr.aria-labelledby]="headingText() ? headingId : null">
+  @if (headingText(); as heading) {
+    @switch (resolved().headingLevel) {
+      @case ('h3') {
+        <h3 class="novan-card-grid-block__heading" [id]="headingId">{{ heading }}</h3>
+      }
+      @case ('h4') {
+        <h4 class="novan-card-grid-block__heading" [id]="headingId">{{ heading }}</h4>
+      }
+      @default {
+        <h2 class="novan-card-grid-block__heading" [id]="headingId">{{ heading }}</h2>
+      }
+    }
+  }
+  @if (introText(); as intro) {
+    <p class="novan-card-grid-block__intro lead">{{ intro }}</p>
+  }
+
+  @if (items().length) {
+    <ul class="novan-card-grid-block__list">
+      @for (item of items(); track $index) {
+        <li class="novan-card-grid-block__card">
+          @if (item.picture; as picture) {
+            <img
+              class="novan-card-grid-block__image"
+              [src]="picture.src"
+              [attr.srcset]="picture.srcset"
+              [attr.sizes]="picture.srcset ? picture.sizes : null"
+              alt="{{ picture.alt }}"
+              [attr.width]="picture.width"
+              [attr.height]="picture.height"
+              loading="lazy"
+              decoding="async"
+            />
+          }
+          @if (item.title || item.subtitle || item.tag) {
+            <div class="novan-card-grid-block__body">
+              @if (item.title) {
+                @switch (itemLevel()) {
+                  @case ('h2') {
+                    <h2 class="novan-card-grid-block__title h5">{{ item.title }}</h2>
+                  }
+                  @case ('h4') {
+                    <h4 class="novan-card-grid-block__title h5">{{ item.title }}</h4>
+                  }
+                  @case ('h5') {
+                    <h5 class="novan-card-grid-block__title h5">{{ item.title }}</h5>
+                  }
+                  @default {
+                    <h3 class="novan-card-grid-block__title h5">{{ item.title }}</h3>
+                  }
+                }
+              }
+              @if (item.subtitle) {
+                <p class="novan-card-grid-block__subtitle">{{ item.subtitle }}</p>
+              }
+              @if (item.tag) {
+                <p class="novan-card-grid-block__tag">
+                  <span class="ds-badge ds-badge--neutral">{{ item.tag }}</span>
+                </p>
+              }
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

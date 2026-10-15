@@ -155,6 +155,16 @@ describe('management API', () => {
       expect(res.body.code).toBe('insufficient_role');
     });
 
+    it('answers 403 when a space admin who is not agency staff turns SVG uploads on', async () => {
+      const res = await request(app.getHttpServer())
+        .patch(`/v1/management/spaces/${demoSpaceId}`)
+        .auth(await token({ sub: clientId, spaces: [{ id: demoSpaceId, role: 'admin' }] }), { type: 'bearer' })
+        .send({ allowSvg: true });
+
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe('agency_staff_only');
+    });
+
     it('answers 403 when a viewer dismisses the onboarding checklist', async () => {
       const res = await request(app.getHttpServer())
         .post(`/v1/management/spaces/${demoSpaceId}/onboarding/dismiss`)
@@ -281,6 +291,35 @@ describe('management API', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.errors).toHaveProperty('previewUrl');
+    });
+
+    it('agency staff allow SVG uploads, audited, and the other settings are kept', async () => {
+      const staff = await agencyStaff();
+      expect((await request(app.getHttpServer()).get('/v1/management/spaces').auth(staff, { type: 'bearer' })).body).toContainEqual(
+        expect.objectContaining({ id: spaceId, allowSvg: false }),
+      );
+
+      const res = await request(app.getHttpServer())
+        .patch(`/v1/management/spaces/${spaceId}`)
+        .auth(staff, { type: 'bearer' })
+        .send({ allowSvg: true });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ id: spaceId, allowSvg: true });
+      const [row] = await db.serviceDb.select({ settings: spaces.settings }).from(spaces).where(eq(spaces.id, spaceId));
+      expect(row.settings).toEqual({ onboarding: { completed: {}, dismissedAt: null }, media: { allowSvg: true } });
+      const audit = await db.serviceDb
+        .select({ diff: auditEvents.diff })
+        .from(auditEvents)
+        .where(and(eq(auditEvents.spaceId, spaceId), eq(auditEvents.action, 'space.updated')));
+      expect(audit.map((event) => event.diff)).toContainEqual({ allowSvg: { from: false, to: true } });
+
+      const upload = await request(app.getHttpServer())
+        .post(`/v1/management/spaces/${spaceId}/assets/upload-url`)
+        .auth(staff, { type: 'bearer' })
+        .send({ filename: 'logo.svg', sizeBytes: 1200 });
+      expect(upload.status).toBe(200);
+      expect(upload.body.mime).toBe('image/svg+xml');
     });
 
     it('agency staff viewing as a role is audited, and grants nothing', async () => {

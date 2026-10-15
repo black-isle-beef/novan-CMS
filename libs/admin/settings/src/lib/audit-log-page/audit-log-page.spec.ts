@@ -48,7 +48,7 @@ describe('AuditLogPage', () => {
 
   async function render() {
     const spaces = signal<SpaceSummary[] | null>([
-      { id: spaceId, name: 'Demo site', slug: 'demo-site', organisationId: spaceId, previewUrl: null, requireApproval: false, role: 'admin', createdAt: '' },
+      { id: spaceId, name: 'Demo site', slug: 'demo-site', organisationId: spaceId, previewUrl: null, requireApproval: false, allowSvg: false, role: 'admin', createdAt: '' },
     ]);
     const currentSpaceId = signal<string | null>(null);
     TestBed.configureTestingModule({

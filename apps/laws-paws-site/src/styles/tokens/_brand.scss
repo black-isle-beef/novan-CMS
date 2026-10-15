@@ -1,0 +1,30 @@
+// _brand.scss — the Law's Paws palette: the only place the site's colour literals are written. styles.scss passes these
+// to the design system as its tokens.
+//
+// Contrast (WCAG 2.2 AA) for the pairings the blocks' tones use:
+//   white on sage-700 (brand tone, buttons)      6.38:1
+//   white on ink-900 (dark tone)                 17.60:1
+//   ink-900 on blush-50 / blush-100 (body text)  16.19 / 14.58:1
+//   sage-700 on blush-50 (links on the page)     5.87:1
+//   ink-600 on blush-50 (muted text)             7.97:1
+$rose-700: #8e2f32;
+$sage-700: #5c6336;
+$blush-50: #faf4f5;
+$blush-100: #f3e7e7;
+$ink-200: #dcd4d0;
+$ink-400: #97857d;
+$ink-600: #594840;
+$ink-900: #201713;
+$ink-950: #130e0b;
+
+// Semantic colours kept apart from the brand rose, so an error never reads as decoration.
+$success: #2c6d4f;
+$warning: #885c11;
+$danger: #ae3f29;
+
+$font:
+  'Nunito Sans',
+  system-ui,
+  -apple-system,
+  'Segoe UI',
+  sans-serif;

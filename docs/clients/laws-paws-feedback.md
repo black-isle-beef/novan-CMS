@@ -1,0 +1,24 @@
+# Law's Paws: feedback log
+
+Every question and problem from Law's Paws during the pilot and the two weeks of hypercare after launch
+([laws-paws-launch.md](laws-paws-launch.md)). Each row is triaged as one of:
+
+- **Backlog**: becomes an issue; link it.
+- **Client**: content or a decision the client owns.
+- **Answered**: a question, answered.
+- **Won't do**: with the reason.
+
+Add new rows at the bottom. Keep the client's own words in _What came up_.
+
+| #   | Date       | From      | What came up                                                                                                                                                                                                                                   | Triage                                                                      | Owner  | Status |
+| --- | ---------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------ | ------ |
+| 1   | 2026-10-14 | Migration | The old gallery showed placeholders, not photos of real clients. The cards are migrated as text only. The library has eight stock photos (`website/stock-photos`), but they are other people's animals, so they are not used as client photos. | Client: supply real groom photos (with the owners' permission)              | Hayley | Open   |
+| 2   | 2026-10-14 | Migration | `featureGrid` has no grooming icons. The old site used scissors and a sound wave for Grooming and Teeth cleaning; the migration uses star and shield.                                                                                          | Backlog: add `scissors` and `soundwave` to the feature grid's icon list     | Agency | Open   |
+| 3   | 2026-10-14 | Migration | The home page's "See example reports" button went to the gallery, which has no reports. It is now "See our gallery".                                                                                                                           | Client: is a sample report wanted on the site?                              | Hayley | Open   |
+| 4   | 2026-10-14 | Migration | The contact form now stores messages in the CMS, so it asks for consent ("I agree that you may keep my message to reply to it."). The old form did not.                                                                                        | Client: confirm the wording. The privacy policy must cover it (row 5).      | Hayley | Open   |
+| 5   | 2026-10-14 | Migration | The privacy and cookie policies were placeholders on the old site and still are.                                                                                                                                                               | Client: provide both before launch. Launch blocker.                         | Hayley | Open   |
+| 6   | 2026-10-14 | Migration | The old site had a dark-mode switch. The new site does not.                                                                                                                                                                                    | Backlog if the client asks: a theme switch in the site layout               | Agency | Open   |
+| 7   | 2026-10-14 | Migration | The old footer credited the agency ("Site built and maintained by novanweb.dev"). The new footer has no credit.                                                                                                                                | Backlog: an optional credit line in site settings                           | Agency | Open   |
+| 8   | 2026-10-14 | Migration | The home page's search description was 161 characters. It is shortened to fit the 160 that search results show.                                                                                                                                | Answered                                                                    | Agency | Done   |
+| 9   | 2026-10-14 | Migration | The grooming-report app stays on Firebase at a subdomain. `/report/*` and `/admin` on the new site redirect there.                                                                                                                             | Backlog: plan porting reports to Novan as its own project                   | Agency | Open   |
+| 10  | 2026-10-14 | Migration | `tools/migrate` reuses the CLI's source, so its lint config turns off the module-boundary rule.                                                                                                                                                | Backlog: move the CLI's API client and seed code to a library under `libs/` | Agency | Open   |

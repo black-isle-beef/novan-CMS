@@ -1,0 +1,39 @@
+<section class="novan-media-text-block__inner container" [attr.aria-labelledby]="headingText() ? headingId : null">
+  <div class="novan-media-text-block__body">
+    @if (headingText(); as heading) {
+      @switch (resolved().headingLevel) {
+        @case ('h3') {
+          <h3 class="novan-media-text-block__heading" [id]="headingId">{{ heading }}</h3>
+        }
+        @case ('h4') {
+          <h4 class="novan-media-text-block__heading" [id]="headingId">{{ heading }}</h4>
+        }
+        @default {
+          <h2 class="novan-media-text-block__heading" [id]="headingId">{{ heading }}</h2>
+        }
+      }
+    }
+    @for (paragraph of paragraphs(); track $index) {
+      <p class="novan-media-text-block__text">{{ paragraph }}</p>
+    }
+    @if (link(); as link) {
+      <novan-block-action [link]="link" [on]="actionOn()" />
+    }
+  </div>
+
+  @if (picture(); as picture) {
+    <div class="novan-media-text-block__media">
+      <img
+        class="novan-media-text-block__image"
+        [src]="picture.src"
+        [attr.srcset]="picture.srcset"
+        [attr.sizes]="picture.srcset ? picture.sizes : null"
+        alt="{{ picture.alt }}"
+        [attr.width]="picture.width"
+        [attr.height]="picture.height"
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
+  }
+</section>

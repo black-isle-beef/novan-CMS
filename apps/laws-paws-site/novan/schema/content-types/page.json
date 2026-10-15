@@ -1,0 +1,106 @@
+{
+  "apiId": "page",
+  "name": "Page",
+  "kind": "page",
+  "description": "A web page built from blocks.",
+  "fields": [
+    {
+      "id": "title",
+      "apiId": "title",
+      "label": "Title",
+      "required": true,
+      "localised": true,
+      "type": "text",
+      "multiline": false,
+      "max": 120
+    },
+    {
+      "id": "slug",
+      "apiId": "slug",
+      "label": "Slug",
+      "help": "The last part of the page address, like about-us.",
+      "required": true,
+      "localised": false,
+      "type": "text",
+      "multiline": false,
+      "max": 100,
+      "pattern": "[a-z0-9]+(-[a-z0-9]+)*"
+    },
+    {
+      "id": "seo",
+      "apiId": "seo",
+      "label": "SEO",
+      "help": "How the page appears in search results and when shared.",
+      "required": false,
+      "localised": false,
+      "type": "group",
+      "multiple": false,
+      "fields": [
+        {
+          "id": "metaTitle",
+          "apiId": "metaTitle",
+          "label": "Search title",
+          "help": "Leave empty to use the page title.",
+          "required": false,
+          "localised": true,
+          "type": "text",
+          "multiline": false,
+          "max": 60
+        },
+        {
+          "id": "metaDescription",
+          "apiId": "metaDescription",
+          "label": "Search description",
+          "help": "One or two sentences on what the page offers. Leave empty to let search engines choose.",
+          "required": false,
+          "localised": true,
+          "type": "text",
+          "multiline": true,
+          "max": 160
+        },
+        {
+          "id": "ogImage",
+          "apiId": "ogImage",
+          "label": "Sharing image",
+          "help": "Shown when the page is shared on social media. Leave empty to use the site's sharing image.",
+          "required": false,
+          "localised": false,
+          "type": "media",
+          "accept": ["image"],
+          "multiple": false,
+          "requireAlt": true
+        },
+        {
+          "id": "canonical",
+          "apiId": "canonical",
+          "label": "Canonical address",
+          "help": "Only when this page copies another: the full address of the original. Leave empty otherwise.",
+          "required": false,
+          "localised": false,
+          "type": "text",
+          "multiline": false,
+          "max": 2048,
+          "pattern": "https?://\\S+"
+        },
+        {
+          "id": "noindex",
+          "apiId": "noindex",
+          "label": "Hide from search engines",
+          "required": false,
+          "localised": false,
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "body",
+      "apiId": "body",
+      "label": "Content",
+      "required": false,
+      "localised": false,
+      "type": "blocks",
+      "allowedBlocks": ["hero", "richText", "image", "mediaText", "featureGrid", "cardGrid", "badgeList", "cta", "form"]
+    }
+  ]
+}

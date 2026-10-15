@@ -1,0 +1,109 @@
+{
+  "apiId": "mediaText",
+  "name": "Image and text",
+  "icon": "layout-split",
+  "previewImagePath": null,
+  "fields": [
+    {
+      "id": "heading",
+      "apiId": "heading",
+      "label": "Heading",
+      "required": true,
+      "localised": true,
+      "type": "text",
+      "multiline": false,
+      "max": 120
+    },
+    {
+      "id": "text",
+      "apiId": "text",
+      "label": "Text",
+      "required": false,
+      "localised": true,
+      "type": "text",
+      "multiline": true,
+      "max": 1000,
+      "help": "Leave a blank line to start a new paragraph."
+    },
+    {
+      "id": "image",
+      "apiId": "image",
+      "label": "Image",
+      "required": true,
+      "localised": false,
+      "type": "media",
+      "accept": ["image"],
+      "multiple": false,
+      "requireAlt": true
+    },
+    {
+      "id": "action",
+      "apiId": "action",
+      "label": "Button",
+      "required": false,
+      "localised": true,
+      "type": "link",
+      "allowExternal": true,
+      "allowEmail": true
+    }
+  ],
+  "allowedChildren": [],
+  "styleOptions": {
+    "tone": {
+      "kind": "radio",
+      "label": "Tone",
+      "hint": "Background and text colours.",
+      "options": [
+        {
+          "value": "light",
+          "label": "Light"
+        },
+        {
+          "value": "brand",
+          "label": "Brand"
+        },
+        {
+          "value": "dark",
+          "label": "Dark"
+        }
+      ],
+      "default": "light"
+    },
+    "imagePosition": {
+      "kind": "radio",
+      "label": "Image side",
+      "hint": "On small screens the image sits below the text.",
+      "options": [
+        {
+          "value": "start",
+          "label": "Left"
+        },
+        {
+          "value": "end",
+          "label": "Right"
+        }
+      ],
+      "default": "end"
+    },
+    "headingLevel": {
+      "kind": "select",
+      "label": "Heading level",
+      "hint": "Keep headings in order on the page.",
+      "options": [
+        {
+          "value": "h2",
+          "label": "H2"
+        },
+        {
+          "value": "h3",
+          "label": "H3"
+        },
+        {
+          "value": "h4",
+          "label": "H4"
+        }
+      ],
+      "default": "h2"
+    }
+  }
+}

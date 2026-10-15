@@ -1,0 +1,15 @@
+{
+  "name": "migrate",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "tools/migrate",
+  "projectType": "application",
+  "tags": ["scope:tools", "type:app"],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p tools/migrate/tsconfig.json --noEmit"
+      }
+    }
+  }
+}

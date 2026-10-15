@@ -1,0 +1,130 @@
+{
+  "apiId": "navigation",
+  "name": "Navigation",
+  "kind": "singleton",
+  "description": "The menu at the top of every page and the links in the footer.",
+  "fields": [
+    {
+      "id": "items",
+      "apiId": "items",
+      "label": "Main menu",
+      "help": "The links across the top of every page.",
+      "required": false,
+      "localised": false,
+      "type": "group",
+      "multiple": true,
+      "max": 8,
+      "fields": [
+        {
+          "id": "label",
+          "apiId": "label",
+          "label": "Label",
+          "required": true,
+          "localised": true,
+          "type": "text",
+          "multiline": false,
+          "max": 40
+        },
+        {
+          "id": "link",
+          "apiId": "link",
+          "label": "Link",
+          "help": "Leave empty for a menu that only opens its sub-links.",
+          "required": false,
+          "localised": true,
+          "type": "link",
+          "allowExternal": true,
+          "allowEmail": false
+        },
+        {
+          "id": "subItems",
+          "apiId": "subItems",
+          "label": "Sub-links",
+          "required": false,
+          "localised": false,
+          "type": "group",
+          "multiple": true,
+          "max": 10,
+          "fields": [
+            {
+              "id": "label",
+              "apiId": "label",
+              "label": "Label",
+              "required": true,
+              "localised": true,
+              "type": "text",
+              "multiline": false,
+              "max": 40
+            },
+            {
+              "id": "link",
+              "apiId": "link",
+              "label": "Link",
+              "required": true,
+              "localised": true,
+              "type": "link",
+              "allowExternal": true,
+              "allowEmail": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "footerGroups",
+      "apiId": "footerGroups",
+      "label": "Footer links",
+      "help": "Columns of links above the copyright line.",
+      "required": false,
+      "localised": false,
+      "type": "group",
+      "multiple": true,
+      "max": 4,
+      "fields": [
+        {
+          "id": "title",
+          "apiId": "title",
+          "label": "Title",
+          "required": true,
+          "localised": true,
+          "type": "text",
+          "multiline": false,
+          "max": 40
+        },
+        {
+          "id": "links",
+          "apiId": "links",
+          "label": "Links",
+          "required": true,
+          "localised": false,
+          "type": "group",
+          "multiple": true,
+          "min": 1,
+          "max": 10,
+          "fields": [
+            {
+              "id": "label",
+              "apiId": "label",
+              "label": "Label",
+              "required": true,
+              "localised": true,
+              "type": "text",
+              "multiline": false,
+              "max": 40
+            },
+            {
+              "id": "link",
+              "apiId": "link",
+              "label": "Link",
+              "required": true,
+              "localised": true,
+              "type": "link",
+              "allowExternal": true,
+              "allowEmail": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
