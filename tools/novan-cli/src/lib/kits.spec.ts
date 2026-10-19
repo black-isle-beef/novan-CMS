@@ -3,9 +3,9 @@
 import { buildEntrySchema } from '@novan/shared-schemas';
 import { resolve } from 'node:path';
 import { readManifest } from './blocks';
-import { canonical } from './diff';
+import { canonical } from '@novan/schema-sync';
 import { kitNames, loadKit } from './kits';
-import { referencesOf } from './push';
+import { referencesOf } from '@novan/schema-sync';
 import { readSchemaDir } from './schema-files';
 import { resolveRefs, toStoredData } from './seed';
 

@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
-import { applyChanges } from './push';
-import { diffSchemas } from './diff';
+import { applyChanges } from '@novan/schema-sync';
+import { diffSchemas } from '@novan/schema-sync';
 import { fakeApi, target } from './fake-api';
 import { loadKit } from './kits';
 import { resolveRefs, seed, toStoredData } from './seed';

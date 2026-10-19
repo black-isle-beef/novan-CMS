@@ -14,5 +14,10 @@ Content types and block types (package 05), under
   provider (`DbEntrySource`: each live entry's current version, under the caller's RLS). Forcing the
   deletion of a content type deletes its entries (package 06).
 - Every write records an audit event in the same transaction.
+- `POST /v1/management/spaces/:spaceId/schema-source/github` (agency staff only) reads a repo's schema files
+  (`{ repoUrl, ref?, path = "novan/schema" }`) at one commit from api.github.com with `SCHEMA_GITHUB_TOKEN`, parses
+  them with `@novan/schema-sync` and answers them (`repo_not_found`, `ref_not_found`, `schema_not_found` 404;
+  `schema_invalid` 422; `github_unavailable` 502). It only reads and records `schema.github_read`; the admin pushes
+  the changes through the routes above.
 
 Run `nx test api-content-model` (pure model checks) and `nx test api` (HTTP and database).

@@ -30,7 +30,10 @@ describe('SchemaPage', () => {
       providers: [
         provideRouter([]),
         { provide: SchemaApi, useValue: { listContentTypes: () => of([page]), listBlockTypes: () => of([hero]) } },
-        { provide: SpaceContext, useValue: { currentSpaceId: signal(null), currentSpace: signal({ name: 'Demo site' }) } },
+        {
+          provide: SpaceContext,
+          useValue: { currentSpaceId: signal(null), currentSpace: signal({ name: 'Demo site' }), currentAccess: signal({ role: 'developer', agencyStaff: false }) },
+        },
       ],
     });
     const fixture = TestBed.createComponent(SchemaPage);
@@ -49,5 +52,26 @@ describe('SchemaPage', () => {
       ['Hero', `/spaces/${spaceId}/schema/block-types/hero`],
     ]);
     expect(el.querySelector('tbody th i')?.getAttribute('aria-hidden')).toBe('true');
+    expect(el.textContent).not.toContain('Set up from GitHub');
+  });
+
+  it('offers agency staff the set up from GitHub page', async () => {
+    TestBed.configureTestingModule({
+      imports: [SchemaPage],
+      providers: [
+        provideRouter([]),
+        { provide: SchemaApi, useValue: { listContentTypes: () => of([]), listBlockTypes: () => of([]) } },
+        {
+          provide: SpaceContext,
+          useValue: { currentSpaceId: signal(null), currentSpace: signal({ name: 'Demo site' }), currentAccess: signal({ role: null, agencyStaff: true }) },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(SchemaPage);
+    fixture.componentRef.setInput('spaceId', spaceId);
+    await fixture.whenStable();
+    const link = [...(fixture.nativeElement as HTMLElement).querySelectorAll('a')].find((a) => a.textContent?.includes('Set up from GitHub'));
+
+    expect(link?.getAttribute('href')).toBe(`/spaces/${spaceId}/schema/from-github`);
   });
 });

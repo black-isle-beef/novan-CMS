@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
-import { type Change, diffSchemas } from './diff';
+import { type Change, diffSchemas } from '@novan/schema-sync';
 import { CliError } from './errors';
 import { type BlockTypeFile, type SchemaSet, toBlockTypeFile } from './schema-files';
 

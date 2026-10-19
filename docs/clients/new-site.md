@@ -57,6 +57,8 @@ novan schema diff --kit blog               # "The space matches ..."
 
 `schema push` makes the space match the files: it creates and updates content types and block types. It refuses to delete a type, remove a field or change a field's type unless you add `--force`, and the API still refuses a change that would make existing pages invalid unless forced.
 
+**Or from the admin**, when the site's repo already has its `novan/schema` (an existing site moving to a new space, or a copy of the starter site): as agency staff, open the space's **Schema > Set up from GitHub**, paste the repo's address (private repos work when the API's `SCHEMA_GITHUB_TOKEN` may read them), **Check**, and apply. It runs the same diff and push as the CLI, as you; destructive changes need **Restore** and the space's short name.
+
 ## 3. Seed the kit's pages
 
 ```bash

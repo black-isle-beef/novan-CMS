@@ -1,13 +1,27 @@
-import type { FieldDef } from '@novan/shared-schemas';
-import type { NovanApi, Target } from './api';
+import type { FieldDef, UpdateBlockTypeRequest, UpdateContentTypeRequest } from '@novan/shared-schemas';
 import { type Change, describe, formatChanges, type TypeKind } from './diff';
-import { ApiError, CliError } from './errors';
+import { ApiError, SchemaSyncError } from './errors';
 import type { BlockTypeFile, ContentTypeFile, SchemaSet } from './schema-files';
+
+/**
+ * The Management API calls a push makes, against `target` (whatever the caller uses to name a space and
+ * environment). Failures must be thrown as {@link ApiError}, so `entries_invalidated` and `*_in_use` are recognised.
+ */
+export interface SchemaWriter<T> {
+  createContentType(target: T, body: ContentTypeFile): Promise<unknown>;
+  updateContentType(target: T, apiId: string, body: UpdateContentTypeRequest, force: boolean): Promise<unknown>;
+  deleteContentType(target: T, apiId: string, force: boolean): Promise<unknown>;
+  createBlockType(target: T, body: BlockTypeFile): Promise<unknown>;
+  updateBlockType(target: T, apiId: string, body: UpdateBlockTypeRequest, force: boolean): Promise<unknown>;
+  deleteBlockType(target: T, apiId: string, force: boolean): Promise<unknown>;
+}
 
 export interface PushOptions {
   force: boolean;
   dryRun: boolean;
   log: (line: string) => void;
+  /** How to ask for `force`, in refusals: "Run again with --force" by default. */
+  forceHint?: string;
 }
 
 /** Block and content types a type's definition points at; they must exist before it can be saved with them. */
@@ -29,11 +43,12 @@ export function referencesOf(kind: TypeKind, type: ContentTypeFile | BlockTypeFi
  * types that point at each other are created empty, then filled in. Deletions come last, content types first.
  * The API still refuses a change that would make existing entries invalid (409 `entries_invalidated`) unless forced.
  */
-export async function applyChanges(api: NovanApi, target: Target, local: SchemaSet, remote: SchemaSet, changes: readonly Change[], options: PushOptions): Promise<void> {
+export async function applyChanges<T>(api: SchemaWriter<T>, target: T, local: SchemaSet, remote: SchemaSet, changes: readonly Change[], options: PushOptions): Promise<void> {
+  const forceHint = options.forceHint ?? 'Run again with --force';
   const destructive = changes.filter((change) => change.destructive);
   if (destructive.length && !options.force) {
-    throw new CliError(
-      ['These changes can lose content or make it invalid:', ...formatChanges(destructive), 'Nothing was changed. Run again with --force to apply them.'].join('\n'),
+    throw new SchemaSyncError(
+      ['These changes can lose content or make it invalid:', ...formatChanges(destructive), `Nothing was changed. ${forceHint} to apply them.`].join('\n'),
     );
   }
   if (options.dryRun) {
@@ -56,9 +71,9 @@ export async function applyChanges(api: NovanApi, target: Target, local: SchemaS
       await work();
     } catch (error) {
       if (error instanceof ApiError && error.code === 'entries_invalidated') {
-        throw new CliError(`${describe(change)}: ${error.detail} Run again with --force to apply it anyway; those entries then need fixing.`);
+        throw new SchemaSyncError(`${describe(change)}: ${error.detail} ${forceHint} to apply it anyway; those entries then need fixing.`);
       }
-      if (error instanceof ApiError) throw new CliError(`${describe(change)}: ${error.message}`);
+      if (error instanceof ApiError) throw new SchemaSyncError(`${describe(change)}: ${error.message}`);
       throw error;
     }
   };
@@ -114,7 +129,7 @@ export async function applyChanges(api: NovanApi, target: Target, local: SchemaS
         lastError = error;
       }
     }
-    if (blocked.length === deletions.length) throw new CliError(`${describe(blocked[0])}: ${lastError?.detail ?? 'still in use.'}`);
+    if (blocked.length === deletions.length) throw new SchemaSyncError(`${describe(blocked[0])}: ${lastError?.detail ?? 'still in use.'}`);
     deletions = blocked;
   }
 }
