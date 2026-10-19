@@ -184,3 +184,55 @@ export interface EntriesInvalidatedProblem {
   /** Entries that would fail validation after the change. */
   affectedEntries: number;
 }
+
+// --- Schema files from GitHub (new sites and restores) -----------------------------------------
+
+/** `https://github.com/<owner>/<repo>`, optionally ending `.git` or `/`. Owner and repo as GitHub allows them. */
+export const githubRepoUrlSchema = z
+  .string()
+  .trim()
+  .regex(/^https:\/\/github\.com\/[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/[A-Za-z0-9._-]{1,100}?(?:\.git)?\/?$/, 'Use a GitHub address like https://github.com/owner/repo.')
+  .refine((url) => !/^\.+$/.test(parseGithubRepoUrl(url).repo), 'Use a GitHub address like https://github.com/owner/repo.');
+
+/** The owner and repo of a {@link githubRepoUrlSchema} address. */
+export function parseGithubRepoUrl(url: string): { owner: string; repo: string } {
+  const [owner = '', repo = ''] = url
+    .trim()
+    .replace(/^https:\/\/github\.com\//, '')
+    .replace(/\/$/, '')
+    .replace(/\.git$/, '')
+    .split('/');
+  return { owner, repo };
+}
+
+export const githubSchemaSourceRequestSchema = z.strictObject({
+  repoUrl: githubRepoUrlSchema,
+  /** A branch, tag or commit; the repo's default branch when left out. */
+  ref: z
+    .string()
+    .trim()
+    .max(200)
+    .regex(/^[A-Za-z0-9._/-]+$/, 'Use a branch, tag or commit.')
+    .refine((ref) => !ref.split('/').includes('..'), 'Use a branch, tag or commit.')
+    .optional(),
+  /** The schema directory in the repo. */
+  path: z
+    .string()
+    .trim()
+    .max(200)
+    .regex(/^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/, 'Use a folder path like novan/schema.')
+    .refine((path) => !path.split('/').includes('..'), 'Use a folder path like novan/schema.')
+    .default('novan/schema'),
+});
+export type GithubSchemaSourceRequest = z.input<typeof githubSchemaSourceRequestSchema>;
+
+/** The schema files at one commit, parsed and with their defaults filled in (the CLI's file format). */
+export const githubSchemaSourceSchema = z.object({
+  repo: z.string(),
+  ref: z.string(),
+  commitSha: z.string(),
+  path: z.string(),
+  contentTypes: z.array(createContentTypeRequestSchema),
+  blockTypes: z.array(createBlockTypeRequestSchema),
+});
+export type GithubSchemaSource = z.output<typeof githubSchemaSourceSchema>;

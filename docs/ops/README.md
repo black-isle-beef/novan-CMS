@@ -59,6 +59,7 @@ plain and public to anyone with repository access, so only public values go ther
 | `CLOUDFLARE_ZONE_ID`, `CLOUDFLARE_API_TOKEN` | api (purge on publish), deploy (purge admin) | Token: Zone > Cache Purge on the platform zone only |
 | `RESEND_API_KEY` or `POSTMARK_SERVER_TOKEN` | api, worker | With `MAIL_PROVIDER` |
 | `TURNSTILE_SECRET_KEY` | api | |
+| `SCHEMA_GITHUB_TOKEN` | api | Optional. Fine-grained GitHub token, **Contents: read-only** on the agency's site repos only, for Schema > Set up from GitHub. Unset: public repos only |
 | `STARTER_SITE_DELIVERY_TOKEN`, `STARTER_SITE_PREVIEW_TOKEN` | starter site | From the admin, Settings > API tokens, in that environment's starter space |
 | `SENTRY_DSN` | api, worker, sites | DSN of the `novan-server` Sentry project |
 | `BETTER_STACK_SOURCE_TOKEN` | vector | Optional: without it, logs stay on the host only |

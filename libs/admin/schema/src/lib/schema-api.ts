@@ -6,6 +6,8 @@ import type {
   ContentType,
   CreateBlockTypeRequest,
   CreateContentTypeRequest,
+  GithubSchemaSource,
+  GithubSchemaSourceRequest,
   UpdateBlockTypeRequest,
   UpdateContentTypeRequest,
 } from '@novan/shared-schemas';
@@ -60,6 +62,11 @@ export class SchemaApi {
 
   deleteBlockType(spaceId: string, apiId: string, force = false): Observable<void> {
     return this.http.delete<void>(this.url(spaceId, 'block-types', apiId), { params: forceParams(force) });
+  }
+
+  /** The schema files of a GitHub repo at one commit (agency staff). The API holds the GitHub token and only reads. */
+  readGithubSchema(spaceId: string, body: GithubSchemaSourceRequest): Observable<GithubSchemaSource> {
+    return this.http.post<GithubSchemaSource>(`${this.base}/${spaceId}/schema-source/github`, body);
   }
 
   private url(spaceId: string, kind: ModelKind, apiId?: string): string {

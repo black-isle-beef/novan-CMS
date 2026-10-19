@@ -1,0 +1,169 @@
+<p class="mb-2">
+  <a [routerLink]="['/spaces', spaceId(), 'schema']"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Schema</a>
+</p>
+<h1 class="mb-1">Set up from GitHub</h1>
+<p class="lead text-body-secondary mb-4">
+  Make the content types and blocks of {{ context.currentSpace()?.name ?? 'this space' }} match the schema files in a
+  site's repo: for a new site, or to restore one. It does what <code>novan schema push</code> does.
+</p>
+
+<div class="col-lg-8">
+  @if (checkError(); as message) {
+    <ds-alert variant="danger" class="mb-4">{{ message }}</ds-alert>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="check()" novalidate class="mb-5" aria-labelledby="github-source-heading">
+    <h2 id="github-source-heading" class="h4 mb-3">Repo</h2>
+    <div class="mb-3">
+      <label for="github-repo-url" class="form-label">GitHub address</label>
+      <input
+        id="github-repo-url"
+        type="url"
+        class="form-control"
+        formControlName="repoUrl"
+        autocomplete="url"
+        spellcheck="false"
+        placeholder="https://github.com/owner/repo"
+        required
+        aria-describedby="github-repo-url-hint"
+        [class.is-invalid]="invalid('repoUrl')"
+        [attr.aria-invalid]="invalid('repoUrl')"
+      />
+      <div id="github-repo-url-hint" [class]="invalid('repoUrl') ? 'invalid-feedback' : 'form-text'">
+        {{
+          serverErrors()['repoUrl']?.join(' ') ||
+            (invalid('repoUrl')
+              ? 'Enter a GitHub address like https://github.com/owner/repo.'
+              : "Private repos work when the API's GitHub token may read them.")
+        }}
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-sm-6">
+        <label for="github-ref" class="form-label">Branch, tag or commit <span class="text-body-secondary">(optional)</span></label>
+        <input
+          id="github-ref"
+          type="text"
+          class="form-control"
+          formControlName="ref"
+          spellcheck="false"
+          aria-describedby="github-ref-hint"
+          [class.is-invalid]="invalid('ref')"
+          [attr.aria-invalid]="invalid('ref')"
+        />
+        <div id="github-ref-hint" [class]="invalid('ref') ? 'invalid-feedback' : 'form-text'">
+          {{ serverErrors()['ref']?.join(' ') || 'Leave empty for the default branch. For a restore, use the release you want back.' }}
+        </div>
+      </div>
+      <div class="col-sm-6">
+        <label for="github-path" class="form-label">Schema folder</label>
+        <input
+          id="github-path"
+          type="text"
+          class="form-control"
+          formControlName="path"
+          spellcheck="false"
+          required
+          aria-describedby="github-path-hint"
+          [class.is-invalid]="invalid('path')"
+          [attr.aria-invalid]="invalid('path')"
+        />
+        <div id="github-path-hint" [class]="invalid('path') ? 'invalid-feedback' : 'form-text'">
+          {{ serverErrors()['path']?.join(' ') || 'Holds content-types/ and block-types/.' }}
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" [disabled]="checking() || applying()" [attr.aria-busy]="checking()">
+      {{ checking() ? 'Checking the repo...' : 'Check' }}
+    </button>
+  </form>
+
+  @if (plan(); as p) {
+    <section #results tabindex="-1" aria-labelledby="github-changes-heading" class="mb-4">
+      <h2 id="github-changes-heading" class="h4 mb-1">What would change</h2>
+      <p class="text-body-secondary">
+        {{ p.source.repo }} at <code>{{ p.source.ref }}</code> (commit <code>{{ p.source.commitSha.slice(0, 7) }}</code>),
+        {{ p.source.contentTypes.length }} content types and {{ p.source.blockTypes.length }} block types in
+        <code>{{ p.source.path }}</code>.
+      </p>
+
+      @if (!p.changes.length) {
+        <ds-alert variant="success">The space already matches this commit. There is nothing to change.</ds-alert>
+      } @else {
+        <ul class="list-unstyled mb-4">
+          @for (change of p.changes; track change.kind + change.apiId) {
+            <li class="border-bottom py-2">
+              <span class="fw-semibold">{{ actionLabel[change.action] }}</span> {{ describe(change) }}
+              @if (change.destructive) {
+                <ds-badge variant="danger" class="ms-2">Can lose content</ds-badge>
+              }
+              @if (change.details.length) {
+                <ul class="small text-body-secondary mb-0 mt-1">
+                  @for (detail of change.details; track $index) {
+                    <li>{{ detail }}</li>
+                  }
+                </ul>
+              }
+            </li>
+          }
+        </ul>
+
+        <form [formGroup]="confirm" (ngSubmit)="apply()" novalidate aria-labelledby="github-apply-heading">
+          <h3 id="github-apply-heading" class="h5">Apply</h3>
+          @if (p.destructive) {
+            <ds-alert variant="warning" class="mb-3">
+              {{ p.destructive }} {{ p.destructive === 1 ? 'change deletes a type, removes a field or changes a field type' : 'changes delete types, remove fields or change field types' }}.
+              Only a restore applies them.
+            </ds-alert>
+          }
+
+          <div class="form-check mb-3">
+            <input id="github-restore" type="checkbox" class="form-check-input" formControlName="restore" aria-describedby="github-restore-hint" />
+            <label for="github-restore" class="form-check-label">Restore: make the space match the repo exactly</label>
+            <div id="github-restore-hint" class="form-text">
+              Also deletes types, removes fields and changes field types, even when existing pages then need fixing. Content
+              of a deleted content type is deleted with it.
+            </div>
+          </div>
+
+          @if (restore()) {
+            <div class="mb-3">
+              <label for="github-confirm-slug" class="form-label">Type the space's short name, <code>{{ slug() }}</code>, to confirm</label>
+              <input id="github-confirm-slug" type="text" class="form-control" formControlName="slug" autocomplete="off" spellcheck="false" />
+            </div>
+          }
+
+          <button type="submit" [class]="restore() ? 'btn btn-danger' : 'btn btn-primary'" [disabled]="!canApply()" [attr.aria-busy]="applying()">
+            {{ applying() ? 'Applying...' : restore() ? 'Restore the schema' : 'Apply ' + p.changes.length + (p.changes.length === 1 ? ' change' : ' changes') }}
+          </button>
+        </form>
+      }
+    </section>
+  }
+
+  @if (log().length || applyError() || applied()) {
+    <section #outcome tabindex="-1" aria-labelledby="github-outcome-heading">
+      <h2 id="github-outcome-heading" class="h4">Progress</h2>
+      <ol class="small font-monospace mb-3" role="log" aria-label="Changes made">
+        @for (line of log(); track $index) {
+          <li>{{ line }}</li>
+        }
+      </ol>
+      @if (applyError(); as message) {
+        <ds-alert variant="danger">
+          @for (line of message.split('\n'); track $index) {
+            <p class="mb-0">{{ line }}</p>
+          }
+        </ds-alert>
+      }
+      @if (applied(); as sha) {
+        <ds-alert variant="success">
+          The schema now matches commit <code>{{ sha.slice(0, 7) }}</code>.
+          <a [routerLink]="['/spaces', spaceId(), 'schema']">Back to Schema</a>
+        </ds-alert>
+      }
+    </section>
+  }
+</div>

@@ -1,7 +1,7 @@
 import { planBlockSync } from './blocks';
-import { diffSchemas } from './diff';
+import { diffSchemas } from '@novan/schema-sync';
 import { fakeApi, target } from './fake-api';
-import { applyChanges } from './push';
+import { applyChanges } from '@novan/schema-sync';
 import { type SchemaSet, toBlockTypeFile, toContentTypeFile } from './schema-files';
 
 const text = (apiId: string) => ({ id: apiId, apiId, label: apiId, type: 'text' });

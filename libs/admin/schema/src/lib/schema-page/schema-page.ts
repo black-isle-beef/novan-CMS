@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DsAlertComponent, DsBadgeComponent, DsSpinnerComponent } from '@black-isle-beef/novan-design-system';
 import { problemMessage, SpaceContext } from '@novan/admin-spaces';
@@ -26,6 +26,8 @@ export class SchemaPage {
   readonly spaceId = input.required<string>();
   readonly deleted = input<string>();
 
+  /** Setting up from GitHub is for agency staff, not while viewing as a role. */
+  protected readonly staff = computed(() => this.context.currentAccess()?.agencyStaff === true);
   protected readonly model = signal<Model | null>(null);
   protected readonly loadError = signal<string | null>(null);
 
