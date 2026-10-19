@@ -1,7 +1,16 @@
-<h1 class="mb-1">Schema</h1>
-<p class="lead text-muted mb-4">
-  The content types and blocks of {{ context.currentSpace()?.name ?? 'this space' }}. Editors never see this page.
-</p>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h1 class="mb-1">Schema</h1>
+    <p class="lead text-muted mb-0">
+      The content types and blocks of {{ context.currentSpace()?.name ?? 'this space' }}. Editors never see this page.
+    </p>
+  </div>
+  @if (staff()) {
+    <a class="btn btn-secondary" [routerLink]="['/spaces', spaceId(), 'schema', 'from-github']">
+      <i class="bi bi-github me-1" aria-hidden="true"></i>Set up from GitHub
+    </a>
+  }
+</div>
 
 @if (deleted(); as name) {
   <ds-alert variant="success" class="mb-4">Deleted {{ name }}.</ds-alert>

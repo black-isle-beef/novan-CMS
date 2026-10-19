@@ -1,5 +1,5 @@
 import type { Route } from '@angular/router';
-import { requireSchemaAccess } from './schema-access';
+import { requireSchemaAccess, requireSchemaFromGithub } from './schema-access';
 
 const editor = () => import('./type-editor-page/type-editor-page').then((m) => m.TypeEditorPage);
 
@@ -10,6 +10,12 @@ export const schemaRoutes: Route[] = [
     title: 'Schema | Novan CMS',
     canActivate: [requireSchemaAccess],
     loadComponent: () => import('./schema-page/schema-page').then((m) => m.SchemaPage),
+  },
+  {
+    path: 'spaces/:spaceId/schema/from-github',
+    title: 'Set up from GitHub | Novan CMS',
+    canActivate: [requireSchemaFromGithub],
+    loadComponent: () => import('./github-setup-page/github-setup-page').then((m) => m.GithubSetupPage),
   },
   {
     path: 'spaces/:spaceId/schema/new/content-type',
