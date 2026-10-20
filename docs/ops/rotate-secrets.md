@@ -16,6 +16,7 @@ Redeploy without a code change: **Actions > Deploy > Run workflow**, the environ
 | `CLOUDFLARE_API_TOKEN` | Cloudflare **My profile > API tokens > Roll** | Rolling revokes the old value | |
 | `RESEND_API_KEY` / `POSTMARK_SERVER_TOKEN` | Provider dashboard | Delete the old key | Also the SMTP password in Supabase auth settings if it is the same key |
 | `TURNSTILE_SECRET_KEY` | Cloudflare **Turnstile > widget > Rotate secret key** | Cloudflare keeps the old one valid for 2 hours | |
+| `SCHEMA_GITHUB_TOKEN` | GitHub **Settings > Developer settings > Fine-grained tokens**: regenerate, or a new token with the same repos and Contents: read-only | Delete the old token | Fine-grained tokens expire: put the expiry date in the table below |
 | Delivery / preview tokens of a site | Admin, **Settings > API tokens**: create a new one | Revoke the old one after the deploy | Per site |
 | `SENTRY_DSN` / `SENTRY_DSN_ADMIN` | Sentry **Project > Client keys**: new key | Disable the old key | DSNs are not really secret, but rotate them if abused |
 | `DEPLOY_SSH_KEY` | `ssh-keygen -t ed25519 -C novan-deploy`; add the public key to `/home/deploy/.ssh/authorized_keys` | Remove the old public key line | Check a deploy works before removing the old key |

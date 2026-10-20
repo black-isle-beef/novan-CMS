@@ -76,3 +76,13 @@ itself is gone or the data needed is older than they keep.
 
 Don't. Restore into a new project, check it, then switch the environment over (step 5). Restoring over a live
 database deletes everything written since the backup.
+
+## Restoring one space's content model
+
+When only a space's content types and blocks are wrong (someone changed them in the admin, or a push went wrong), the
+site's repo is the copy to go back to; no database restore is needed. As agency staff: **Schema > Set up from GitHub**,
+the site's repo and the release tag that was live, **Check**, then **Restore** and type the space's short name. It
+does what `novan schema push --force` does: types are deleted and fields removed or retyped to match the repo, and
+content of a deleted content type is deleted with it, so read the list of changes before restoring. Pages left
+invalid by a change need fixing in the editor. The audit log records the commit read (`schema.github_read`) and each
+change.

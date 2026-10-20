@@ -36,6 +36,6 @@ Every command that talks to a space takes `--api`, `--space` and `--env`, which 
 ## Files
 
 - `src/lib/api.ts`: the Management API calls; `session.ts` and `login.ts`: signing in.
-- `src/lib/schema-files.ts`, `diff.ts`, `push.ts`: schema as code. Files are the create request with every default filled in, which is also what the API answers, so pulled files round-trip unchanged.
+- `src/lib/schema-files.ts`: the schema directory on disk. The file format, `diffSchemas` and `applyChanges` live in `@novan/schema-sync` (`libs/shared/schema-sync`), shared with the admin's Schema > Set up from GitHub. Files are the create request with every default filled in, which is also what the API answers, so pulled files round-trip unchanged.
 - `src/lib/blocks.ts`: `blocks sync`. `src/lib/kits.ts`, `seed.ts`: starter kits. Seed data is written plainly in the default language; the CLI wraps translated fields in a locale map, gives blocks a `_uid` and resolves `{ "$entry": "<key>" }` to the other entry's id.
 - `src/lib/kits.spec.ts` keeps every kit valid: its blocks equal `@novan/blocks`, its seed content passes the same validation as publishing, and the starter site's schema equals the brochure kit's.

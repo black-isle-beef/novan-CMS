@@ -4,7 +4,7 @@ import type { BlockType, ContentType, Entry, EntrySummary, Folder } from '@novan
 import { randomUUID } from 'node:crypto';
 import type { NovanApi, Target } from './api';
 import { ApiError } from './errors';
-import { referencesOf } from './push';
+import { referencesOf } from '@novan/schema-sync';
 import { type BlockTypeFile, type ContentTypeFile, toBlockTypeFile, toContentTypeFile } from './schema-files';
 
 export interface FakeState {
