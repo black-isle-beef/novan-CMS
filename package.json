@@ -64,7 +64,7 @@
     "ng-packagr": "~22.2.4",
     "nx": "23.3.0",
     "otpauth": "^9.5.2",
-    "postcss": "^8.4.5",
+    "postcss": "^8.5.30",
     "prettier": "~3.6.2",
     "supabase": "^2.119.0",
     "supertest": "^7.3.1",
