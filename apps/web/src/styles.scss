@@ -1,2 +1,8 @@
-// Novan design system: tokens, Bootstrap 5, Bootstrap Icons and component styles.
+// Novan design system: tokens, Bootstrap 5, Bootstrap Icons and component styles (the Charcoal & Copper theme is
+// switched on in index.html).
 @use '@black-isle-beef/novan-design-system/styles/styles';
+@use 'styles/layout';
+@use 'styles/sections';
+@use 'styles/pricing';
+@use 'styles/forms';
+@use 'styles/legal';

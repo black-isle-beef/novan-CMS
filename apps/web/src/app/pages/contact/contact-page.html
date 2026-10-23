@@ -1,0 +1,186 @@
+<mk-hero heading="Contact us" lede="Ask a question, talk to sales, get help or book a demo. We read every message." />
+
+<div class="mk-container mk-contact">
+  <section class="mk-contact__form" aria-labelledby="contact-form-heading">
+    <h2 id="contact-form-heading" class="mk-section__title">Send us an enquiry</h2>
+
+    @if (config.contactForm) {
+      <!-- Announces the outcome; always in the page so screen readers hear changes to it. -->
+      <div class="mk-form-status" role="status">
+        @switch (state()) {
+          @case ('sending') {
+            <p class="visually-hidden">Sending your enquiry</p>
+          }
+          @case ('sent') {
+            <div class="alert alert-success" tabindex="-1">
+              <i class="bi bi-check-circle me-2" aria-hidden="true"></i>{{ text.successMessage }}
+            </div>
+          }
+          @case ('failed') {
+            <div class="alert alert-danger">
+              <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{{ text.failureMessage }}
+              <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a>
+            </div>
+          }
+        }
+      </div>
+
+      @if (summary().length) {
+        <div #summaryBox class="mk-error-summary" tabindex="-1" aria-labelledby="contact-error-summary-title">
+          <h3 id="contact-error-summary-title" class="mk-error-summary__title">
+            <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>There is a problem
+          </h3>
+          <ul class="mk-error-summary__list">
+            @for (item of summary(); track item.field) {
+              <li>
+                <a [href]="'#' + ids[item.field]" (click)="focusField($event, item.field)">{{ item.message }}</a>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      <form class="mk-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="mk-field">
+          <label class="form-label" [for]="ids.name">Your name</label>
+          @if (error('name'); as message) {
+            <p class="mk-field__error" [id]="ids.name + '-error'"><span class="visually-hidden">Error: </span>{{ message }}</p>
+          }
+          <input
+            class="form-control"
+            [class.is-invalid]="!!error('name')"
+            type="text"
+            [id]="ids.name"
+            formControlName="name"
+            autocomplete="name"
+            [attr.aria-invalid]="!!error('name')"
+            [attr.aria-describedby]="describedBy('name')"
+          />
+        </div>
+
+        <div class="mk-field">
+          <label class="form-label" [for]="ids.email">Email address</label>
+          <p class="mk-field__hint" [id]="ids.email + '-hint'">We will only use this to reply to you.</p>
+          @if (error('email'); as message) {
+            <p class="mk-field__error" [id]="ids.email + '-error'"><span class="visually-hidden">Error: </span>{{ message }}</p>
+          }
+          <input
+            class="form-control"
+            [class.is-invalid]="!!error('email')"
+            type="email"
+            [id]="ids.email"
+            formControlName="email"
+            autocomplete="email"
+            spellcheck="false"
+            [attr.aria-invalid]="!!error('email')"
+            [attr.aria-describedby]="describedBy('email', true)"
+          />
+        </div>
+
+        <div class="mk-field">
+          <label class="form-label" [for]="ids.company">Company (optional)</label>
+          @if (error('company'); as message) {
+            <p class="mk-field__error" [id]="ids.company + '-error'"><span class="visually-hidden">Error: </span>{{ message }}</p>
+          }
+          <input
+            class="form-control"
+            [class.is-invalid]="!!error('company')"
+            type="text"
+            [id]="ids.company"
+            formControlName="company"
+            autocomplete="organization"
+            [attr.aria-invalid]="!!error('company')"
+            [attr.aria-describedby]="describedBy('company')"
+          />
+        </div>
+
+        <div class="mk-field">
+          <label class="form-label" [for]="ids.enquiry">What is your enquiry about?</label>
+          @if (error('enquiry'); as message) {
+            <p class="mk-field__error" [id]="ids.enquiry + '-error'"><span class="visually-hidden">Error: </span>{{ message }}</p>
+          }
+          <select
+            class="form-select"
+            [class.is-invalid]="!!error('enquiry')"
+            [id]="ids.enquiry"
+            formControlName="enquiry"
+            [attr.aria-invalid]="!!error('enquiry')"
+            [attr.aria-describedby]="describedBy('enquiry')"
+          >
+            @for (type of text.enquiryTypes; track type.value) {
+              <option [value]="type.value">{{ type.label }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="mk-field">
+          <label class="form-label" [for]="ids.message">Your message</label>
+          @if (error('message'); as message) {
+            <p class="mk-field__error" [id]="ids.message + '-error'"><span class="visually-hidden">Error: </span>{{ message }}</p>
+          }
+          <textarea
+            class="form-control"
+            [class.is-invalid]="!!error('message')"
+            [id]="ids.message"
+            formControlName="message"
+            rows="6"
+            [attr.aria-invalid]="!!error('message')"
+            [attr.aria-describedby]="describedBy('message')"
+          ></textarea>
+        </div>
+
+        <div class="mk-field">
+          @if (error('consent'); as message) {
+            <p class="mk-field__error" [id]="ids.consent + '-error'"><span class="visually-hidden">Error: </span>{{ message }}</p>
+          }
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              [class.is-invalid]="!!error('consent')"
+              type="checkbox"
+              [id]="ids.consent"
+              formControlName="consent"
+              [attr.aria-invalid]="!!error('consent')"
+              [attr.aria-describedby]="describedBy('consent')"
+            />
+            <label class="form-check-label" [for]="ids.consent">
+              I agree to {{ site.organisationName }} contacting me about this enquiry, as described in the
+              <a routerLink="/privacy">privacy policy</a>.
+            </label>
+          </div>
+        </div>
+
+        <!-- Honeypot: hidden from people and assistive technology; robots fill it in and are quietly dropped. -->
+        <div class="mk-honeypot" aria-hidden="true">
+          <label for="contact-website">Leave this empty</label>
+          <input type="text" id="contact-website" formControlName="website" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg" [attr.aria-disabled]="state() === 'sending'">
+          {{ state() === 'sending' ? 'Sending…' : text.submitLabel }}
+        </button>
+      </form>
+    } @else {
+      <p>
+        Email us at <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a> and tell us how we can help.
+      </p>
+    }
+  </section>
+
+  <aside class="mk-card mk-contact__details" aria-labelledby="contact-details-heading">
+    <h2 id="contact-details-heading" class="mk-contact__details-title">Other ways to reach us</h2>
+    <dl class="mk-contact__list">
+      <dt>Email</dt>
+      <dd><a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></dd>
+      <dt>Replies</dt>
+      <dd>{{ site.responseTime }}</dd>
+      <dt>Company</dt>
+      <dd>{{ site.organisationName }}</dd>
+      <!-- TODO(copy): registered address and company number, once confirmed. -->
+      @if (site.legalAddress) {
+        <dt>Address</dt>
+        <dd>{{ site.legalAddress }}</dd>
+      }
+    </dl>
+  </aside>
+</div>

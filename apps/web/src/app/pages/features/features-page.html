@@ -1,0 +1,43 @@
+<mk-hero
+  heading="Features"
+  lede="What Novan CMS does today, and what is coming next. Everything is built for editors first, on foundations developers can trust."
+/>
+
+<div class="mk-container">
+  <nav class="mk-jump-links" aria-label="Features on this page">
+    <ul>
+      @for (feature of features; track feature.id) {
+        <li><a [routerLink]="[]" [fragment]="feature.id">{{ feature.title }}</a></li>
+      }
+    </ul>
+  </nav>
+</div>
+
+@for (feature of features; track feature.id; let odd = $odd) {
+  <section class="mk-section mk-feature" [class.mk-section--muted]="odd" [id]="feature.id" [attr.aria-labelledby]="feature.id + '-heading'">
+    <div class="mk-container mk-feature__inner" [class.mk-feature__inner--reverse]="odd">
+      <div class="mk-feature__copy">
+        <h2 class="mk-section__title" [id]="feature.id + '-heading'">{{ feature.title }}</h2>
+        @if (feature.status === 'planned') {
+          <p><ds-badge variant="neutral">Planned</ds-badge></p>
+        }
+        @for (paragraph of feature.description; track $index) {
+          <p class="mk-feature__text">{{ paragraph }}</p>
+        }
+        <ul class="mk-check-list">
+          @for (point of feature.points; track point) {
+            <li><i class="bi bi-check2" aria-hidden="true"></i>{{ point }}</li>
+          }
+        </ul>
+      </div>
+      <!-- TODO(copy): replace with a screenshot or illustration of this feature (with alt text). -->
+      <div class="mk-feature__visual" aria-hidden="true">
+        <span class="mk-feature__visual-icon"><i [class]="feature.icon"></i></span>
+      </div>
+    </div>
+  </section>
+}
+
+<mk-cta-band heading="Want to see it working?" text="We will walk you through the editor with a site like yours.">
+  <a class="btn btn-primary btn-lg" [routerLink]="cta.path" [queryParams]="cta.queryParams">{{ cta.label }}</a>
+</mk-cta-band>

@@ -1,0 +1,67 @@
+<mk-hero heading="Pricing" lede="Straightforward monthly plans. We build your site, then you run it yourself." />
+
+<section class="mk-section mk-section--tight" aria-labelledby="plans-heading">
+  <div class="mk-container">
+    <h2 id="plans-heading" class="visually-hidden">Plans</h2>
+    <ul class="mk-plans" role="list">
+      @for (plan of pricing.plans; track plan.id) {
+        <li><mk-pricing-card [plan]="plan" /></li>
+      }
+    </ul>
+    <p class="mk-plans__note">{{ pricing.vatNote }}</p>
+  </div>
+</section>
+
+<section class="mk-section mk-section--muted" aria-labelledby="compare-heading">
+  <div class="mk-container">
+    <h2 id="compare-heading" class="mk-section__title mk-section__title--centred">Compare plans</h2>
+    <div class="table-responsive mk-table-scroll">
+      <table class="table mk-table mk-compare">
+        <caption>What each plan includes. A tick means included; a dash means not included.</caption>
+        <thead>
+          <tr>
+            <th scope="col">Feature</th>
+            @for (plan of pricing.plans; track plan.id) {
+              <th scope="col">{{ plan.name }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of pricing.comparison; track row.feature) {
+            <tr>
+              <th scope="row">{{ row.feature }}</th>
+              @for (plan of pricing.plans; track plan.id) {
+                @let value = row.values[plan.id];
+                <td>
+                  @if (value === true) {
+                    <i class="bi bi-check2 mk-compare__yes" aria-hidden="true"></i><span class="visually-hidden">Included</span>
+                  } @else if (value === false) {
+                    <span class="mk-compare__no" aria-hidden="true">–</span><span class="visually-hidden">Not included</span>
+                  } @else {
+                    {{ value }}
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section" aria-labelledby="faq-heading">
+  <div class="mk-container mk-faq">
+    <h2 id="faq-heading" class="mk-section__title mk-section__title--centred">Questions</h2>
+    @for (faq of pricing.faq; track faq.question) {
+      <ds-accordion-item [summary]="faq.question">
+        <p class="mb-0">{{ faq.answer }}</p>
+      </ds-accordion-item>
+    }
+    <p class="mk-section__more">Something else? <a routerLink="/contact" [queryParams]="{ enquiry: 'sales' }">Ask our sales team</a>.</p>
+  </div>
+</section>
+
+<mk-cta-band heading="Not sure which plan fits?" text="Tell us about your sites and we will recommend one.">
+  <a class="btn btn-primary btn-lg" [routerLink]="cta.path" [queryParams]="cta.queryParams">{{ cta.label }}</a>
+</mk-cta-band>

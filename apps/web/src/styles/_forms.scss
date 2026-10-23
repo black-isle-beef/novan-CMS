@@ -1,0 +1,144 @@
+// The Contact page: the form, its error summary and messages, and the contact details.
+
+.mk-contact {
+  display: grid;
+  gap: 3rem;
+  padding-block: 3rem 5rem;
+
+  @media (min-width: 62rem) {
+    grid-template-columns: 2fr 1fr;
+    align-items: start;
+  }
+}
+
+.mk-contact__form {
+  max-width: 40rem;
+}
+
+.mk-form {
+  display: grid;
+  gap: 1.5rem;
+  justify-items: start;
+}
+
+.mk-field {
+  display: grid;
+  gap: 0.25rem;
+  width: 100%;
+
+  .form-label {
+    margin-bottom: 0;
+    font-weight: 600;
+  }
+}
+
+.mk-field__hint {
+  margin: 0;
+  color: var(--ds-color-copper-theme-text-muted);
+}
+
+// Errors are text with an "Error:" prefix for screen readers and a bar beside them, never colour alone.
+.mk-field__error {
+  margin: 0;
+  padding-left: 0.75rem;
+  border-left: 0.25rem solid var(--ds-color-copper-theme-danger);
+  color: var(--ds-color-copper-theme-danger);
+  font-weight: 600;
+}
+
+.mk-error-summary {
+  margin-bottom: 2rem;
+  padding: 1.25rem 1.5rem;
+  border: 0.125rem solid var(--ds-color-copper-theme-danger);
+  border-radius: var(--bs-border-radius-lg);
+
+  &:focus-visible {
+    outline: 0.125rem solid var(--ds-color-copper-500);
+    outline-offset: 0.125rem;
+  }
+}
+
+.mk-error-summary__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.mk-error-summary__list {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding-left: 1.25rem;
+
+  a {
+    display: inline-block;
+    min-height: 1.5rem;
+    color: var(--ds-color-copper-theme-danger);
+    font-weight: 600;
+  }
+}
+
+// Links inside labels are underlined, so they never stand out by colour alone.
+.mk-form .form-check-label a[href] {
+  text-decoration: underline;
+}
+
+.mk-form-status:empty {
+  display: none;
+}
+
+// Kept off-screen for people; robots that fill every field give themselves away.
+.mk-honeypot {
+  position: absolute;
+  left: -100vw;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+// The cookie preferences dialog.
+.mk-consent-form__legend {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.mk-consent-form__option {
+  margin-bottom: 1rem;
+
+  .form-check-label {
+    font-weight: 600;
+  }
+}
+
+.mk-consent-form__always {
+  color: var(--ds-color-copper-theme-text-muted);
+  font-weight: 400;
+}
+
+.mk-consent-form__description {
+  margin: 0.25rem 0 0;
+  color: var(--ds-color-copper-theme-text-muted);
+}
+
+.mk-contact__details {
+  padding: 1.5rem;
+}
+
+.mk-contact__details-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.mk-contact__list {
+  margin: 0;
+
+  dt {
+    margin-top: 1rem;
+    color: var(--ds-color-copper-theme-text-muted);
+    font-weight: 400;
+  }
+
+  dd {
+    margin: 0;
+  }
+}
