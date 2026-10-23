@@ -54,7 +54,7 @@
     "angular-eslint": "^22.6.0",
     "autocannon": "^8.0.0",
     "autoprefixer": "^10.4.0",
-    "axe-core": "^4.13.0",
+    "axe-core": "^4.14.0",
     "drizzle-kit": "^0.31.11",
     "esbuild": "^0.28.2",
     "eslint": "^10.0.0",
