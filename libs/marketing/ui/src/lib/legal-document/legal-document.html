@@ -1,0 +1,42 @@
+<div class="mk-container mk-legal">
+  <header class="mk-legal__header">
+    <h1 class="mk-legal__title">{{ document().title }}</h1>
+    <p class="mk-legal__updated">Last updated <time [attr.datetime]="document().lastUpdated">{{ lastUpdated() }}</time></p>
+    <p class="mk-legal__intro"><mk-rich-text [content]="document().intro" /></p>
+  </header>
+
+  <nav class="mk-card mk-legal__toc" aria-labelledby="mk-legal-toc-heading">
+    <h2 id="mk-legal-toc-heading" class="mk-legal__toc-title">On this page</h2>
+    <ol class="mk-legal__toc-list">
+      @for (section of document().sections; track section.id) {
+        <li><a [routerLink]="[]" [fragment]="section.id">{{ section.heading }}</a></li>
+      }
+    </ol>
+  </nav>
+
+  @for (section of document().sections; track section.id) {
+    <section class="mk-legal__section" [id]="section.id" [attr.aria-labelledby]="section.id + '-heading'">
+      <h2 class="mk-legal__heading" [id]="section.id + '-heading'">{{ section.heading }}</h2>
+      @for (block of section.blocks; track $index) {
+        @switch (block.kind) {
+          @case ('paragraph') {
+            <p><mk-rich-text [content]="block.content" /></p>
+          }
+          @case ('list') {
+            <ul>
+              @for (item of block.items; track $index) {
+                <li><mk-rich-text [content]="item" /></li>
+              }
+            </ul>
+          }
+          @case ('storage-table') {
+            <mk-storage-table />
+          }
+          @case ('cookie-settings') {
+            <p><button type="button" class="btn btn-secondary" (click)="consent.reopen()">Cookie settings</button></p>
+          }
+        }
+      }
+    </section>
+  }
+</div>
