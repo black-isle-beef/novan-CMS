@@ -81,6 +81,18 @@ services:
     depends_on:
       api: { condition: service_healthy }
 
+  # The Novan CMS marketing site (apps/web, docs/clients/marketing-site.md). Its pages need nothing else, so it starts
+  # without waiting for the API; only enquiries go to the API's Forms feature.
+  web:
+    <<: *app
+    image: ghcr.io/${IMAGE_OWNER}/novan-web:${TAG}
+    env_file: [env/web.env]
+    environment:
+      APP_VERSION: ${TAG}
+      TRUST_PROXY: '2'
+      # The API over the internal network: no TLS, Cloudflare or Caddy in between.
+      NOVAN_API_URL: http://api:3000
+
   # Ships every container's logs to Better Stack: `docker compose --profile logs up -d` (docs/ops/deploy.md).
   vector:
     image: timberio/vector:0.59.0-alpine

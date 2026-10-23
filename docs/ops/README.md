@@ -61,6 +61,7 @@ plain and public to anyone with repository access, so only public values go ther
 | `TURNSTILE_SECRET_KEY` | api | |
 | `SCHEMA_GITHUB_TOKEN` | api | Optional. Fine-grained GitHub token, **Contents: read-only** on the agency's site repos only, for Schema > Set up from GitHub. Unset: public repos only |
 | `STARTER_SITE_DELIVERY_TOKEN`, `STARTER_SITE_PREVIEW_TOKEN` | starter site | From the admin, Settings > API tokens, in that environment's starter space |
+| `MARKETING_DELIVERY_TOKEN` | marketing site | Delivery token of that environment's Novan space, used only to send enquiries (docs/clients/marketing-site.md) |
 | `SENTRY_DSN` | api, worker, sites | DSN of the `novan-server` Sentry project |
 | `BETTER_STACK_SOURCE_TOKEN` | vector | Optional: without it, logs stay on the host only |
 | `DEPLOY_HOST`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS` | deploy | Host address, private key of the `deploy` user, `ssh-keyscan <host>` output |
@@ -71,6 +72,8 @@ plain and public to anyone with repository access, so only public values go ther
 | --- | --- |
 | `NOVAN_DOMAIN` | `novan.example` (names the origin certificate files) |
 | `API_HOST`, `ADMIN_HOST`, `STARTER_SITE_HOST` | `api.novan.example`, `admin.novan.example`, `starter.novan.example` (staging: `api.staging.novan.example`, …) |
+| `MARKETING_HOST` | `www.novan.example` (staging: `www.staging.novan.example`): the marketing site, `apps/web` |
+| `MARKETING_CONTACT_ENTRY_ID`, `MARKETING_CONTACT_FORM_UID` | The Novan space's published Contact page and its `form` block (docs/clients/marketing-site.md). Unset: the contact page offers email only |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY` | Public: the admin sends them to every browser |
 | `SUPABASE_IMAGE_TRANSFORMS` | `true` on Pro |
 | `MAIL_PROVIDER`, `MAIL_FROM` | `resend`, `Novan CMS <no-reply@novan.example>` |

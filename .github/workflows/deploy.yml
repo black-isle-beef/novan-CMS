@@ -30,7 +30,7 @@ permissions:
 env:
   NX_NO_CLOUD: true
   # Images: ghcr.io/<owner>/novan-<app>:<sha>
-  APPS: api admin starter-site
+  APPS: api admin starter-site web
 
 jobs:
   plan:
