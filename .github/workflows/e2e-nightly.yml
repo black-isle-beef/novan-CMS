@@ -34,10 +34,10 @@ jobs:
       - uses: ./.github/actions/e2e-stack
         with:
           browsers: ${{ matrix.browser }}
-      # Every browser project, one at a time (admin-e2e and starter-site-e2e share the API port). api-e2e has no
+      # Every browser project, one at a time (admin-e2e and starter-site-e2e share the API port; web-e2e needs no API). api-e2e has no
       # browser, and chromium already runs it on every change.
       - name: e2e (Playwright + axe)
-        run: npx nx run-many -t e2e --projects=admin-e2e,starter-site-e2e --parallel=1
+        run: npx nx run-many -t e2e --projects=admin-e2e,starter-site-e2e,web-e2e --parallel=1
         # Nothing listens on the fake Cloudflare API outside api-e2e; the API's purge retries are expected (ci.yml).
         env:
           CLOUDFLARE_ZONE_ID: e2e-zone
