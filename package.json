@@ -104,7 +104,7 @@
     "@supabase/storage-js": "^2.117.2",
     "@supabase/supabase-js": "^2.117.2",
     "@tiptap/core": "^3.31.4",
-    "@tiptap/extension-subscript": "^3.31.4",
+    "@tiptap/extension-subscript": "^3.32.0",
     "@tiptap/extension-superscript": "^3.31.4",
     "@tiptap/pm": "^3.31.4",
     "@tiptap/starter-kit": "^3.31.4",
