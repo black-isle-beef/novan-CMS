@@ -7,3 +7,4 @@ Multi-tenant headless CMS with an in-house visual editor, built on Supabase + Ne
 - Never weaken row-level security, expose the Supabase service-role key outside `apps/api`, or skip the pgTAP cross-tenant tests.
 - UI work must pass the repo skills `angular-accessibility-audit-remediator` and `angular-scss-compliance-remediator`.
 - New CMS blocks are created with the `create-angular-cms-component` skill.
+- For work on the marketing/brochure site, follow `docs/claude/brochure-site.md`.

@@ -4,16 +4,11 @@
   "projectType": "application",
   "prefix": "app",
   "sourceRoot": "apps/web/src",
-  "tags": [
-    "scope:site",
-    "type:app"
-  ],
+  "tags": ["scope:site", "type:app"],
   "targets": {
     "build": {
       "executor": "@angular/build:application",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
       "options": {
         "outputPath": "dist/apps/web",
@@ -26,16 +21,19 @@
             "input": "apps/web/public"
           }
         ],
-        "styles": [
-          "apps/web/src/styles.scss"
-        ]
+        "styles": ["apps/web/src/styles.scss"],
+        "server": "apps/web/src/main.server.ts",
+        "ssr": {
+          "entry": "apps/web/src/server.ts"
+        },
+        "outputMode": "server"
       },
       "configurations": {
         "production": {
           "budgets": [
             {
               "type": "initial",
-              "maximumWarning": "800kb",
+              "maximumWarning": "900kb",
               "maximumError": "1.5mb"
             },
             {
@@ -44,7 +42,12 @@
               "maximumError": "8kb"
             }
           ],
-          "outputHashing": "all"
+          "outputHashing": "all",
+          "optimization": {
+            "scripts": true,
+            "styles": { "minify": true, "inlineCritical": true },
+            "fonts": false
+          }
         },
         "development": {
           "optimization": false,
@@ -57,6 +60,9 @@
       "continuous": true,
       "executor": "@angular/build:dev-server",
       "defaultConfiguration": "development",
+      "options": {
+        "port": 4100
+      },
       "configurations": {
         "production": {
           "buildTarget": "web:build:production"
@@ -70,15 +76,6 @@
       "executor": "@angular/build:unit-test",
       "options": {
         "watch": false
-      }
-    },
-    "serve-static": {
-      "continuous": true,
-      "executor": "@nx/web:file-server",
-      "options": {
-        "buildTarget": "web:build",
-        "staticFilePath": "dist/apps/web/browser",
-        "spa": true
       }
     }
   }

@@ -1,5 +1,5 @@
 name: Set up workspace
-description: Node 24, npm ci, the Nx cache and the base/head SHAs for `nx affected`.
+description: Node 24, node_modules (cached, else npm ci), the Nx cache and the base/head SHAs for `nx affected`.
 
 inputs:
   cache-name:
@@ -9,12 +9,21 @@ inputs:
 runs:
   using: composite
   steps:
+    # node_modules for this lockfile and Node version; on a hit `npm ci` (and the ~/.npm restore it needs) is skipped.
+    - name: node_modules cache
+      id: node-modules
+      uses: actions/cache@v6
+      with:
+        path: node_modules
+        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc') }}-${{ hashFiles('package-lock.json') }}
+
     - uses: actions/setup-node@v7
       with:
         node-version-file: .nvmrc
-        cache: npm
+        cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'npm' || '' }}
 
     - name: Install dependencies
+      if: steps.node-modules.outputs.cache-hit != 'true'
       shell: bash
       run: npm ci
 

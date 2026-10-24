@@ -1,0 +1,23 @@
+<ds-header class="mk-site-header" [navItems]="navItems()">
+  <mk-brand dsBrand [priority]="true" />
+  <ng-container dsActions>
+    <!-- The CMS admin is another app, so this is a plain link to its sign-in page (CMS_LOGIN_URL). -->
+    <a class="btn btn-secondary mk-header-action" [href]="config.cmsLoginUrl">{{ signInLabel }}</a>
+    <a class="btn btn-primary mk-header-action" [routerLink]="cta.path" [queryParams]="cta.queryParams">{{ cta.label }}</a>
+  </ng-container>
+</ds-header>
+
+<main id="ds-main-content" class="mk-main">
+  <router-outlet />
+</main>
+
+<ds-footer class="mk-site-footer" [organizationName]="site.organisationName" [linkGroups]="footerGroups">
+  <div dsFooterLegal class="mk-footer-legal">
+    <mk-brand />
+    <p class="mk-footer-legal__tagline">{{ site.tagline }}</p>
+    <button type="button" class="btn btn-link mk-footer-legal__settings" (click)="consent.reopen()">Cookie settings</button>
+  </div>
+</ds-footer>
+
+<!-- Last in the page, so the skip link stays the first stop; the banner is fixed to the bottom of the screen. -->
+<mk-consent-manager />

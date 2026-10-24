@@ -1,0 +1,55 @@
+<ds-cookie-banner
+  class="mk-consent-banner"
+  [open]="consent.bannerOpen()"
+  (openChange)="consent.bannerOpen.set($event)"
+  [autoFocus]="false"
+  acceptLabel="Accept all"
+  declineLabel="Reject all"
+  manageLabel="Manage preferences"
+  [equalProminence]="true"
+  (accepted)="consent.acceptAll()"
+  (declined)="consent.rejectAll()"
+  (manage)="openPreferences()"
+>
+  We use cookies that this site needs to work. With your permission we would also use analytics and marketing cookies,
+  though we do not use any yet. Read our <a routerLink="/cookies">cookie policy</a>.
+</ds-cookie-banner>
+
+<ds-modal
+  [open]="consent.preferencesOpen()"
+  (openChange)="consent.preferencesOpen.set($event)"
+  heading="Cookie preferences"
+  closeButtonLabel="Close cookie preferences"
+>
+  <form id="mk-consent-form" class="mk-consent-form" (submit)="saveDraft($event)">
+    <fieldset>
+      <legend class="mk-consent-form__legend">Choose which cookies we may use</legend>
+      @for (category of categories; track category.id) {
+        <div class="form-check form-switch mk-consent-form__option">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            role="switch"
+            [id]="'mk-consent-' + category.id"
+            [checked]="isChecked(category.id)"
+            [disabled]="category.required"
+            [attr.aria-describedby]="'mk-consent-' + category.id + '-description'"
+            (change)="toggle(category.id, $event)"
+          />
+          <label class="form-check-label" [for]="'mk-consent-' + category.id">
+            {{ category.name }}
+            @if (category.required) {
+              <span class="mk-consent-form__always">(always on)</span>
+            }
+          </label>
+          <p class="mk-consent-form__description" [id]="'mk-consent-' + category.id + '-description'">{{ category.description }}</p>
+        </div>
+      }
+    </fieldset>
+  </form>
+  <ng-container dsModalFooter>
+    <button type="button" class="btn btn-secondary" (click)="consent.rejectAll()">Reject all</button>
+    <button type="button" class="btn btn-secondary" (click)="consent.acceptAll()">Accept all</button>
+    <button type="submit" form="mk-consent-form" class="btn btn-primary">Save choices</button>
+  </ng-container>
+</ds-modal>

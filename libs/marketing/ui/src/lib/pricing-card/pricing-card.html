@@ -1,0 +1,30 @@
+<article class="mk-card mk-plan" [class.mk-plan--highlighted]="plan().highlighted" [attr.aria-labelledby]="headingId()">
+  @if (plan().highlighted) {
+    <p class="mk-plan__flag">Most popular</p>
+  }
+  <h3 class="mk-plan__name" [id]="headingId()">{{ plan().name }}</h3>
+  <p class="mk-plan__price">
+    @if (price(); as price) {
+      <span class="mk-plan__amount">{{ price }}</span>
+      <span class="mk-plan__period">{{ period }}</span>
+    } @else {
+      <span class="mk-plan__amount">Let’s talk</span>
+      <span class="mk-plan__period">Priced for your sites</span>
+    }
+  </p>
+  <p class="mk-plan__description">{{ plan().description }}</p>
+  <ul class="mk-check-list">
+    @for (feature of plan().features; track feature) {
+      <li><i class="bi bi-check2" aria-hidden="true"></i>{{ feature }}</li>
+    }
+  </ul>
+  <a
+    class="btn mk-plan__cta"
+    [class.btn-primary]="plan().highlighted"
+    [class.btn-secondary]="!plan().highlighted"
+    [routerLink]="plan().cta.path"
+    [queryParams]="plan().cta.queryParams"
+  >
+    {{ plan().cta.label }}<span class="visually-hidden">: {{ plan().name }} plan</span>
+  </a>
+</article>

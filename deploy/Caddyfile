@@ -39,6 +39,14 @@
 	reverse_proxy admin:8080
 }
 
+# The Novan CMS marketing site (apps/web). A www. name, so the platform's wildcard origin certificate covers it; send
+# the bare domain to it with a Cloudflare redirect rule (docs/clients/marketing-site.md).
+{$MARKETING_HOST} {
+	import common
+	import platform_tls
+	reverse_proxy web:4000
+}
+
 # --- Client sites ---------------------------------------------------------------------------------------------------
 # One block per site (docs/ops/add-client-domain.md). A client domain in its own Cloudflare zone has its own origin
 # certificate, named after the zone.

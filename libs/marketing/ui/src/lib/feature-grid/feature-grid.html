@@ -1,0 +1,14 @@
+<ul class="mk-feature-grid" role="list">
+  @for (feature of features(); track feature.id) {
+    <li class="mk-card mk-feature-card">
+      <span class="mk-icon-tile" aria-hidden="true"><i [class]="feature.icon"></i></span>
+      <h3 class="mk-feature-card__title">
+        <a routerLink="/features" [fragment]="feature.id" class="mk-feature-card__link">{{ feature.title }}</a>
+      </h3>
+      <p class="mk-feature-card__summary">{{ feature.summary }}</p>
+      @if (feature.status === 'planned') {
+        <ds-badge variant="neutral">Planned</ds-badge>
+      }
+    </li>
+  }
+</ul>

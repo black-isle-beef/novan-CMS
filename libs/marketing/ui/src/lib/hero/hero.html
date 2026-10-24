@@ -1,0 +1,22 @@
+<section class="mk-hero" [class.mk-hero--home]="variant() === 'home'" aria-labelledby="mk-hero-heading">
+  <span class="mk-hero__glow" aria-hidden="true"></span>
+  <div class="mk-container mk-hero__inner">
+    <div class="mk-hero__copy">
+      @if (eyebrow(); as eyebrow) {
+        <p class="mk-eyebrow">{{ eyebrow }}</p>
+      }
+      <h1 id="mk-hero-heading" class="mk-hero__title">{{ heading() }}</h1>
+      @if (lede(); as lede) {
+        <p class="mk-hero__lede">{{ lede }}</p>
+      }
+      <div class="mk-hero__actions">
+        <ng-content select="[mkHeroActions]" />
+      </div>
+    </div>
+    @if (variant() === 'home') {
+      <div class="mk-hero__visual">
+        <ng-content select="[mkHeroVisual]" />
+      </div>
+    }
+  </div>
+</section>

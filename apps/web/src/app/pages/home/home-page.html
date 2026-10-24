@@ -1,0 +1,94 @@
+<mk-hero
+  variant="home"
+  eyebrow="Content management for client websites"
+  heading="Websites your clients can run themselves"
+  lede="Novan CMS is a simple content management system, so your clients can change their own pages, images and words, safely and without waiting for a developer."
+>
+  <ng-container mkHeroActions>
+    <a class="btn btn-primary btn-lg" [routerLink]="cta.path" [queryParams]="cta.queryParams">{{ cta.label }}</a>
+    <a class="btn btn-secondary btn-lg" routerLink="/features">See features</a>
+  </ng-container>
+
+  <!-- TODO(copy): replace this illustration with a real screenshot of the visual editor (with alt text). -->
+  <div mkHeroVisual class="mk-editor-sketch" aria-hidden="true">
+    <div class="mk-editor-sketch__bar">
+      <span class="mk-editor-sketch__dot"></span>
+      <span class="mk-editor-sketch__dot"></span>
+      <span class="mk-editor-sketch__dot"></span>
+    </div>
+    <div class="mk-editor-sketch__body">
+      <div class="mk-editor-sketch__panel">
+        <span class="mk-editor-sketch__line"></span>
+        <span class="mk-editor-sketch__line mk-editor-sketch__line--short"></span>
+        <span class="mk-editor-sketch__line"></span>
+      </div>
+      <div class="mk-editor-sketch__canvas">
+        <span class="mk-editor-sketch__block mk-editor-sketch__block--selected"></span>
+        <span class="mk-editor-sketch__block"></span>
+        <span class="mk-editor-sketch__block mk-editor-sketch__block--half"></span>
+      </div>
+    </div>
+  </div>
+</mk-hero>
+
+<section class="mk-section" aria-labelledby="highlights-heading">
+  <div class="mk-container">
+    <div class="mk-section__intro">
+      <h2 id="highlights-heading" class="mk-section__title">Everything a client site needs</h2>
+      <p class="mk-section__lede">Built for the people who edit websites every day, and the agencies who look after them.</p>
+    </div>
+    <mk-feature-grid [features]="highlights" />
+    <p class="mk-section__more"><a routerLink="/features">See every feature</a></p>
+  </div>
+</section>
+
+<section class="mk-section mk-section--muted" aria-labelledby="how-it-works-heading">
+  <div class="mk-container">
+    <h2 id="how-it-works-heading" class="mk-section__title mk-section__title--centred">How it works</h2>
+    <ol class="mk-steps">
+      @for (step of steps; track step.title; let i = $index) {
+        <li class="mk-card mk-step">
+          <span class="mk-step__number" aria-hidden="true">{{ i + 1 }}</span>
+          <h3 class="mk-step__title">{{ step.title }}</h3>
+          <p class="mk-step__text">{{ step.description }}</p>
+        </li>
+      }
+    </ol>
+  </div>
+</section>
+
+@if (testimonials.length) {
+  <section class="mk-section" aria-labelledby="testimonials-heading">
+    <div class="mk-container">
+      <h2 id="testimonials-heading" class="mk-section__title mk-section__title--centred">What our clients say</h2>
+      <ul class="mk-quotes" role="list">
+        @for (testimonial of testimonials; track testimonial.name) {
+          <li>
+            <figure class="mk-card mk-quote">
+              <blockquote class="mk-quote__text"><p>{{ testimonial.quote }}</p></blockquote>
+              <figcaption class="mk-quote__by">{{ testimonial.name }}, {{ testimonial.role }}</figcaption>
+            </figure>
+          </li>
+        }
+      </ul>
+    </div>
+  </section>
+}
+
+<section class="mk-section" aria-labelledby="pricing-teaser-heading">
+  <div class="mk-container">
+    <div class="mk-card mk-teaser">
+      <div>
+        <h2 id="pricing-teaser-heading" class="mk-teaser__title">Simple monthly pricing</h2>
+        @if (fromPrice) {
+          <p class="mk-teaser__text">Plans from <strong>{{ fromPrice }} a month</strong>, {{ vatNote }}.</p>
+        }
+      </div>
+      <a class="btn btn-secondary" routerLink="/pricing">Compare plans</a>
+    </div>
+  </div>
+</section>
+
+<mk-cta-band heading="See Novan CMS with your own content" text="Book a demo and we will show you how your clients would edit their site.">
+  <a class="btn btn-primary btn-lg" [routerLink]="cta.path" [queryParams]="cta.queryParams">{{ cta.label }}</a>
+</mk-cta-band>

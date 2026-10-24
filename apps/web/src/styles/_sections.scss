@@ -1,0 +1,428 @@
+// Page sections: the hero, section headings, feature cards, "How it works", the pricing teaser, the closing call to
+// action and the Features page. Brushed copper is kept to small accents; never behind body text.
+
+.mk-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding-block: 3rem 2.5rem;
+  border-bottom: 0.0625rem solid var(--ds-color-copper-theme-line);
+}
+
+.mk-hero--home {
+  padding-block: 4rem;
+
+  @media (min-width: 62rem) {
+    padding-block: 6rem;
+  }
+}
+
+// A soft copper glow behind the heading; decorative.
+.mk-hero__glow {
+  position: absolute;
+  z-index: -1;
+  inset-block-start: -8rem;
+  inset-inline-start: -10rem;
+  width: 40rem;
+  height: 28rem;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--ds-color-copper-500) 16%, transparent), transparent);
+  pointer-events: none;
+}
+
+.mk-hero__inner {
+  display: grid;
+  gap: 3rem;
+  align-items: center;
+
+  .mk-hero--home & {
+    @media (min-width: 62rem) {
+      grid-template-columns: 1.1fr 1fr;
+    }
+  }
+}
+
+.mk-hero__title {
+  max-width: 20ch;
+  margin-bottom: 1rem;
+  font-size: clamp(2rem, 1.4rem + 2.6vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.mk-hero__lede {
+  max-width: 60ch;
+  margin-bottom: 0;
+  color: var(--ds-color-copper-theme-text-muted);
+  font-size: 1.125rem;
+}
+
+.mk-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+
+  &:empty {
+    display: none;
+  }
+}
+
+// The placeholder editor illustration on the home page; decorative.
+.mk-editor-sketch {
+  border: 0.0625rem solid var(--ds-color-copper-theme-line);
+  border-radius: var(--bs-border-radius-xl);
+  background-color: var(--ds-color-copper-theme-surface);
+  box-shadow: var(--bs-box-shadow-lg);
+}
+
+.mk-editor-sketch__bar {
+  display: flex;
+  gap: 0.375rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 0.0625rem solid var(--ds-color-copper-theme-line);
+}
+
+.mk-editor-sketch__dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background-color: var(--ds-color-copper-theme-line);
+}
+
+.mk-editor-sketch__body {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.mk-editor-sketch__panel,
+.mk-editor-sketch__canvas {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: var(--bs-border-radius-lg);
+  background-color: var(--ds-color-copper-theme-canvas);
+}
+
+.mk-editor-sketch__line {
+  height: 0.5rem;
+  border-radius: var(--bs-border-radius-pill);
+  background-color: var(--ds-color-copper-theme-raised);
+}
+
+.mk-editor-sketch__line--short {
+  width: 60%;
+}
+
+.mk-editor-sketch__block {
+  height: 3.5rem;
+  border-radius: var(--bs-border-radius);
+  background-color: var(--ds-color-copper-theme-raised);
+}
+
+.mk-editor-sketch__block--selected {
+  height: 5rem;
+  outline: 0.125rem solid var(--ds-color-copper-500);
+  outline-offset: 0.125rem;
+}
+
+.mk-editor-sketch__block--half {
+  width: 50%;
+}
+
+// Sections and their headings.
+.mk-section {
+  padding-block: 4rem;
+
+  @media (min-width: 62rem) {
+    padding-block: 5rem;
+  }
+}
+
+.mk-section--tight {
+  padding-block: 3rem;
+}
+
+.mk-section--muted {
+  background-color: var(--ds-color-copper-theme-surface);
+
+  .mk-card {
+    background-color: var(--ds-color-copper-theme-canvas);
+  }
+}
+
+.mk-section__intro {
+  max-width: 45rem;
+  margin: 0 auto 2.5rem;
+  text-align: center;
+}
+
+.mk-section__title {
+  margin-bottom: 1rem;
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.25rem);
+  font-weight: 700;
+}
+
+.mk-section__title--centred {
+  margin-bottom: 2.5rem;
+  text-align: center;
+}
+
+.mk-section__lede {
+  margin-bottom: 0;
+  color: var(--ds-color-copper-theme-text-muted);
+  font-size: 1.125rem;
+}
+
+.mk-section__more {
+  margin: 2rem 0 0;
+  text-align: center;
+}
+
+// Feature cards on the home page; each title is a link to its section on /features.
+.mk-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mk-feature-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.5rem;
+
+  &:focus-within {
+    border-color: var(--ds-color-copper-500);
+  }
+}
+
+.mk-feature-card__title {
+  margin: 0.25rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+// The whole card is the link's target area.
+.mk-feature-card__link {
+  color: var(--bs-body-color);
+  text-decoration: none;
+
+  &::after {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    content: '';
+  }
+
+  &:hover {
+    color: var(--ds-color-copper-300);
+    text-decoration: underline;
+  }
+}
+
+.mk-feature-card__summary {
+  margin: 0;
+  color: var(--ds-color-copper-theme-text-muted);
+}
+
+// "How it works".
+.mk-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mk-step {
+  padding: 1.5rem;
+}
+
+// Step numbers on brushed copper, always with the dark on-accent text.
+.mk-step__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: 1rem;
+  border-radius: 50%;
+  background: var(--ds-gradient-copper-brushed);
+  color: var(--ds-color-copper-theme-on-accent);
+  font-weight: 700;
+
+  @media (prefers-contrast: more), (forced-colors: active) {
+    border: 0.125rem solid var(--bs-body-color);
+    background: var(--ds-color-copper-500);
+  }
+}
+
+.mk-step__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.mk-step__text {
+  margin: 0;
+  color: var(--ds-color-copper-theme-text-muted);
+}
+
+// Client quotes (shown only when there are some).
+.mk-quotes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mk-quote {
+  height: 100%;
+  margin: 0;
+  padding: 1.5rem;
+}
+
+.mk-quote__text {
+  font-size: 1.125rem;
+}
+
+.mk-quote__by {
+  color: var(--ds-color-copper-theme-text-muted);
+}
+
+// The pricing teaser.
+.mk-teaser {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 2rem;
+}
+
+.mk-teaser__title {
+  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.mk-teaser__text {
+  margin: 0;
+  color: var(--ds-color-copper-theme-text-muted);
+}
+
+// The closing call to action, under a brushed-copper hairline.
+.mk-cta-band {
+  position: relative;
+  padding-block: 4rem;
+  background-color: var(--ds-color-copper-theme-surface);
+  text-align: center;
+
+  &::before {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 0.125rem;
+    background: var(--ds-gradient-copper-brushed);
+    content: '';
+  }
+}
+
+.mk-cta-band__title {
+  margin-bottom: 0.75rem;
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.25rem);
+  font-weight: 700;
+}
+
+.mk-cta-band__text {
+  max-width: 40rem;
+  margin: 0 auto;
+  color: var(--ds-color-copper-theme-text-muted);
+  font-size: 1.125rem;
+}
+
+.mk-cta-band__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+// The Features page.
+.mk-jump-links {
+  padding-block: 2rem;
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  a {
+    display: inline-block;
+    min-height: 1.5rem;
+  }
+}
+
+.mk-feature__inner {
+  display: grid;
+  gap: 2.5rem;
+  align-items: center;
+
+  @media (min-width: 62rem) {
+    grid-template-columns: 3fr 2fr;
+  }
+}
+
+.mk-feature__inner--reverse {
+  @media (min-width: 62rem) {
+    grid-template-columns: 2fr 3fr;
+
+    .mk-feature__copy {
+      order: 2;
+    }
+  }
+}
+
+.mk-feature__copy {
+  max-width: 65ch;
+}
+
+.mk-feature__text {
+  color: var(--ds-color-copper-theme-text-muted);
+  font-size: 1.0625rem;
+}
+
+.mk-feature__visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 14rem;
+  border: 0.0625rem solid var(--ds-color-copper-theme-line);
+  border-radius: var(--bs-border-radius-xl);
+  background:
+    radial-gradient(closest-side, color-mix(in srgb, var(--ds-color-copper-500) 14%, transparent), transparent),
+    var(--ds-color-copper-theme-canvas);
+
+  .mk-section--muted & {
+    background-color: var(--ds-color-copper-theme-canvas);
+  }
+}
+
+.mk-feature__visual-icon {
+  color: var(--ds-color-copper-500);
+  font-size: 4rem;
+}
