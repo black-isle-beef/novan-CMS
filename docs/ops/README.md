@@ -39,7 +39,7 @@ How Novan runs on staging and production (package 20, `docs/build/20-deployment.
 | --- | --- |
 | Images | `apps/api/Dockerfile` (API and worker), `apps/admin/Dockerfile` (static files in Caddy), `apps/starter-site/Dockerfile` |
 | Host files | `deploy/compose.yml`, `deploy/Caddyfile`, `deploy/vector.yaml`; on the host in `/opt/novan` with `.env`, `env/*.env` (written by each deploy) and `certs/` (by hand) |
-| Workflows | `.github/workflows/deploy.yml` (plan, build, record), `deploy-environment.yml` (migrate, ship, smoke test), `backup.yml` (nightly), `restore-drill.yml` (monthly) |
+| Workflows | `.github/workflows/deploy.yml` (plan, build, record), `deploy-environment.yml` (migrate, ship, smoke test), `backup.yml` (nightly), `restore-drill.yml` (monthly), `keep-alive.yml` (daily ping so free-plan Supabase projects never pause) |
 | Scripts | `deploy/smoke.sh`, `deploy/restore-drill.sh` |
 
 ## Settings each environment needs
