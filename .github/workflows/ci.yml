@@ -25,12 +25,12 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          filter: blob:none
       - uses: ./.github/actions/setup
         with:
           cache-name: lint-test-build
-      - run: npx nx affected -t lint test build --parallel=3
-      # Client sites' browser bundles must not contain API tokens (package 09).
-      - run: npx nx affected -t test-bundle --parallel=3
+      # test-bundle: client sites' browser bundles must not contain API tokens (package 09).
+      - run: npx nx affected -t lint test build test-bundle --parallel=3
 
   database:
     runs-on: ubuntu-latest
@@ -39,25 +39,44 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          filter: blob:none
       - uses: ./.github/actions/setup
         with:
           cache-name: database
+      # A required check, so the job always reports; the Supabase steps only run when the schema, its types or the
+      # Supabase CLI version can have changed. Pushes to main always run them.
+      - name: Schema changed
+        id: changed
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ] \
+            || [ -n "$(git diff --name-only "$NX_BASE" "$NX_HEAD" -- supabase libs/shared/types package-lock.json .github/workflows/ci.yml)" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=database::Skipped: nothing under supabase/, libs/shared/types/ or package-lock.json changed."
+          fi
       - name: Supabase CLI version from package-lock.json
+        if: steps.changed.outputs.run == 'true'
         id: supabase-version
         run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/supabase'].version")" >> "$GITHUB_OUTPUT"
       - uses: supabase/setup-cli@v3
+        if: steps.changed.outputs.run == 'true'
         with:
           version: ${{ steps.supabase-version.outputs.version }}
       # Postgres, Auth and Storage: Auth and Storage own the `auth` and `storage` schemas the migrations use. Kong
       # stays up because start and db reset seed the config.toml buckets (and their objects) through the gateway.
       - name: Start Supabase
+        if: steps.changed.outputs.run == 'true'
         run: supabase start -x realtime,imgproxy,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
       - run: supabase db reset
+        if: steps.changed.outputs.run == 'true'
       - name: pgTAP tests
+        if: steps.changed.outputs.run == 'true'
         run: supabase test db
       - name: Schema lint
+        if: steps.changed.outputs.run == 'true'
         run: supabase db lint --level warning --fail-on warning
       - name: Generated database types are up to date
+        if: steps.changed.outputs.run == 'true'
         run: |
           npm run db:types
           git diff --exit-code -- libs/shared/types/src/lib/database.types.ts \
@@ -70,6 +89,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          filter: blob:none
       - uses: ./.github/actions/setup
         with:
           cache-name: audits
@@ -101,6 +121,7 @@ jobs:
         if: steps.configured.outputs.ok == 'true'
         with:
           fetch-depth: 0
+          filter: blob:none
       - uses: ./.github/actions/setup
         if: steps.configured.outputs.ok == 'true'
         with:
@@ -112,9 +133,9 @@ jobs:
         working-directory: apps/starter-site
         run: node ../../dist/tools/novan-cli/main.cjs schema diff --exit-code
 
-  # Chromium only on every change; firefox and webkit run nightly (e2e-nightly.yml).
+  # Chromium only on every change; firefox and webkit run nightly (e2e-nightly.yml). Runs alongside `database`
+  # rather than after it: it starts its own Supabase.
   e2e:
-    needs: database
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -123,16 +144,31 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          filter: blob:none
       - uses: ./.github/actions/setup
         with:
           cache-name: e2e
+      # A required check, so the job always reports. Schema and e2e-stack changes belong to no Nx project, so they
+      # run every e2e project; otherwise only the affected ones, and nothing (no Supabase, no browsers) if none are.
+      - name: e2e projects to run
+        id: plan
+        run: |
+          if [ -n "$(git diff --name-only "$NX_BASE" "$NX_HEAD" -- supabase .github/actions .github/workflows/ci.yml)" ]; then
+            echo "mode=run-many" >> "$GITHUB_OUTPUT"
+          elif [ -n "$(npx nx show projects --affected -t e2e)" ]; then
+            echo "mode=affected" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=e2e::Skipped: no e2e project is affected."
+          fi
       - uses: ./.github/actions/e2e-stack
+        if: steps.plan.outputs.mode != ''
         with:
           browsers: ${{ env.E2E_BROWSERS }}
       # Each e2e target starts what it needs: the admin and API dev servers (Playwright webServer / Nx
       # continuous tasks). One project at a time, because admin-e2e and api-e2e share the API port.
       - name: e2e (Playwright + axe)
-        run: npx nx affected -t e2e --parallel=1
+        if: steps.plan.outputs.mode != ''
+        run: npx nx ${{ steps.plan.outputs.mode }} -t e2e --parallel=1
         # The API purges the CDN through the fake Cloudflare API that api-e2e starts and checks
         # (apps/api-e2e/src/support/fake-cloudflare.ts). Outside api-e2e nothing listens there: the worker
         # retries those purge jobs with back-off and logs "Purge by tag failed ... fetch failed", which is expected.
@@ -156,6 +192,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          filter: blob:none
       # Scans the commits in this PR or push for live (verified) and unverifiable credentials.
       - uses: trufflesecurity/trufflehog@v3.99.2
         with:
