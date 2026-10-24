@@ -192,8 +192,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          filter: blob:none
-      # Scans the commits in this PR or push for live (verified) and unverifiable credentials.
+      # Scans the commits in this PR or push for live (verified) and unverifiable credentials. No blobless clone here:
+      # trufflehog re-clones the checkout and reads every blob, which a partial clone cannot serve.
       - uses: trufflesecurity/trufflehog@v3.99.2
         with:
           extra_args: --results=verified,unknown
