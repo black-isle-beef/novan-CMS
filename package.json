@@ -107,7 +107,7 @@
     "@tiptap/extension-subscript": "^3.31.4",
     "@tiptap/extension-superscript": "^3.31.4",
     "@tiptap/pm": "^3.31.4",
-    "@tiptap/starter-kit": "^3.31.4",
+    "@tiptap/starter-kit": "^3.32.0",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
     "commander": "^14.0.3",
