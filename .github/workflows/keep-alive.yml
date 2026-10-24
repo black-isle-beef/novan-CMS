@@ -1,0 +1,52 @@
+# Keeps the Supabase projects from being paused for inactivity (free-plan projects pause after 7 days without
+# activity). Once a day each environment gets one Data API request and one direct query, the two kinds of traffic
+# Supabase counts. A paused or unreachable project fails the run, so GitHub's failed-workflow email is the alert.
+# Not needed on a paid plan, which never pauses.
+name: Keep alive
+
+on:
+  schedule:
+    # 06:15 UTC, away from the backup (02:30) and the nightly e2e run (03:00).
+    - cron: '15 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [staging, production]
+    environment: ${{ matrix.environment }}
+    env:
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+      # Session pooler URL (IPv4: GitHub runners have no IPv6 for the direct host).
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      # anon may read nothing, so PostgREST answers 401 (42501) after running the query: the gateway and the database
+      # were both reached. Anything else (5xx, 540 for a paused project, no answer) fails the job.
+      - name: Data API
+        if: env.SUPABASE_URL != ''
+        run: |
+          status="$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 --max-time 20 \
+            -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/content_types?select=id&limit=1")"
+          echo "Data API answered $status."
+          case "$status" in 200|401|403) ;; *) echo "::error::$SUPABASE_URL answered $status."; exit 1 ;; esac
+
+      - name: Database
+        if: env.DATABASE_URL != ''
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -tAc 'select 1' > /dev/null
+
+      - name: Summary
+        run: |
+          if [ -z "$SUPABASE_URL" ] && [ -z "$DATABASE_URL" ]; then
+            echo "::warning::${{ matrix.environment }} has no SUPABASE_URL variable or DATABASE_URL secret; nothing was pinged."
+          else
+            echo "${{ matrix.environment }} pinged." >> "$GITHUB_STEP_SUMMARY"
+          fi
