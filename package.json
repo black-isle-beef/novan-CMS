@@ -100,7 +100,7 @@
     "@sentry/nestjs": "^11.7.0",
     "@sentry/node": "^11.7.0",
     "@supabase/auth-js": "^2.117.2",
-    "@supabase/realtime-js": "^2.117.3",
+    "@supabase/realtime-js": "^2.118.0",
     "@supabase/storage-js": "^2.117.2",
     "@supabase/supabase-js": "^2.117.2",
     "@tiptap/core": "^3.31.4",
