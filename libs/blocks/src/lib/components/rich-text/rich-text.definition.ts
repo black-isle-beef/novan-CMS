@@ -10,4 +10,5 @@ export const RICH_TEXT_DEFINITION = defineCmsComponent({
   fields: { body: 'richText' },
   settingsSchema: RICH_TEXT_SCHEMA,
   sampleContent: RICH_TEXT_SAMPLE_CONTENT,
+  parts: ['root', 'inner', 'body'],
 });

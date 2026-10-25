@@ -10,4 +10,5 @@ export const BADGE_LIST_DEFINITION = defineCmsComponent({
   fields: { heading: 'text', intro: 'text', badges: { type: 'group', multiple: true, fields: { label: 'text' } } },
   settingsSchema: BADGE_LIST_SCHEMA,
   sampleContent: BADGE_LIST_SAMPLE_CONTENT,
+  parts: ['root', 'inner', 'heading', 'intro', 'list', 'badge'],
 });

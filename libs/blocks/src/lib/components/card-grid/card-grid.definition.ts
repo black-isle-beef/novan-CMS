@@ -14,4 +14,5 @@ export const CARD_GRID_DEFINITION = defineCmsComponent({
   },
   settingsSchema: CARD_GRID_SCHEMA,
   sampleContent: CARD_GRID_SAMPLE_CONTENT,
+  parts: ['root', 'inner', 'heading', 'intro', 'list', 'card', 'image', 'body', 'title', 'subtitle', 'tag'],
 });

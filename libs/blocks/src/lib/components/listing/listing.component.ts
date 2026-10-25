@@ -52,7 +52,7 @@ function dateLabel(date: string, locale: string | null): string {
   imports: [NgTemplateOutlet, RouterLink],
   templateUrl: './listing.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class]': 'hostClasses()' },
+  host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class ListingBlock implements NovanBlock<ListingFields> {
   static readonly novanBlock = { apiId: 'listing', schemaVersion: 1 };

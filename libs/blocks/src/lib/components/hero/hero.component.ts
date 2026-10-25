@@ -17,7 +17,7 @@ import { HERO_SCHEMA, type HeroFields, type HeroSettings } from './hero.schema';
   imports: [BlockActionComponent],
   templateUrl: './hero.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class]': 'hostClasses()' },
+  host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class HeroBlock implements NovanBlock<HeroFields> {
   static readonly novanBlock = { apiId: 'hero', schemaVersion: 1 };

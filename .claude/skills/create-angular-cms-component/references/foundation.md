@@ -186,6 +186,8 @@ export interface CmsComponentDefinition<TSettings = unknown, TContent = unknown>
   readonly settingsSchema: CmsStyleSchema<TSettings>;
   /** Realistic content used by the editor preview and tests. */
   readonly sampleContent: TContent;
+  /** Elements editors can add classes to, each marked `data-novan-part` in the template; `root` is the host. */
+  readonly parts: readonly string[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the registry holds definitions of many different shapes

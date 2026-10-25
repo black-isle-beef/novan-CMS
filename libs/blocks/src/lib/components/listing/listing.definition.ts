@@ -10,4 +10,5 @@ export const LISTING_DEFINITION = defineCmsComponent({
   fields: { heading: 'text', intro: 'text', source: 'select', limit: 'number' },
   settingsSchema: LISTING_SCHEMA,
   sampleContent: LISTING_SAMPLE_CONTENT,
+  parts: ['root', 'inner', 'heading', 'intro', 'list', 'item', 'title', 'date', 'summary'],
 });

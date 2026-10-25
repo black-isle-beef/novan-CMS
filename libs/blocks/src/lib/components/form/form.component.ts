@@ -74,7 +74,7 @@ type State = 'idle' | 'sending' | 'sent';
   selector: 'novan-form-block',
   templateUrl: './form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class]': 'hostClasses()' },
+  host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class FormBlock implements NovanBlock<FormFields> {
   static readonly novanBlock = { apiId: 'form', schemaVersion: 1 };

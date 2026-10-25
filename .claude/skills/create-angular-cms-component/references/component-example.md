@@ -134,7 +134,7 @@ let nextId = 0;
   templateUrl: './testimonial.component.html',
   styleUrl: './testimonial.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class]': 'hostClasses()' },
+  host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class CmsTestimonialComponent {
   readonly content = input.required<TestimonialContent>();
@@ -152,22 +152,22 @@ export class CmsTestimonialComponent {
 ### `lib/components/testimonial/testimonial.component.html`
 
 ```html
-<section class="cms-testimonial__inner" [attr.aria-labelledby]="content().heading ? headingId : null">
+<section class="cms-testimonial__inner" data-novan-part="inner" [attr.aria-labelledby]="content().heading ? headingId : null">
   @if (content().heading; as heading) {
     @switch (resolved().headingLevel) {
       @case ('h3') {
-        <h3 class="cms-testimonial__heading" [id]="headingId">{{ heading }}</h3>
+        <h3 class="cms-testimonial__heading" data-novan-part="heading" [id]="headingId">{{ heading }}</h3>
       }
       @case ('h4') {
-        <h4 class="cms-testimonial__heading" [id]="headingId">{{ heading }}</h4>
+        <h4 class="cms-testimonial__heading" data-novan-part="heading" [id]="headingId">{{ heading }}</h4>
       }
       @default {
-        <h2 class="cms-testimonial__heading" [id]="headingId">{{ heading }}</h2>
+        <h2 class="cms-testimonial__heading" data-novan-part="heading" [id]="headingId">{{ heading }}</h2>
       }
     }
   }
 
-  <figure class="cms-testimonial__figure">
+  <figure class="cms-testimonial__figure" data-novan-part="figure">
     @if (content().image; as image) {
       <img
         class="cms-testimonial__image"
@@ -347,6 +347,8 @@ export const TESTIMONIAL_DEFINITION = defineCmsComponent({
   component: CmsTestimonialComponent,
   settingsSchema: TESTIMONIAL_SCHEMA,
   sampleContent: TESTIMONIAL_SAMPLE_CONTENT,
+  // Every part also marked in the template; the example marks inner, heading and figure.
+  parts: ['root', 'inner', 'heading', 'figure'],
 });
 ```
 

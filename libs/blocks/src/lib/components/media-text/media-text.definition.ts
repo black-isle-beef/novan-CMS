@@ -10,4 +10,5 @@ export const MEDIA_TEXT_DEFINITION = defineCmsComponent({
   fields: { heading: 'text', text: 'text', image: 'media', action: 'link' },
   settingsSchema: MEDIA_TEXT_SCHEMA,
   sampleContent: MEDIA_TEXT_SAMPLE_CONTENT,
+  parts: ['root', 'inner', 'body', 'heading', 'text', 'action', 'media', 'image'],
 });

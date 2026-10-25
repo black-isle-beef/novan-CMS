@@ -18,12 +18,12 @@ const SIZES: Record<ImageSettings['width'], { widths: number[]; sizes: string }>
 @Component({
   selector: 'novan-image-block',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class]': 'hostClasses()' },
+  host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
   template: `
     @if (picture(); as picture) {
-      <figure class="novan-image-block__figure">
+      <figure class="novan-image-block__figure" data-novan-part="figure">
         <img
-          class="novan-image-block__image"
+          class="novan-image-block__image" data-novan-part="image"
           [src]="picture.src"
           [attr.srcset]="picture.srcset"
           [attr.sizes]="picture.srcset ? picture.sizes : null"
@@ -34,7 +34,7 @@ const SIZES: Record<ImageSettings['width'], { widths: number[]; sizes: string }>
           decoding="async"
         />
         @if (captionText(); as caption) {
-          <figcaption class="novan-image-block__caption">{{ caption }}</figcaption>
+          <figcaption class="novan-image-block__caption" data-novan-part="caption">{{ caption }}</figcaption>
         }
       </figure>
     }

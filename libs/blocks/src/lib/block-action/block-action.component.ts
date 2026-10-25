@@ -35,9 +35,9 @@ export function blockLink(link: NovanLinkValue | null | undefined): BlockLink | 
   template: `
     @if (link(); as link) {
       @if (link.route && hasRouter) {
-        <a [class]="classes()" [routerLink]="link.route.path" [fragment]="link.route.fragment">{{ link.text }}</a>
+        <a [class]="classes()" data-novan-part="action" [routerLink]="link.route.path" [fragment]="link.route.fragment">{{ link.text }}</a>
       } @else {
-        <a [class]="classes()" [href]="link.href">{{ link.text }}</a>
+        <a [class]="classes()" data-novan-part="action" [href]="link.href">{{ link.text }}</a>
       }
     }
   `,

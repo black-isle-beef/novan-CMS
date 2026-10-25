@@ -14,4 +14,5 @@ export const FEATURE_GRID_DEFINITION = defineCmsComponent({
   },
   settingsSchema: FEATURE_GRID_SCHEMA,
   sampleContent: FEATURE_GRID_SAMPLE_CONTENT,
+  parts: ['root', 'inner', 'heading', 'intro', 'list', 'item', 'icon', 'title', 'text'],
 });

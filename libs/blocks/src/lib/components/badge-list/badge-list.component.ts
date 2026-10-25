@@ -14,7 +14,7 @@ import { type Badge, BADGE_LIST_SCHEMA, type BadgeListFields, type BadgeListSett
   selector: 'novan-badge-list-block',
   templateUrl: './badge-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class]': 'hostClasses()' },
+  host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class BadgeListBlock implements NovanBlock<BadgeListFields> {
   static readonly novanBlock = { apiId: 'badgeList', schemaVersion: 1 };

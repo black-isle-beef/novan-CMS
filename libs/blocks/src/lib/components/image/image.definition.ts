@@ -10,4 +10,5 @@ export const IMAGE_DEFINITION = defineCmsComponent({
   fields: { image: 'media', caption: 'text' },
   settingsSchema: IMAGE_SCHEMA,
   sampleContent: IMAGE_SAMPLE_CONTENT,
+  parts: ['root', 'figure', 'image', 'caption'],
 });

@@ -30,7 +30,7 @@ const ITEM_LEVEL = { h2: 'h3', h3: 'h4', h4: 'h5' } as const;
   selector: 'novan-feature-grid-block',
   templateUrl: './feature-grid.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class]': 'hostClasses()' },
+  host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class FeatureGridBlock implements NovanBlock<FeatureGridFields> {
   static readonly novanBlock = { apiId: 'featureGrid', schemaVersion: 1 };
