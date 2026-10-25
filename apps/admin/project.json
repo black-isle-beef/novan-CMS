@@ -73,7 +73,11 @@
         "port": 4200,
         "staticFilePath": "dist/apps/admin/browser",
         "spa": true
-      }
+      },
+      "readyWhen": {
+        "signal": true
+      },
+      "dependsOn": ["build"]
     }
   }
 }

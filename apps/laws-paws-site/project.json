@@ -48,7 +48,10 @@
           "outputHashing": "all",
           "optimization": {
             "scripts": true,
-            "styles": { "minify": true, "inlineCritical": true },
+            "styles": {
+              "minify": true,
+              "inlineCritical": true
+            },
             "fonts": false
           }
         },
@@ -97,7 +100,11 @@
         "port": 4310,
         "staticFilePath": "dist/apps/laws-paws-site/browser",
         "spa": true
-      }
+      },
+      "readyWhen": {
+        "signal": true
+      },
+      "dependsOn": ["build"]
     }
   }
 }
