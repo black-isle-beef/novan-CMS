@@ -6,11 +6,10 @@
   "implicitDependencies": ["api"],
   "targets": {
     "e2e": {
-      "executor": "@nx/vitest:test",
       "dependsOn": ["api:build", "api:serve"],
       "options": {
-        "configFile": "apps/api-e2e/vitest.config.mts",
-        "watch": false
+        "watch": false,
+        "config": "./vitest.config.mts"
       }
     }
   }

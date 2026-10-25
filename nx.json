@@ -86,6 +86,14 @@
         "testMode": "watch"
       },
       "exclude": ["apps/api-e2e/**"]
+    },
+    {
+      "plugin": "@nx/vitest",
+      "options": {
+        "testMode": "watch",
+        "testTargetName": "e2e"
+      },
+      "include": ["apps/api-e2e/**/*"]
     }
   ],
   "release": {
