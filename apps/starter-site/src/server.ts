@@ -124,7 +124,7 @@ app.use((req, res, next) => void redirects.handle(req, res, next));
  * `withCachePolicy`. An address with no page is reported to the CMS, which lists the most visited for editors
  * to redirect (previews and the editor's frame are not visits).
  */
-app.use('/**', (req, res, next) => {
+app.use((req, res, next) => {
   angularApp
     .handle(req)
     .then((response) => {

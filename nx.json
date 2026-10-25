@@ -4,7 +4,16 @@
   "analytics": false,
   "targetDefaults": {
     "e2e": {
-      "inputs": ["default", "^default", { "externalDependencies": ["@playwright/test"] }, { "env": "E2E_BROWSERS" }]
+      "inputs": [
+        "default",
+        "^default",
+        {
+          "externalDependencies": ["@playwright/test"]
+        },
+        {
+          "env": "E2E_BROWSERS"
+        }
+      ]
     },
     "@angular/build:application": {
       "cache": true,
@@ -77,11 +86,22 @@
         "testMode": "watch"
       },
       "exclude": ["apps/api-e2e/**"]
+    },
+    {
+      "plugin": "@nx/vitest",
+      "options": {
+        "testMode": "watch",
+        "testTargetName": "e2e"
+      },
+      "include": ["apps/api-e2e/**/*"]
     }
   ],
   "release": {
     "version": {
       "preVersionCommand": "npx nx run-many -t build"
     }
+  },
+  "affected": {
+    "legacy": true
   }
 }

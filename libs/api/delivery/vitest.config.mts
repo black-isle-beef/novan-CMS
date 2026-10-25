@@ -1,12 +1,14 @@
 import { defineConfig } from 'vitest/config';
-import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import swc from 'unplugin-swc';
 
 export default defineConfig(() => ({
+  resolve: {
+    tsconfigPaths: true,
+  },
   root: import.meta.dirname,
   cacheDir: '../../../node_modules/.vite/libs/api/delivery',
   // SWC replaces Vite's transformer so Nest decorators emit the metadata DI relies on.
-  plugins: [nxViteTsPaths(), swc.vite({ tsconfigFile: './tsconfig.spec.json' })],
+  plugins: [swc.vite({ tsconfigFile: './tsconfig.spec.json' })],
   test: {
     name: 'api-delivery',
     watch: false,

@@ -13,9 +13,6 @@
         "buildTarget": "web:build:development",
         "tsConfig": "libs/marketing/ui/tsconfig.spec.json"
       }
-    },
-    "lint": {
-      "executor": "@nx/eslint:lint"
     }
   }
 }

@@ -48,7 +48,10 @@
           "outputHashing": "all",
           "optimization": {
             "scripts": true,
-            "styles": { "minify": true, "inlineCritical": true },
+            "styles": {
+              "minify": true,
+              "inlineCritical": true
+            },
             "fonts": false
           }
         },
@@ -73,6 +76,9 @@
         "development": {
           "buildTarget": "laws-paws-site:build:development"
         }
+      },
+      "readyWhen": {
+        "signal": true
       }
     },
     "test": {
@@ -92,6 +98,10 @@
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",
+      "readyWhen": {
+        "signal": true
+      },
+      "dependsOn": ["build"],
       "options": {
         "buildTarget": "laws-paws-site:build",
         "port": 4310,

@@ -566,6 +566,9 @@ describe('VisualEditorPage', () => {
 
     it('reorders with the arrow buttons and says where the block went', async () => {
       const { fixture, el, body } = await render();
+      // The arrows live in the Block order tab; a hidden panel's buttons cannot take focus.
+      el.querySelector<HTMLButtonElement>('#nv-panel-tab-order')?.click();
+      await settle(fixture);
       el.querySelector<HTMLButtonElement>(`#nv-outline-down-${HERO}`)?.click();
       await settle(fixture);
       expect(body().map((b) => b._uid)).toEqual([CTA, HERO]);
