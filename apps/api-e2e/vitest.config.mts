@@ -1,10 +1,12 @@
 import { defineConfig } from 'vitest/config';
-import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 
 export default defineConfig(() => ({
+  resolve: {
+    tsconfigPaths: true,
+  },
   root: import.meta.dirname,
   cacheDir: '../../node_modules/.vite/apps/api-e2e',
-  plugins: [nxViteTsPaths()],
+  plugins: [],
   test: {
     name: 'api-e2e',
     watch: false,
