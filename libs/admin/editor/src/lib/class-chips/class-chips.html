@@ -17,7 +17,10 @@
 @if (classes().length) {
   <ul class="nv-class-chips" [attr.aria-label]="label()">
     @for (name of classes(); track name) {
-      <li class="nv-class-chip">
+      <li class="nv-class-chip" [class.nv-class-chip--warning]="warnings()[name]">
+        @if (warnings()[name]) {
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        }
         <span class="nv-class-chip__name">{{ name }}</span>
         @if (!disabled()) {
           <button type="button" class="nv-class-chip__remove" (click)="remove(name)">
@@ -27,27 +30,63 @@
       </li>
     }
   </ul>
+  @if (warned().length) {
+    <ul class="list-unstyled small mb-2">
+      @for (item of warned(); track item.name) {
+        <li><span class="font-monospace">{{ item.name }}</span>: {{ item.message }}</li>
+      }
+    </ul>
+  }
 }
 
 @if (!disabled()) {
-  <div class="input-group input-group-sm">
-    <input
-      #box
-      class="form-control font-monospace"
-      type="text"
-      autocomplete="off"
-      autocapitalize="off"
-      spellcheck="false"
-      [id]="inputId()"
-      [value]="draft()"
-      [disabled]="full()"
-      [class.is-invalid]="error()"
-      [attr.aria-invalid]="error() ? true : null"
-      [attr.aria-describedby]="describedBy()"
-      (input)="typed($event)"
-      (keydown)="keydown($event)"
-    />
-    <button type="button" class="btn btn-secondary" [disabled]="full()" (click)="add()">Add</button>
+  <div class="position-relative">
+    <div class="input-group input-group-sm">
+      <input
+        #box
+        class="form-control font-monospace"
+        type="text"
+        role="combobox"
+        aria-autocomplete="list"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        [id]="inputId()"
+        [value]="draft()"
+        [disabled]="full()"
+        [class.is-invalid]="error()"
+        [attr.aria-invalid]="error() ? true : null"
+        [attr.aria-describedby]="describedBy()"
+        [attr.aria-expanded]="options().length > 0"
+        [attr.aria-controls]="listId()"
+        [attr.aria-activedescendant]="activeId()"
+        (input)="typed($event)"
+        (keydown)="keydown($event)"
+        (blur)="closeSuggestions()"
+      />
+      <button type="button" class="btn btn-secondary" [disabled]="full()" (click)="add()">Add</button>
+    </div>
+    @if (options().length) {
+    <ul class="dropdown-menu show w-100 nv-class-suggestions" role="listbox" [id]="listId()" [attr.aria-label]="'Suggestions for ' + label()">
+      @for (option of options(); track option.name; let i = $index) {
+        <!-- The combobox pattern: focus stays in the text box, whose arrow keys and Enter choose an option
+             (aria-activedescendant); clicking is for pointers only. -->
+        <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+        <li
+          role="option"
+          class="dropdown-item"
+          [id]="listId() + '-' + i"
+          [class.active]="i === active()"
+          [attr.aria-selected]="i === active()"
+          (mousedown)="$event.preventDefault()"
+          (click)="pick(option)"
+        >
+          <span class="font-monospace">{{ option.name }}</span>
+          <span class="small text-body-secondary"> {{ option.group ?? '' }} · {{ option.source }}</span>
+        </li>
+      }
+    </ul>
+    }
   </div>
   @if (error(); as message) {
     <div class="invalid-feedback d-block" [id]="inputId() + '-error'">{{ message }}</div>

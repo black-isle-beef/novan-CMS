@@ -51,7 +51,7 @@ describe('FormsPage', () => {
 
   async function render(role: SpaceRole, submission?: string) {
     const spaces = signal<SpaceSummary[] | null>([
-      { id: spaceId, name: 'Demo site', slug: 'demo-site', organisationId: spaceId, previewUrl: null, requireApproval: false, allowSvg: false, role, createdAt: '' },
+      { id: spaceId, name: 'Demo site', slug: 'demo-site', organisationId: spaceId, previewUrl: null, requireApproval: false, allowSvg: false, designSystems: false, role, createdAt: '' },
     ]);
     const currentSpaceId = signal<string | null>(null);
     TestBed.configureTestingModule({

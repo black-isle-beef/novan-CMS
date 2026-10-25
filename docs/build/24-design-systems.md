@@ -169,6 +169,84 @@ admin document has no design-system `<link>` or `<script>`.
 - **E2E:** `apps/admin-e2e/src/class-overrides.spec.ts` (`@classes`): add classes to the hero and its heading, see them
   in the frame, a refused name, Backspace, axe, publish, and the site's server-rendered HTML has the classes.
 
+### 24c
+
+- **Migration `0024_design_systems.sql`:** `design_systems`, `design_system_versions`, `design_system_components`
+  (filled in 24d), `design_system_classes` and `space_design_systems` (per environment, one version of each design
+  system, `load_order`), all space-scoped with composite same-space foreign keys.
+  - Members read; admins and developers (and staff at AAL2) write. The worker's tables and fields are written by the
+    service role only.
+  - `design_system_versions_guard()`: members insert a version as `uploaded` and nothing else, and only move it
+    `uploaded → validating` or `ready → deprecated`. A ready or deprecated version's manifest, files and checksum
+    never change, even for the service role.
+  - `space_design_systems_guard()`: only a ready version is attached. A deprecated one may stay, because the API
+    updates kept rows in place rather than re-inserting them.
+  - Private `design-systems` bucket (26 MB cap, stylesheet, script, font, image and JSON types), member read policy
+    as `media`; queue `design-systems`.
+  - `spaces.settings.designSystems.enabled` is guarded like `media.allowSvg`, exposed as `SpaceSummary.designSystems`
+    and switched in Space settings by staff.
+  - pgTAP: `supabase/tests/design_systems.test.sql` (31 tests: cross-space reads and writes, roles, the guards, the
+    worker-only tables, storage, flags, anon, the queue). The local seed turns design systems on for the demo space.
+- **API `libs/api/design-systems`** (`@novan/api-design-systems`):
+  - Routes under `v1/management/spaces/:spaceId`:
+    - `design-systems` (GET, POST)
+    - `design-systems/:id/versions` (POST `{ source: 'css', version, filename }` → signed upload URL, or
+      `{ source: 'url', version, url }` → fetched straight away)
+    - `.../versions/:versionId` (GET, with its report) and `.../complete`, `.../deprecate`
+    - `.../versions/:versionId/classes?q=&group=&limit=` (prefix search, shortest first, and counts per group)
+    - `site/design-systems` (GET; PUT the whole ordered list `{ items: [{ versionId, enabled }] }`)
+  - Uploads are limited per person (20 versions in ten minutes, `DS_UPLOAD_RATE_LIMIT`, in memory per instance; the
+    first throttling on management routes). The feature flag is checked on every write (403 `design_systems_off`).
+    Everything is audited (`design_system.created`, `.version_uploaded`, `.version_ready|invalid` from the worker,
+    `.version_deprecated`, `design_systems.site_changed`).
+  - Changing what the site loads emits `site-styles.changed`, which purges the whole space, like `locales.changed`.
+- **Worker** (`design-systems:process-version`, idempotent, only `validating` versions):
+  - Reads the pending upload, or fetches the address through `safeFetch`. That is https only; public addresses only,
+    checked by a custom DNS lookup at connect time (so DNS rebinding cannot reach private ranges), with IP-literal
+    hosts checked before connecting; at most 3 redirects, each re-checked; a 5 MB cap while streaming
+    (`DS_MAX_FILE_BYTES`); a 15 s timeout.
+  - `processStylesheet` (PostCSS): parse errors with their line; `@charset` dropped; `@namespace` and imports not
+    from `allowedOrigins` removed (allowed ones kept with `layer(ds-vendor)`); `behavior`, `-moz-binding` and
+    `expression()` removed; each `url()` checked (image and font `data:` URLs and fragments kept, https kept, relative
+    ones resolved against a CDN address or refused for uploads, every other scheme removed); `!important` counted
+    and warned about. The rest goes inside `@layer ds-vendor`, after the layer order statement, so a stylesheet loaded
+    before the site's own cannot change the order.
+  - The class index is grouped by the manifest's `classGroups`, else a utility preset (`classGroupOf`). Up to 20,000
+    classes are kept. Files go under `files/`, and the version becomes ready or invalid with its report in one
+    transaction.
+- **Serving:** `GET /v1/design-system-files/:versionId/*path` (no auth) serves only ready or deprecated versions that
+  some environment has attached. Paths are plain segments with a known extension. Responses are immutable for a
+  year, with `Cache-Tag: design-system:<id>`, CORS `*`, CORP cross-origin, nosniff and a sandbox CSP.
+- **Delivery:** Delivery and Preview `GET site-styles` returns `{ layers, stylesheets: [{ href, designSystem,
+  version }], adapter }` for the token's environment, tagged `space:` and `site-styles:<env>`. The SDK's proxy passes
+  it.
+- **Adapters:** `bootstrapAdapter` writes Bootstrap's infix (`px-3` → `px-md-3`, `col` → `col-md`, `text-center`
+  → `text-md-center`) for the utility families that have breakpoint versions, and no states. `canWrite(class,
+  bucket)` says when a class has no version. `adapterFor()` picks Bootstrap's adapter or the manifest's templates.
+  The SDK's copy is held in step as before.
+- **SDK:** `NovanDesignSystems` (app initializer in `provideNovanCms`; `designSystems: false` turns it off) fetches
+  `site-styles` before the first render, links each stylesheet once in `<head>` (`link[data-novan-ds]`, http(s)
+  only, stale ones removed) and sets the adapter. `NOVAN_CLASS_ADAPTER` is now a getter defaulting to that adapter,
+  so blocks follow it. An API without the endpoint (404) or an unreachable one leaves the site as it was.
+- **Admin:**
+  - Settings › Design systems (`settings/design-systems`, admins and developers; linked from the Settings overview
+    when the flag is on): what the site loads (move up and down buttons, an on/off switch, remove, add a ready
+    version, save, undo); each design system's versions with status badges and the check report (errors open, with
+    lines); a new version from a file or an address, polled until checked; deprecate; a class browser (prefix search,
+    groups); add a design system (short name suggested from the name).
+  - Editor: `EditorClassIndex` (provided by the editor page) loads the site's design systems. The Classes section
+    offers an Applies select of the adapter's breakpoints and states (and any bucket already holding classes), and
+    the chips input is an ARIA combobox suggesting the design systems' classes. Warnings are written out: a class the
+    framework cannot apply at that size, or one no attached design system has.
+- **Not in the space nav:** the nav filters by role permission only, not per-space flags, so the page is reached from
+  Settings. Changed from the plan.
+- **Tests:** `css-processor.spec` (15), `safe-fetch.spec` (27; a public-looking name whose DNS answer is private is
+  covered by the connect-time lookup, which needs real DNS to test), `class-groups.spec`, Bootstrap adapter specs, the
+  API integration spec `apps/api/src/app/design-systems.spec.ts` (17: roles, the flag, upload → worker → ready with
+  report and class search, invalid with line, an SSRF refusal, cross-space 404s, attach rules, files before and
+  after attaching, `site-styles`, one version each, deprecation), SDK `site-styles.spec`, admin page and editor
+  specs with axe, and the e2e journey `apps/admin-e2e/src/design-systems.spec.ts` (`@design-systems`).
+
 ## Definition of done
 
 - [ ] A developer uploads a design system (CSS-only or zip), attaches it, places a custom component on a page, edits

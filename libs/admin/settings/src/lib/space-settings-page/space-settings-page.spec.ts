@@ -14,7 +14,7 @@ const space: SpaceSummary = {
   organisationId: '00000000-0000-4000-8000-000000000100',
   previewUrl: 'http://localhost:4300',
   requireApproval: false,
-  allowSvg: false,
+  allowSvg: false, designSystems: false,
   role: 'admin',
   createdAt: '2026-10-01T00:00:00Z',
 };
@@ -97,7 +97,7 @@ describe('SpaceSettingsPage', () => {
     await fixture.whenStable();
     expect(fixture.componentInstance.hasUnsavedChanges()).toBe(true);
     await save();
-    expect(updateSpace).toHaveBeenCalledWith(spaceId, expect.objectContaining({ allowSvg: true }));
+    expect(updateSpace).toHaveBeenCalledWith(spaceId, expect.objectContaining({ allowSvg: true, designSystems: false }));
   });
 
   it('neither shows nor sends the SVG setting for space admins', async () => {

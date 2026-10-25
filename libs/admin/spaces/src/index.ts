@@ -1,6 +1,7 @@
 export * from './lib/management-api';
 export * from './lib/problem';
 export * from './lib/can-edit-content';
+export * from './lib/design-systems-api';
 export * from './lib/permissions';
 export * from './lib/permission.guard';
 export * from './lib/roles';

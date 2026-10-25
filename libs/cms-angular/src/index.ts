@@ -4,6 +4,8 @@ export { defineBlocks, type NovanBlock, type NovanBlockMeta, type NovanBlockRegi
 export { NovanBlocks } from './lib/blocks.component';
 export { NOVAN_BLOCK_CONTEXT, type NovanBlockContext } from './lib/block-context';
 export {
+  adapterFor,
+  bootstrapAdapter,
   BREAKPOINTS,
   BUCKETS,
   CASCADE_LAYERS,
@@ -15,6 +17,7 @@ export {
   plainAdapter,
   ROOT_PART,
   STATES,
+  type AdapterSource,
   type BlockOverrides,
   type Breakpoint,
   type Bucket,
@@ -26,6 +29,7 @@ export {
   type State,
 } from './lib/overrides';
 export { NOVAN_CLASS_ADAPTER, NovanBlockRoot, NovanPart } from './lib/parts';
+export { NovanDesignSystems } from './lib/site-styles';
 export { NovanForms, type NovanFormSubmission } from './lib/forms';
 export { NovanSearch } from './lib/search/search.component';
 export {

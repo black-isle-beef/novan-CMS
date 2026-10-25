@@ -13,6 +13,11 @@ Class overrides on block parts (docs/build/24-design-systems.md).
   `cascadeLayers`, `CASCADE_LAYERS`, `PART_NAME`, `ROOT_PART` and their types.
 - Bridge: site → admin `parts` (the selected block's parts), admin → site `part` (outline one part).
 - Sites should wrap their own CSS in `@layer novan-base` (see the README), or editors' classes may lose to it.
+- `NovanDesignSystems` and `NovanContentService.siteStyles()` (`GET site-styles`): `provideNovanCms` links the
+  stylesheets of the site's attached design systems in `<head>` before the first render and uses the first one's
+  class adapter (`designSystems: false` to opt out). `NOVAN_CLASS_ADAPTER` now provides a getter.
+- `bootstrapAdapter`, `adapterFor`, `ClassAdapter.canWrite`; type `NovanSiteStyles`. `createNovanProxy` passes
+  `site-styles`.
 
 ## 0.7.0
 

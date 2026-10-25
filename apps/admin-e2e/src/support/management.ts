@@ -35,6 +35,13 @@ export async function removeLocale(request: APIRequestContext, spaceId: string, 
   expect(prefixes.ok(), await prefixes.text()).toBe(true);
 }
 
+/** Stops the demo site loading any design system (docs/build/24-design-systems.md), as the other journeys expect. */
+export async function detachDesignSystems(request: APIRequestContext, spaceId: string): Promise<void> {
+  const headers = { Authorization: `Bearer ${await token(request)}` };
+  const response = await request.put(`${apiUrl}/v1/management/spaces/${spaceId}/site/design-systems`, { headers, data: { items: [] } });
+  expect(response.ok(), await response.text()).toBe(true);
+}
+
 /**
  * Adds a redirect as the space admin, so the audit log has an "Added a redirect" event whichever journeys ran before,
  * and returns a function that deletes it again.

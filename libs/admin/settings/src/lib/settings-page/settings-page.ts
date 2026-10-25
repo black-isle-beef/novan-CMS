@@ -43,6 +43,9 @@ export class SettingsPage {
         ? [
             { title: 'API tokens', description: 'Keys your sites use to read published content.', link: [...settings, 'api-tokens'] },
             { title: 'Webhooks', description: 'Addresses called when content changes, for builds and other systems.', link: ['/spaces', this.spaceId(), 'webhooks'] },
+            ...(this.context.currentSpace()?.designSystems
+              ? [{ title: 'Design systems', description: 'Stylesheets the site loads, whose classes editors add to blocks.', link: [...settings, 'design-systems'] }]
+              : []),
           ]
         : []),
       ...(this.context.can('space.update')

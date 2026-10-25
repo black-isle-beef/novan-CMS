@@ -14,6 +14,7 @@ import {
   formUidSchema,
   notFoundReportSchema,
   sitemapQuerySchema,
+  siteStylesSchema,
   sitemapSchema,
   spaceLocalesSchema,
 } from '@novan/shared-schemas';
@@ -104,6 +105,13 @@ abstract class ContentApiController {
   @ApiResponse(deliveryRedirectsSchema)
   redirects(@TokenAccess() access: ApiTokenAccess): Promise<Delivered<unknown>> {
     return this.site.redirects(access);
+  }
+
+  /** The design systems' stylesheets for the site's `<head>`, and its class adapter (package 24). */
+  @Get('site-styles')
+  @ApiResponse(siteStylesSchema)
+  siteStyles(@TokenAccess() access: ApiTokenAccess): Promise<Delivered<unknown>> {
+    return this.site.siteStyles(access);
   }
 }
 

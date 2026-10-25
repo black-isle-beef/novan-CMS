@@ -4,13 +4,20 @@
 import { computed, Directive, HostAttributeToken, inject, InjectionToken } from '@angular/core';
 
 import { NOVAN_BLOCK_CONTEXT } from './block-context';
-import { type ClassAdapter, plainAdapter, ROOT_PART } from './overrides';
+import { type ClassAdapter, ROOT_PART } from './overrides';
+import { NovanDesignSystems } from './site-styles';
 
 /**
- * How the site writes breakpoints and states (`md:px-8`, `px-md-8`, ...). Plain CSS, the default, has the base
- * bucket only; a site with a design system attached gets that design system's adapter.
+ * How the site writes breakpoints and states (`md:px-8`, `px-md-8`, ...). By default the adapter of the site's first
+ * attached design system ({@link NovanDesignSystems}), else plain CSS, which has the base bucket only. Provide one to
+ * use another.
  */
-export const NOVAN_CLASS_ADAPTER = new InjectionToken<ClassAdapter>('NOVAN_CLASS_ADAPTER', { factory: () => plainAdapter });
+export const NOVAN_CLASS_ADAPTER = new InjectionToken<() => ClassAdapter>('NOVAN_CLASS_ADAPTER', {
+  factory: () => {
+    const designSystems = inject(NovanDesignSystems);
+    return () => designSystems.adapter();
+  },
+});
 
 /**
  * A block's part: an element in a block's template with `data-novan-part="<part>"`. Import it in the block

@@ -17,4 +17,8 @@ export const cacheTag = {
   redirects: (spaceId: string): string => `redirects:${spaceId}`,
   /** Responses that embed the file's URL, and the file itself on the image route. */
   asset: (assetId: string): string => `asset:${assetId}`,
+  /** What a site's environment loads from attached design systems (docs/build/24-design-systems.md). */
+  siteStyles: (environmentId: string): string => `site-styles:${environmentId}`,
+  /** One design system version's files, which never change. */
+  designSystem: (versionId: string): string => `design-system:${versionId}`,
 };

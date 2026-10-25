@@ -31,6 +31,12 @@ export interface NovanCmsConfig {
    * accepts only when it has no secret key either (local development).
    */
   turnstileSiteKey?: string;
+  /**
+   * Loads the design systems attached to the site in Novan CMS (docs/build/24-design-systems.md): their
+   * stylesheets go in `<head>` and the first one's class adapter writes editors' breakpoint classes. Default true;
+   * false for a site that loads its own.
+   */
+  designSystems?: boolean;
 }
 
 /**

@@ -85,6 +85,21 @@
           <div id="space-settings-svg-hint" class="form-text">
             For logos and icons. Uploaded SVG files are cleaned of scripts and links. Only agency staff see and change this.
           </div>
+            <div class="form-check form-switch mt-3">
+              <input
+                id="space-settings-design-systems"
+                type="checkbox"
+                role="switch"
+                class="form-check-input"
+                formControlName="designSystems"
+                aria-describedby="space-settings-design-systems-hint"
+              />
+              <label for="space-settings-design-systems" class="form-check-label">Allow design systems</label>
+            </div>
+            <div id="space-settings-design-systems-hint" class="form-text">
+              Developers can upload stylesheets for the site in Settings, and editors add their classes to blocks. Only
+              agency staff see and change this.
+            </div>
         </fieldset>
       }
 

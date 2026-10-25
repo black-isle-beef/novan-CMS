@@ -64,6 +64,13 @@ export class CachePurge implements OnModuleInit {
       case 'locales.changed':
         // Every page reads differently: the space's whole cache goes. Without tags, the home page and sitemap at least.
         return this.purge(`${event.type} ${event.spaceId}`, [cacheTag.space(event.spaceId), ...redirects], urls(['/'], ['/sitemap.xml']));
+      case 'site-styles.changed':
+        // Every page links the stylesheets: the space's whole cache goes, as for locales.
+        return this.purge(
+          `${event.type} ${event.environmentId}`,
+          [cacheTag.space(event.spaceId), cacheTag.siteStyles(event.environmentId), overflowTag(event.spaceId)],
+          urls(['/']),
+        );
       case 'paths.changed':
         return this.purge(
           `${event.type} ${event.entryIds.join(',')}`,

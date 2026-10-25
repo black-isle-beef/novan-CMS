@@ -54,6 +54,13 @@ export const settingsRoutes: Route[] = [
     loadComponent: () => import('./api-tokens-page/api-tokens-page').then((m) => m.ApiTokensPage),
   },
   {
+    path: 'spaces/:spaceId/settings/design-systems',
+    title: 'Design systems | Novan CMS',
+    canActivate: [requireSettingsAccess],
+    canDeactivate: [unsavedChangesGuard],
+    loadComponent: () => import('./design-systems-page/design-systems-page').then((m) => m.DesignSystemsPage),
+  },
+  {
     path: 'spaces/:spaceId/webhooks',
     title: 'Webhooks | Novan CMS',
     canActivate: [requireSettingsAccess],

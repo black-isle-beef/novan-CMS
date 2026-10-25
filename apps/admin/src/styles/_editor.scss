@@ -52,9 +52,31 @@
   }
 }
 
+// A class that does nothing on this site, or that no attached design system has: a warning edge and icon (the
+// reason is written out below the chips).
+.nv-class-chip--warning {
+  border-color: var(--bs-warning-border-subtle);
+  padding-inline-start: 0.375rem;
+}
+
+// Suggestions under the class box: a scrolling list, above the panel's other controls.
+.nv-class-suggestions {
+  max-block-size: 16rem;
+  overflow-y: auto;
+
+  .dropdown-item {
+    cursor: pointer;
+    white-space: normal;
+  }
+}
+
 @media (forced-colors: active) {
   .nv-class-chip {
     border-color: CanvasText;
+  }
+
+  .nv-class-suggestions .dropdown-item.active {
+    outline: 0.125rem solid Highlight;
   }
 }
 

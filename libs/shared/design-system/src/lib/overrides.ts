@@ -58,6 +58,8 @@ export interface ClassAdapter {
   toClassList(buckets: PartBuckets): string[];
   /** A well-formed class name that the index (when given) knows. */
   isValid(className: string, index?: ClassIndex): boolean;
+  /** Whether the class can be written for the bucket (Bootstrap has no `md` version of `text-primary`). */
+  canWrite(className: string, bucket: Bucket): boolean;
 }
 
 export function isClassToken(value: unknown): value is string {
@@ -116,11 +118,108 @@ export function createTemplateAdapter(framework: string, templates: ClassTemplat
     isValid(className, index) {
       return isClassToken(className) && (index?.has(className) ?? true);
     },
+    canWrite(className, bucket) {
+      return isClassToken(className) && byBucket.has(bucket);
+    },
   };
 }
 
 /** Plain CSS: the base bucket only. */
 export const plainAdapter: ClassAdapter = createTemplateAdapter('css');
+
+/**
+ * Bootstrap's responsive utilities put the breakpoint inside the class (`px-3` → `px-md-3`, `col` → `col-md`).
+ * Only these utility families have breakpoint versions; text alignment is the only `text-` one. Bootstrap has no
+ * state variants, so no state buckets are offered.
+ */
+const BOOTSTRAP_RESPONSIVE = [
+  'row-cols',
+  'justify-content',
+  'align-items',
+  'align-self',
+  'align-content',
+  'column-gap',
+  'row-gap',
+  'offset',
+  'order',
+  'float',
+  'flex',
+  'gap',
+  'col',
+  'gx',
+  'gy',
+  'g',
+  'd',
+  'p',
+  'pt',
+  'pb',
+  'ps',
+  'pe',
+  'px',
+  'py',
+  'm',
+  'mt',
+  'mb',
+  'ms',
+  'me',
+  'mx',
+  'my',
+];
+const BOOTSTRAP_TEXT_ALIGN = new Set(['text-start', 'text-end', 'text-center']);
+
+/** The class's Bootstrap version at the breakpoint, or null when Bootstrap has none. */
+export function bootstrapResponsive(className: string, breakpoint: Breakpoint): string | null {
+  if (!isClassToken(className)) return null;
+  if (className === 'col') return `col-${breakpoint}`;
+  if (BOOTSTRAP_TEXT_ALIGN.has(className)) return className.replace('text-', `text-${breakpoint}-`);
+  const prefix = BOOTSTRAP_RESPONSIVE.find((candidate) => className.startsWith(`${candidate}-`));
+  if (!prefix) return null;
+  const rest = className.slice(prefix.length + 1);
+  // Already responsive (`p-md-3`), or not a utility value at all.
+  if (!rest || BREAKPOINTS.some((other) => rest === other || rest.startsWith(`${other}-`)) || rest.startsWith('xxl')) return null;
+  return `${prefix}-${breakpoint}-${rest}`;
+}
+
+export const bootstrapAdapter: ClassAdapter = {
+  framework: 'bootstrap',
+  breakpoints: BREAKPOINTS,
+  states: [],
+  toClassList(buckets) {
+    const classes: string[] = [];
+    for (const bucket of BUCKETS) {
+      const names = buckets[bucket];
+      if (!Array.isArray(names)) continue;
+      for (const name of names.slice(0, MAX_CLASSES_PER_BUCKET)) {
+        const written = bucket === 'base' ? (isClassToken(name) ? name : null) : isBreakpoint(bucket) ? bootstrapResponsive(name, bucket) : null;
+        if (written) classes.push(written);
+      }
+    }
+    return unique(classes);
+  },
+  isValid(className, index) {
+    return isClassToken(className) && (index?.has(className) ?? true);
+  },
+  canWrite(className, bucket) {
+    if (bucket === 'base') return isClassToken(className);
+    return isBreakpoint(bucket) && bootstrapResponsive(className, bucket) !== null;
+  },
+};
+
+/** What a site's class adapter is made from: its first design system's framework and manifest templates. */
+export interface AdapterSource extends ClassTemplates {
+  readonly framework: string;
+}
+
+/** The adapter for a design system: Bootstrap's own, else the manifest's templates (base only without them). */
+export function adapterFor(source: AdapterSource | null | undefined): ClassAdapter {
+  if (!source) return plainAdapter;
+  if (source.framework === 'bootstrap') return bootstrapAdapter;
+  return createTemplateAdapter(source.framework, source);
+}
+
+function isBreakpoint(bucket: Bucket): bucket is Breakpoint {
+  return (BREAKPOINTS as readonly string[]).includes(bucket);
+}
 
 /**
  * Each part's final classes: the component's default classes, then the block's overrides through the adapter.

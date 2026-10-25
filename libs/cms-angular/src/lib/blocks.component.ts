@@ -112,7 +112,7 @@ export class NovanBlocks {
       uid: node._uid,
       block: node._block,
       entryId,
-      parts: computed(() => mergeOverrides(null, overrides(), this.adapter), { equal: sameParts }),
+      parts: computed(() => mergeOverrides(null, overrides(), this.adapter()), { equal: sameParts }),
       tokens: computed(() => overrideTokens(overrides()), { equal: sameTokens }),
     };
   }

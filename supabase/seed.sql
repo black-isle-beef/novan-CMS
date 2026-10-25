@@ -73,10 +73,11 @@ values (
 insert into public.organisations (id, name)
 values ('00000000-0000-4000-8000-000000000100', 'Novan Web Services');
 
-insert into public.spaces (id, organisation_id, name, slug, preview_url)
+-- Design systems are on for the demo space (docs/build/24-design-systems.md), as agency staff would turn them on.
+insert into public.spaces (id, organisation_id, name, slug, preview_url, settings)
 values (
   '00000000-0000-4000-8000-000000000200', '00000000-0000-4000-8000-000000000100',
-  'Demo site', 'demo-site', 'http://localhost:4300'
+  'Demo site', 'demo-site', 'http://localhost:4300', '{"designSystems": {"enabled": true}}'
 );
 
 insert into public.members (space_id, user_id, role_id, invited_by)
