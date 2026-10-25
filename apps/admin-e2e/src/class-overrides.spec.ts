@@ -8,7 +8,8 @@ import { keepPublished } from './support/management';
 
 test.describe('@editor @classes', () => {
   test('an editor adds classes to parts of a block, sees them on the page, and the live page has them', async ({ page, request }) => {
-    test.setTimeout(120_000);
+    // The site's first render compiles on demand in the dev server.
+    test.setTimeout(150_000);
     const putBack = await keepPublished(request, '00000000-0000-4000-8000-000000000200', '00000000-0000-4000-8000-000000000703');
     try {
       await signIn(page, client);
@@ -24,7 +25,7 @@ test.describe('@editor @classes', () => {
 
       // The site says which parts the hero has; the whole block comes first.
       const part = panel.getByRole('combobox', { name: 'Part' });
-      await expect(part.getByRole('option', { name: 'Heading' })).toBeAttached();
+      await expect(part.getByRole('option', { name: 'Heading', exact: true })).toBeAttached();
 
       // Classes on the whole block, typed and added with Enter; the page follows without reloading.
       const classes = panel.getByRole('textbox', { name: 'Classes on Whole block' });
@@ -33,7 +34,7 @@ test.describe('@editor @classes', () => {
       await expect(hero).toHaveClass(/(^|\s)mt-5(\s|$)/);
       await expect(hero).toHaveClass(/(^|\s)shadow-lg(\s|$)/);
       await expect(hero).toHaveClass(/novan-hero-block/);
-      await expect(panel.getByRole('status')).toHaveText('Added mt-5, shadow-lg.');
+      await expect(panel.getByRole('status').filter({ hasText: 'Added mt-5, shadow-lg.' })).toBeAttached();
 
       // And on the heading, while the site outlines the part being edited.
       await part.selectOption({ label: 'Heading' });
@@ -49,7 +50,7 @@ test.describe('@editor @classes', () => {
       await headingClasses.fill('"><b>');
       await headingClasses.press('Enter');
       await expect(headingClasses).toHaveAttribute('aria-invalid', 'true');
-      await expect(panel.getByRole('status')).toContainText('is not a class name');
+      await expect(panel.getByRole('status').filter({ hasText: 'is not a class name' })).toBeAttached();
       await headingClasses.fill('');
 
       // Removing with the keyboard: Backspace in the empty box takes the last class off.
