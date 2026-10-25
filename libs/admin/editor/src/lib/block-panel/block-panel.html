@@ -39,6 +39,15 @@
       (valueChange)="setStyle($event)"
     />
   }
+  <h3 class="h6 mt-3">Classes</h3>
+  <nv-class-overrides
+    [uid]="node()._uid"
+    [overrides]="node()._overrides"
+    [parts]="parts()"
+    [readonly]="readonly()"
+    (overridesChange)="setOverrides($event)"
+    (pointPart)="pointPart.emit($event)"
+  />
 } @else {
   <ds-alert variant="warning">This block type no longer exists. Delete the block, or ask a developer to add the type back.</ds-alert>
 }

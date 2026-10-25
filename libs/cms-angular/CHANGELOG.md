@@ -2,6 +2,18 @@
 
 All notable changes to `@black-isle-beef/cms-angular`. The package follows [semantic versioning](https://semver.org).
 
+## 0.8.0 (unreleased)
+
+Class overrides on block parts (docs/build/24-design-systems.md).
+
+- `NovanBlockNode._overrides`: classes per part and bucket, and token overrides, set by editors.
+- `NovanPart` (`[data-novan-part]`) and `NovanBlockRoot` (host directive) apply them; `NovanBlockContext` has `parts`
+  and `tokens`, kept current as the page changes in the visual editor.
+- `NOVAN_CLASS_ADAPTER`, `mergeOverrides`, `overrideTokens`, `createTemplateAdapter`, `plainAdapter`,
+  `cascadeLayers`, `CASCADE_LAYERS`, `PART_NAME`, `ROOT_PART` and their types.
+- Bridge: site → admin `parts` (the selected block's parts), admin → site `part` (outline one part).
+- Sites should wrap their own CSS in `@layer novan-base` (see the README), or editors' classes may lose to it.
+
 ## 0.7.0
 
 Search and forms (docs/build/18-search-forms-audit.md).

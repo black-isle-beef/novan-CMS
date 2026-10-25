@@ -325,6 +325,26 @@ Give the page's id as well, `<novan-blocks [blocks]="page.data.body" [entryId]="
 other blocks too) can `inject(NOVAN_BLOCK_CONTEXT, { optional: true })` to learn its `uid`, its block type and the
 `entryId` of the page it is on. A form block needs this to send what visitors fill in.
 
+### Parts and class overrides
+
+Editors can add CSS classes to a block's **parts** and set its design tokens in the visual editor (`_overrides`).
+A block opts in by marking its parts: `data-novan-part="root"` on the host with `hostDirectives: [NovanBlockRoot]`,
+and `data-novan-part="<part>"` on elements in its template, with `NovanPart` in its `imports`. The classes are
+added with Angular bindings, so they sit alongside the block's own (`[class]` bindings included) and are never
+written into markup as text; tokens become custom properties on the host. Classes for breakpoints and states are
+written by `NOVAN_CLASS_ADAPTER` (plain CSS, base classes only, unless the site provides another). Unmarked blocks
+are unaffected.
+
+So that an editor's classes can beat the site's own styles, put the site's CSS in cascade layers, declared before
+any other `@layer` (`cascadeLayers()` returns the statement):
+
+```scss
+@layer novan-base, ds-vendor, ds-components, novan-overrides;
+@layer novan-base {
+  @include meta.load-css('@black-isle-beef/novan-design-system/styles/styles');
+}
+```
+
 ## Forms
 
 `NovanForms.submit(formUid, { entryId, locale, data, turnstileToken })` sends a form's answers to the Delivery API

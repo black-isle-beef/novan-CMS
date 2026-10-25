@@ -30,6 +30,11 @@ const UID = 'data-novan-uid';
 const BLOCK = 'data-novan-block';
 /** Set by a block component on the element that shows a text field, e.g. `data-novan-field="heading"`. */
 const FIELD = 'data-novan-field';
+/** Marks a block's parts, which editors add classes to (docs/build/24-design-systems.md). */
+const PART = 'data-novan-part';
+/** Most elements outlined for one part (a part repeats in lists, e.g. every card's title). */
+const MAX_PART_OUTLINES = 50;
+const MAX_PARTS = 30;
 /** The editor's outline colour: 4.6:1 against white, for the label's white text. */
 const ACCENT = '#0b5ed7';
 
@@ -73,6 +78,9 @@ export function startNovanBridge(
   let editing: Editing | null = null;
   let lastRects = '';
   let lastHeadings = '';
+  let lastParts = '';
+  /** The part the admin asked to outline. */
+  let pointedPart: { uid: string | null; part: string | null } = { uid: null, part: null };
   let frame: number | null = null;
 
   const post = (message: SiteMessage) => env.parent.postMessage(bridgeEnvelope(message), host.adminOrigin);
@@ -119,6 +127,23 @@ export function startNovanBridge(
       lastHeadings = headingsJson;
       post({ type: 'headings', payload: { headings } });
     }
+    if (selectedEl && selected) {
+      const parts = [...new Set(partsOf(selectedEl).map((el) => el.getAttribute(PART) as string))].filter(isPartName).slice(0, MAX_PARTS);
+      const partsJson = JSON.stringify([selected, parts]);
+      if (partsJson !== lastParts) {
+        lastParts = partsJson;
+        post({ type: 'parts', payload: { uid: selected, parts } });
+      }
+    }
+    const partBlock = element(pointedPart.uid);
+    overlay.drawParts(
+      partBlock && pointedPart.part
+        ? partsOf(partBlock)
+            .filter((el) => el.getAttribute(PART) === pointedPart.part)
+            .slice(0, MAX_PART_OUTLINES)
+            .map((el) => el.getBoundingClientRect())
+        : [],
+    );
   };
   const schedule = () => {
     frame ??= (win.requestAnimationFrame ?? ((callback: () => void) => win.setTimeout(callback, 16)))(measure);
@@ -207,6 +232,9 @@ export function startNovanBridge(
         editable = message.payload;
         if (editing && editing.uid !== editable.uid) finishEditing(false);
         break;
+      case 'part':
+        pointedPart = message.payload;
+        break;
     }
     schedule();
   };
@@ -267,6 +295,7 @@ export function startNovanBridge(
       hovered = null;
       lastRects = '';
       lastHeadings = '';
+      lastParts = '';
       ready();
       schedule();
     },
@@ -327,6 +356,15 @@ function blockOfElement(el: Element): Element | null {
   return el.closest(`[${UID}]`);
 }
 
+/** A block's own part elements in page order: not those of blocks inside it. */
+function partsOf(block: Element): HTMLElement[] {
+  return Array.from(block.querySelectorAll<HTMLElement>(`[${PART}]`)).filter((el) => blockOfElement(el) === block);
+}
+
+function isPartName(value: string | null): value is string {
+  return value !== null && /^[a-z][a-z0-9-]{0,39}$/.test(value);
+}
+
 /** The edited text as the field stores it: one line unless the field is multiline. */
 function textOf(editing: Editing): string {
   const text = editing.element.innerText ?? editing.element.textContent ?? '';
@@ -350,10 +388,14 @@ class Overlay {
   private readonly label: HTMLElement;
   private readonly before: HTMLElement;
   private readonly after: HTMLElement;
+  /** Outlines of the part the editor is pointing at, reused between draws. */
+  private readonly parts: HTMLElement[] = [];
+  private readonly doc: Document;
   /** The block the "+" buttons are drawn for. */
   insertTarget: string | null = null;
 
   constructor(doc: Document, onInsert: (position: InsertPosition) => void) {
+    this.doc = doc;
     this.layer = doc.createElement('div');
     this.layer.setAttribute('aria-hidden', 'true');
     this.layer.setAttribute('data-novan-overlay', '');
@@ -411,6 +453,18 @@ class Overlay {
       }
       style(button, { display: 'block', left: `${rect.x + rect.width / 2 - 12}px`, top: `${y - 12}px` });
     }
+  }
+
+  /** Dotted outlines around each element of one part. */
+  drawParts(rects: BridgeRect[]): void {
+    while (this.parts.length < rects.length) {
+      const outline = this.doc.createElement('div');
+      outline.setAttribute('data-novan-part-outline', '');
+      style(outline, { position: 'absolute', boxSizing: 'border-box', border: `2px dotted ${ACCENT}`, display: 'none' });
+      this.layer.insertBefore(outline, this.label);
+      this.parts.push(outline);
+    }
+    this.parts.forEach((outline, index) => place(outline, rects[index]));
   }
 
   remove(): void {

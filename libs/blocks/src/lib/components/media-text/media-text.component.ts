@@ -1,6 +1,12 @@
 // components/media-text/media-text.component.ts — styles: src/styles/_media-text.scss.
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import type { NovanAsset, NovanBlock, NovanLinkValue } from '@black-isle-beef/cms-angular';
+import {
+  type NovanAsset,
+  type NovanBlock,
+  type NovanLinkValue,
+  NovanBlockRoot,
+  NovanPart,
+} from '@black-isle-beef/cms-angular';
 
 import { BlockActionComponent, blockLink } from '../../block-action/block-action.component';
 import { blockPicture } from '../../block-picture';
@@ -18,9 +24,10 @@ const SIZES = '(min-width: 80rem) 37rem, (min-width: 48rem) 50vw, 100vw';
  */
 @Component({
   selector: 'novan-media-text-block',
-  imports: [BlockActionComponent],
+  imports: [NovanPart, BlockActionComponent],
   templateUrl: './media-text.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [NovanBlockRoot],
   host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class MediaTextBlock implements NovanBlock<MediaTextFields> {
