@@ -137,38 +137,6 @@ admin document has no design-system `<link>` or `<script>`.
 - **Feature flags move to 24c**, with the first screen that needs them; class overrides on Novan blocks (24b) are
   not gated.
 
-### 24b
-
-- **Page model:** blocks take `_overrides` (`blockOverridesSchema` in `@novan/shared-design-system`, used by
-  `buildEntrySchema` for both node shapes): `v` (a version id), `parts` (≤ 30, by part name) of buckets (`base`,
-  `sm`–`xl`, `hover`/`focus`/`active`/`dark`, ≤ 50 class names each, shape-checked by `CLASS_TOKEN`) and `tokens`
-  (≤ 40 custom properties with plain values). `css` is refused until 24f sanitises it. Pages without `_overrides`
-  are unchanged; search skips `_` keys already.
-- **SDK (0.8.0):** `<novan-blocks>` gives each block's context `parts` and `tokens` signals, computed from the current
-  blocks, so editor updates reach a block without re-creating it. `NovanPart` (selector `[data-novan-part]`, so the
-  24a markers are the whole opt-in) and `NovanBlockRoot` (a host directive) bind the classes as separate `[class]`
-  sources, which Angular merges with the block's own `hostClasses()`; nothing in the blocks' class logic changed.
-  Tokens are a `[style]` binding; the server DOM keeps custom properties. `NOVAN_CLASS_ADAPTER` defaults to the plain
-  adapter (base bucket only) until 24c provides a design system's.
-- **Blocks:** every block has `hostDirectives: [NovanBlockRoot]` and imports `NovanPart`; `<novan-block-action>`
-  imports `NovanPart` for its `action` part. `block-parts.spec.ts` renders every block through `<novan-blocks>` with a
-  class on every part and checks each rendered part has its own class only, and that markup is otherwise the same.
-- **Cascade layers:** the starter and Laws & Paws sites load the design system and the blocks with `meta.load-css`
-  inside `@layer novan-base` (a `@use ... with` cannot sit in a layer), after the layer order statement; the Laws &
-  Paws site's own rules are in `novan-base` too. Compiling the old and new stylesheets gives the same rules in the
-  same order. The kits have no styles of their own; `docs/clients/new-site.md` says how other sites upgrade.
-- **Bridge:** site → admin `parts { uid, parts }` (the selected block's own parts in page order, not those of blocks
-  inside it, sent when they change); admin → site `part { uid, part }` draws dotted outlines round every element of
-  that part (up to 50).
-- **Editor:** a Classes section under Style in the block panel (`nv-class-overrides`): a Part select (the whole block
-  first, then the parts the site reported, then any others that hold classes, marked "not on the page"), the classes
-  on that part's base bucket in `nv-class-chips`, and Clear buttons. Choosing or editing a part outlines it on the
-  page. `nv-class-chips` is a labelled text box with removable chips: Enter adds (several, space-separated),
-  Backspace in an empty box removes the last, refusals and changes are announced in a polite live region, and focus
-  stays in the box. Breakpoint and state tabs wait for 24c's adapters.
-- **E2E:** `apps/admin-e2e/src/class-overrides.spec.ts` (`@classes`): add classes to the hero and its heading, see them
-  in the frame, a refused name, Backspace, axe, publish, and the site's server-rendered HTML has the classes.
-
 ## Definition of done
 
 - [ ] A developer uploads a design system (CSS-only or zip), attaches it, places a custom component on a page, edits
