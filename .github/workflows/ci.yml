@@ -194,9 +194,10 @@ jobs:
           fetch-depth: 0
       # Scans the commits in this PR or push for live (verified) and unverifiable credentials. No blobless clone here:
       # trufflehog re-clones the checkout and reads every blob, which a partial clone cannot serve.
+      # trufflehog-exclude.txt lists files whose fake credentials are test inputs; keep it to exact paths.
       - uses: trufflesecurity/trufflehog@v3.99.2
         with:
-          extra_args: --results=verified,unknown
+          extra_args: --results=verified,unknown --exclude-paths=.github/trufflehog-exclude.txt
 
   # Non-blocking: reports high and critical advisories in production dependencies as a PR comment.
   # Not a required check; the job goes red so the finding is visible, but merging is not blocked.

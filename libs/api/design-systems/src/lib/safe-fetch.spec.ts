@@ -45,7 +45,7 @@ describe('fetching', () => {
     ['the cloud metadata address', () => 'https://169.254.169.254/latest/meta-data'],
     ['IPv6 loopback', () => `https://[::1]:${port}/a.css`],
     ['localhost', () => `https://localhost:${port}/a.css`],
-    ['addresses with credentials', () => 'https://user:secret@cdn.example.com/a.css'],
+    ['addresses with credentials', () => 'https://user:secret@cdn.example.com/a.css'], // trufflehog:ignore
     ['things that are not addresses', () => 'not a url'],
   ])('refuses %s without connecting', async (_, address) => {
     await refused(address());
