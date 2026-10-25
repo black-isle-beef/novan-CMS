@@ -76,6 +76,9 @@
         "development": {
           "buildTarget": "starter-site:build:development"
         }
+      },
+      "readyWhen": {
+        "signal": true
       }
     },
     "test": {
@@ -95,16 +98,16 @@
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",
+      "readyWhen": {
+        "signal": true
+      },
+      "dependsOn": ["build"],
       "options": {
         "buildTarget": "starter-site:build",
         "port": 4300,
         "staticFilePath": "dist/apps/starter-site/browser",
         "spa": true
-      },
-      "readyWhen": {
-        "signal": true
-      },
-      "dependsOn": ["build"]
+      }
     }
   }
 }

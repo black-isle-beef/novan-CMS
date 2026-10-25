@@ -76,6 +76,9 @@
         "development": {
           "buildTarget": "laws-paws-site:build:development"
         }
+      },
+      "readyWhen": {
+        "signal": true
       }
     },
     "test": {
@@ -95,16 +98,16 @@
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",
+      "readyWhen": {
+        "signal": true
+      },
+      "dependsOn": ["build"],
       "options": {
         "buildTarget": "laws-paws-site:build",
         "port": 4310,
         "staticFilePath": "dist/apps/laws-paws-site/browser",
         "spa": true
-      },
-      "readyWhen": {
-        "signal": true
-      },
-      "dependsOn": ["build"]
+      }
     }
   }
 }
