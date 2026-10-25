@@ -56,7 +56,7 @@ app.use(DEFAULT_PROXY_PATH, forms);
 app.use(express.static(browserDistFolder, { maxAge: '1y', index: false, redirect: false }));
 
 /** Every other address is rendered by Angular; unknown ones get the branded 404 page. */
-app.use('/**', (req, res, next) => {
+app.use((req, res, next) => {
   angularApp
     .handle(req)
     .then((response) => (response ? withCachePolicy(response) : null))
