@@ -24,6 +24,15 @@ const frameworkNames: Readonly<Record<string, string>> = { bootstrap: 'Bootstrap
  * breakpoints and states the site's design system can write. The parts are the ones the site says the block rendered,
  * plus those that already have classes, so stale ones can still be cleared. Changes go out as the block's whole
  * `_overrides`, or undefined once nothing is left.
+import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output } from '@angular/core';
+import { type BlockOverrides, type PartBuckets, ROOT_PART } from '@novan/shared-design-system';
+import { ClassChips } from '../class-chips/class-chips';
+
+/**
+ * The Classes section of the block panel (docs/build/24-design-systems.md): pick one of the block's parts and add
+ * CSS classes to it, from the site's own framework or an attached design system. The parts are the ones the site
+ * says the block rendered, plus those that already have classes, so stale ones can still be cleared. Changes go out
+ * as the block's whole `_overrides`, or undefined once nothing is left.
  */
 @Component({
   selector: 'nv-class-overrides',
@@ -121,6 +130,11 @@ export class ClassOverrides {
     });
   }
 
+  protected readonly classes = computed(() => this.overrides()?.parts?.[this.part()]?.base ?? []);
+  protected readonly label = computed(() => partLabel(this.part()));
+  protected readonly anyClasses = computed(() => this.options().some((option) => option.count > 0));
+  protected readonly idPrefix = computed(() => `nv-classes-${this.uid()}`);
+
   protected choose(event: Event): void {
     this.part.set((event.target as HTMLSelectElement).value);
     this.pointPart.emit(this.part());
@@ -138,6 +152,7 @@ export class ClassOverrides {
     const current = this.overrides();
     const parts: Record<string, PartBuckets> = { ...(current?.parts ?? {}) };
     parts[this.part()] = { ...(parts[this.part()] ?? {}), [this.bucket()]: classes };
+    parts[this.part()] = { ...(parts[this.part()] ?? {}), base: classes };
     this.emit({ ...current, parts });
   }
 
@@ -153,6 +168,7 @@ export class ClassOverrides {
   }
 
   protected count(part: string): number {
+  private count(part: string): number {
     return Object.values(this.overrides()?.parts?.[part] ?? {}).reduce((total, names) => total + (names?.length ?? 0), 0);
   }
 

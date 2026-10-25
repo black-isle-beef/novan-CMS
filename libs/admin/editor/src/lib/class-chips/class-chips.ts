@@ -11,6 +11,13 @@ const SUGGEST_DELAY_MS = 200;
  * for the word being typed (arrow keys to choose, Enter to pick, Escape to close). Names are checked for shape only:
  * anything a class attribute could not safely hold is refused with a message. `warnings` are shown by name. Changes
  * are announced, and focus stays in the text box.
+import { ChangeDetectionStrategy, Component, computed, type ElementRef, input, output, signal, viewChild } from '@angular/core';
+import { CLASS_TOKEN, MAX_CLASSES_PER_BUCKET } from '@novan/shared-design-system';
+
+/**
+ * A list of CSS class names as removable chips, with a text box to add more (Enter or the Add button; several at
+ * once, separated by spaces). Names are checked for shape only: anything a class attribute could not safely hold
+ * is refused with a message. Additions and removals are announced, and focus stays in the text box.
  */
 @Component({
   selector: 'nv-class-chips',
@@ -50,6 +57,10 @@ export class ClassChips {
   constructor() {
     inject(DestroyRef).onDestroy(() => this.timer && clearTimeout(this.timer));
   }
+  protected readonly full = computed(() => this.classes().length >= MAX_CLASSES_PER_BUCKET);
+  protected readonly describedBy = computed(() => `${this.inputId()}-hint${this.error() ? ` ${this.inputId()}-error` : ''}`);
+
+  private readonly box = viewChild<ElementRef<HTMLInputElement>>('box');
 
   protected typed(event: Event): void {
     this.draft.set((event.target as HTMLInputElement).value);
@@ -73,6 +84,12 @@ export class ClassChips {
       const chosen = this.options()[this.active()];
       if (chosen) this.pick(chosen);
       else this.add();
+  }
+
+  protected keydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.add();
     } else if (event.key === 'Backspace' && this.draft() === '' && this.classes().length) {
       event.preventDefault();
       this.remove(this.classes()[this.classes().length - 1]);
@@ -89,6 +106,7 @@ export class ClassChips {
 
   protected add(): void {
     this.closeSuggestions();
+  protected add(): void {
     const names = this.draft().split(/\s+/).filter(Boolean);
     if (!names.length) return;
     const bad = names.find((name) => !CLASS_TOKEN.test(name));

@@ -338,6 +338,8 @@ others their manifest's templates), else plain CSS, which has base classes only.
 `provideNovanCms` also loads the design systems attached to the site in Novan CMS (`NovanDesignSystems`, from
 `GET site-styles`): their stylesheets are linked in `<head>` before the first render, so the server's HTML has
 them. Pass `designSystems: false` for a site that loads its own.
+written by `NOVAN_CLASS_ADAPTER` (plain CSS, base classes only, unless the site provides another). Unmarked blocks
+are unaffected.
 
 So that an editor's classes can beat the site's own styles, put the site's CSS in cascade layers, declared before
 any other `@layer` (`cascadeLayers()` returns the statement):
