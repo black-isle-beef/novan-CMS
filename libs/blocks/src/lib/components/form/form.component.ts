@@ -23,6 +23,8 @@ import {
   NovanForms,
   NovanLocale,
   NovanPreview,
+  NovanBlockRoot,
+  NovanPart,
 } from '@black-isle-beef/cms-angular';
 
 import { blockId, blockText } from '../../block-text';
@@ -72,8 +74,10 @@ type State = 'idle' | 'sending' | 'sent';
  */
 @Component({
   selector: 'novan-form-block',
+  imports: [NovanPart],
   templateUrl: './form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [NovanBlockRoot],
   host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class FormBlock implements NovanBlock<FormFields> {

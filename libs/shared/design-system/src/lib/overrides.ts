@@ -17,7 +17,7 @@ export type PartBuckets = { readonly [B in Bucket]?: readonly string[] };
 
 /** A block's `_overrides`. */
 export interface BlockOverrides {
-  /** The design system version the classes were checked against, if any. */
+  /** The design system version the classes were checked against, when there is one. */
   readonly v?: string;
   readonly parts?: Readonly<Record<string, PartBuckets>>;
   /** CSS custom properties set on the block, e.g. `{ '--color-primary': '#c9a227' }`. */
@@ -39,7 +39,7 @@ export const MAX_TOKEN_VALUE = 200;
 export const CASCADE_LAYERS = ['novan-base', 'ds-vendor', 'ds-components', 'novan-overrides'] as const;
 export type CascadeLayer = (typeof CASCADE_LAYERS)[number];
 
-/** The layer order statement each site puts before any other CSS. */
+/** The layer order statement each site puts before all other CSS. */
 export function cascadeLayers(): string {
   return `@layer ${CASCADE_LAYERS.join(', ')};`;
 }

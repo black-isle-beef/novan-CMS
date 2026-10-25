@@ -1,19 +1,21 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { DsAlertComponent } from '@black-isle-beef/novan-design-system';
 import { FieldForm } from '@novan/admin-fields';
+import type { BlockOverrides } from '@novan/shared-design-system';
 import type { BlockNode, BlockStyle, BlockType } from '@novan/shared-schemas';
 import type { BlockPlace } from '../block-tree';
+import { ClassOverrides } from '../class-overrides/class-overrides';
 import { StylePicker } from '../style-picker/style-picker';
 
 /**
- * The selected block's fields (the same controls as the form view, so validation messages match) and its style
- * options as preset pickers, plus what can be done with it: move into the block before it or out of the one it
+ * The selected block's fields (the same controls as the form view, so validation messages match), its style
+ * options as preset pickers and the classes added to its parts, plus what can be done with it: move into the block before it or out of the one it
  * is in, duplicate, hide and delete. Changes go out as just the keys that changed, so two made before the panel
  * catches up do not undo each other.
  */
 @Component({
   selector: 'nv-block-panel',
-  imports: [DsAlertComponent, FieldForm, StylePicker],
+  imports: [ClassOverrides, DsAlertComponent, FieldForm, StylePicker],
   templateUrl: './block-panel.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -27,8 +29,12 @@ export class BlockPanel {
   readonly intoName = input<string | null>(null);
   /** The block this one is in, when its list can hold this block. */
   readonly outOfName = input<string | null>(null);
+  /** The parts the site says this block rendered; null until it says (or when the site's SDK is older). */
+  readonly parts = input<readonly string[] | null>(null);
 
   readonly blockChange = output<Partial<BlockNode>>();
+  /** The part being edited in the Classes section, for the site to outline. */
+  readonly pointPart = output<string | null>();
   readonly moveInto = output<void>();
   readonly moveOut = output<void>();
   readonly duplicate = output<void>();
@@ -48,5 +54,9 @@ export class BlockPanel {
 
   protected setStyle(style: BlockStyle): void {
     this.blockChange.emit({ _style: style });
+  }
+
+  protected setOverrides(overrides: BlockOverrides | undefined): void {
+    this.blockChange.emit({ _overrides: overrides });
   }
 }

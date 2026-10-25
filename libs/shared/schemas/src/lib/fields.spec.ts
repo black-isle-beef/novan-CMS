@@ -634,6 +634,32 @@ describe('buildEntrySchema', () => {
       expect(issues(schema, { body: [{ ...styled, _style: ['brand'] }] })).toHaveLength(1);
     });
 
+    it('keeps class and token overrides, and pages without them', () => {
+      const overrides = {
+        v: uid(9),
+        parts: { root: { base: ['mt-8', 'px-4'], md: ['px-8'], hover: ['shadow-xl'] }, cta: { base: ['btn', 'btn-primary'] } },
+        tokens: { '--color-primary': '#c9a227' },
+      };
+      const block = { _uid: uid(1), _block: 'hero', heading: 'Hi', _overrides: overrides };
+      expect(schema.parse({ body: [block] })).toEqual({ body: [block] });
+      expect(schema.parse({ body: [{ ...block, _overrides: undefined }] })).toEqual({ body: [{ _uid: uid(1), _block: 'hero', heading: 'Hi' }] });
+    });
+
+    it.each([
+      ['a class with a quote', { parts: { root: { base: ['x"><script>'] } } }, 'body.0._overrides.parts.root.base.0'],
+      ['a class with a space', { parts: { root: { base: ['a b'] } } }, 'body.0._overrides.parts.root.base.0'],
+      ['an unknown bucket', { parts: { root: { xxl: ['p-4'] } } }, 'body.0._overrides.parts.root'],
+      ['a bad part name', { parts: { 'Call To Action': { base: ['btn'] } } }, 'body.0._overrides.parts.Call To Action'],
+      ['too many classes', { parts: { root: { base: Array.from({ length: 51 }, (_, n) => `c${n}`) } } }, 'body.0._overrides.parts.root.base'],
+      ['a token value that escapes', { tokens: { '--x': 'red; background: url(x)' } }, 'body.0._overrides.tokens.--x'],
+      ['a token name that is not a custom property', { tokens: { color: 'red' } }, 'body.0._overrides.tokens.color'],
+      ['custom CSS, not accepted yet', { css: '.x { color: red }' }, 'body.0._overrides'],
+      ['a version that is not an id', { v: '1.2.0' }, 'body.0._overrides.v'],
+    ])('refuses overrides with %s', (_, overrides, path) => {
+      const found = issues(schema, { body: [{ _uid: uid(1), _block: 'hero', heading: 'Hi', _overrides: overrides }] });
+      expect(found.some((issue) => issue.startsWith(`${path}:`)), found.join('\n')).toBe(true);
+    });
+
     it('keeps hidden blocks hidden', () => {
       const hidden = { _uid: uid(1), _block: 'hero', heading: 'Hi', _hidden: true };
       expect(schema.parse({ body: [hidden] })).toEqual({ body: [hidden] });

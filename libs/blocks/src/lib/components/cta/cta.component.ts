@@ -1,6 +1,6 @@
 // components/cta/cta.component.ts — styles: src/styles/_cta.scss.
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import type { NovanBlock, NovanLinkValue } from '@black-isle-beef/cms-angular';
+import { type NovanBlock, type NovanLinkValue, NovanBlockRoot, NovanPart } from '@black-isle-beef/cms-angular';
 
 import { BlockActionComponent, blockLink } from '../../block-action/block-action.component';
 import { blockId, blockText } from '../../block-text';
@@ -10,9 +10,10 @@ import { CTA_SCHEMA, type CtaFields, type CtaSettings } from './cta.schema';
 /** A call to action: a heading, a sentence and one button (a page, web address or email). */
 @Component({
   selector: 'novan-cta-block',
-  imports: [BlockActionComponent],
+  imports: [NovanPart, BlockActionComponent],
   templateUrl: './cta.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [NovanBlockRoot],
   host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class CtaBlock implements NovanBlock<CtaFields> {

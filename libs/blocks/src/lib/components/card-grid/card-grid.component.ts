@@ -1,6 +1,6 @@
 // components/card-grid/card-grid.component.ts — styles: src/styles/_card-grid.scss.
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import type { NovanBlock } from '@black-isle-beef/cms-angular';
+import { type NovanBlock, NovanBlockRoot, NovanPart } from '@black-isle-beef/cms-angular';
 
 import { type BlockPicture, blockPicture } from '../../block-picture';
 import { blockId, blockText } from '../../block-text';
@@ -31,8 +31,10 @@ const SIZES: Record<CardGridSettings['columns'], string> = {
  */
 @Component({
   selector: 'novan-card-grid-block',
+  imports: [NovanPart],
   templateUrl: './card-grid.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [NovanBlockRoot],
   host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class CardGridBlock implements NovanBlock<CardGridFields> {

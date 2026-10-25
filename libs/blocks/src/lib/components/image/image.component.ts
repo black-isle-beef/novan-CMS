@@ -1,6 +1,6 @@
 // components/image/image.component.ts — styles: src/styles/_image.scss.
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import type { NovanAsset, NovanBlock } from '@black-isle-beef/cms-angular';
+import { type NovanAsset, type NovanBlock, NovanBlockRoot, NovanPart } from '@black-isle-beef/cms-angular';
 
 import { blockPicture } from '../../block-picture';
 import { blockText } from '../../block-text';
@@ -17,7 +17,9 @@ const SIZES: Record<ImageSettings['width'], { widths: number[]; sizes: string }>
 /** One image with an optional caption. Nothing is rendered until an image is chosen. */
 @Component({
   selector: 'novan-image-block',
+  imports: [NovanPart],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [NovanBlockRoot],
   host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
   template: `
     @if (picture(); as picture) {

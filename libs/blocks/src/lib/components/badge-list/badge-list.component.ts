@@ -1,6 +1,6 @@
 // components/badge-list/badge-list.component.ts — styles: src/styles/_badge-list.scss.
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import type { NovanBlock } from '@black-isle-beef/cms-angular';
+import { type NovanBlock, NovanBlockRoot, NovanPart } from '@black-isle-beef/cms-angular';
 
 import { blockId, blockText } from '../../block-text';
 import { type CmsStoredSettings, modifierClasses, resolveSettings } from '../../cms-schema';
@@ -12,8 +12,10 @@ import { type Badge, BADGE_LIST_SCHEMA, type BadgeListFields, type BadgeListSett
  */
 @Component({
   selector: 'novan-badge-list-block',
+  imports: [NovanPart],
   templateUrl: './badge-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [NovanBlockRoot],
   host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class BadgeListBlock implements NovanBlock<BadgeListFields> {

@@ -1,5 +1,6 @@
 // What the Delivery and Preview APIs send (docs/build/08-delivery-preview-api.md). The SDK is published on its
 // own, so these mirror `@novan/shared-schemas` instead of importing it; `types.spec.ts` keeps them in step.
+import type { BlockOverrides } from './overrides';
 
 /**
  * One page or entry, in one locale. `data` holds one key per field `apiId`, with references, files and links
@@ -105,6 +106,8 @@ export interface NovanBlockNode {
   _style?: Record<string, string | boolean>;
   /** Hidden by an editor: kept in the page but never shown (the API leaves such blocks out already). */
   _hidden?: boolean;
+  /** Classes and tokens an editor added to the block's parts; `<novan-blocks>` applies them. */
+  _overrides?: BlockOverrides;
   children?: NovanBlockNode[];
   [field: string]: unknown;
 }

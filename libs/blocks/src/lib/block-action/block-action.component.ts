@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { novanLinkHref, type NovanLinkValue } from '@black-isle-beef/cms-angular';
+import { novanLinkHref, type NovanLinkValue, NovanPart } from '@black-isle-beef/cms-angular';
 
 /** A `link` field ready to render: its visible text, and the router path for site pages. */
 export interface BlockLink {
@@ -29,7 +29,7 @@ export function blockLink(link: NovanLinkValue | null | undefined): BlockLink | 
  */
 @Component({
   selector: 'novan-block-action',
-  imports: [RouterLink],
+  imports: [NovanPart, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'novan-block-action' },
   template: `

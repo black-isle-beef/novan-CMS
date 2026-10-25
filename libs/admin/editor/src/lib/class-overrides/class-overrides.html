@@ -1,0 +1,37 @@
+<div class="mb-3">
+  <label class="form-label" [for]="idPrefix() + '-part'">Part</label>
+  <select
+    class="form-select"
+    [id]="idPrefix() + '-part'"
+    (change)="choose($event)"
+    (focus)="point(part())"
+    (blur)="point(null)"
+    (mouseenter)="point(part())"
+    (mouseleave)="point(null)"
+  >
+    @for (option of options(); track option.name) {
+      <option [value]="option.name" [selected]="option.name === part()">
+        {{ option.label }}{{ option.count ? ' (' + option.count + ')' : '' }}{{ option.missing ? ', not on the page' : '' }}
+      </option>
+    }
+  </select>
+</div>
+
+<div class="mb-3" (focusin)="point(part())" (focusout)="point(null)">
+  <nv-class-chips
+    [classes]="classes()"
+    [label]="'Classes on ' + label()"
+    [inputId]="idPrefix() + '-base'"
+    [disabled]="readonly()"
+    (classesChange)="setClasses($event)"
+  />
+</div>
+
+@if (!readonly() && anyClasses()) {
+  <div class="d-flex flex-wrap gap-2">
+    @if (classes().length) {
+      <button type="button" class="btn btn-sm btn-secondary" (click)="clearPart()">Clear classes on {{ label().toLowerCase() }}</button>
+    }
+    <button type="button" class="btn btn-sm btn-secondary" (click)="clearAll()">Clear all classes</button>
+  </div>
+}

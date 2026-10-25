@@ -78,6 +78,10 @@ novan schema pull          # writes novan/schema/ from the space; commit it with
 ```
 
 In `novan.json` keep `apiUrl`, `space` and `schemaDir`. Brand the site in `src/styles.scss` (design-system tokens only) and replace `public/favicon.ico`.
+Keep the starter's cascade layers: every rule of the site's own goes inside `@layer novan-base { ... }`, after the
+`@layer novan-base, ds-vendor, ds-components, novan-overrides;` statement, so the classes editors add to blocks can
+change them (docs/build/24-design-systems.md). A site made before SDK 0.8.0 needs the same change when it upgrades;
+`apps/laws-paws-site/src/styles.scss` shows it with configured tokens.
 
 ## 5. Tokens, domain and settings
 

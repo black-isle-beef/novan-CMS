@@ -3,7 +3,13 @@ import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { type NovanBlock, NovanContentService, NovanLocale } from '@black-isle-beef/cms-angular';
+import {
+  type NovanBlock,
+  NovanContentService,
+  NovanLocale,
+  NovanBlockRoot,
+  NovanPart,
+} from '@black-isle-beef/cms-angular';
 
 import { blockId, blockText } from '../../block-text';
 import { type CmsStoredSettings, modifierClasses, resolveSettings } from '../../cms-schema';
@@ -49,9 +55,10 @@ function dateLabel(date: string, locale: string | null): string {
  */
 @Component({
   selector: 'novan-listing-block',
-  imports: [NgTemplateOutlet, RouterLink],
+  imports: [NovanPart, NgTemplateOutlet, RouterLink],
   templateUrl: './listing.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [NovanBlockRoot],
   host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class ListingBlock implements NovanBlock<ListingFields> {
