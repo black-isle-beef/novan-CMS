@@ -43,6 +43,14 @@ const publishing = /(gate-1|seo-publish|forms|listing)\.spec\.ts/;
  * `playwright.config.mts` via its extension list
  * (.ts/.js/.mts/.mjs/.cts/.cjs).
  */
+/**
+ * The command for a dev server Playwright needs. Run through Nx (`nx e2e`), the servers are this target's continuous
+ * dependencies (Nx infers them from these commands) and are already starting: a nested `nx run` would be refused as
+ * a recursive invocation (Nx 24), so Playwright only waits for their address. Run directly (`npx playwright test`), it
+ * starts them itself.
+ */
+const serve = (project: string): string =>
+  process.env['NX_TASK_TARGET_PROJECT'] ? 'node -e "setInterval(() => {}, 1 << 30)"' : `npx nx run ${project}:serve`;
 export default defineConfig({
   ...nxE2EPreset(import.meta.dirname, { testDir: './src' }),
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
@@ -56,14 +64,14 @@ export default defineConfig({
   // start these servers as tasks, and `nx e2e` could not run.
   webServer: [
     {
-      command: 'npx nx run api:serve',
+      command: serve('api'),
       url: 'http://localhost:3000/health',
       reuseExistingServer: true,
       cwd: workspaceRoot,
       timeout: 180_000,
     },
     {
-      command: 'npx nx run starter-site:serve',
+      command: serve('starter-site'),
       url: 'http://localhost:4300/health',
       reuseExistingServer: true,
       cwd: workspaceRoot,
