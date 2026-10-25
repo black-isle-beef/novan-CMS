@@ -9,6 +9,7 @@ export type Database = {
                   Row: {
                     "created_at": string,"created_by": string | null,"environment_id": string,"id": string,"last_used_at": string | null,"name": string,"revoked_at": string | null,"scope": string,"space_id": string,"token_hash": string,"token_hint": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "created_at"?: string,"created_by"?: string | null,"environment_id": string,"id"?: string,"last_used_at"?: string | null,"name": string,"revoked_at"?: string | null,"scope": string,"space_id": string,"token_hash": string,"token_hint": string
                   }
@@ -34,6 +35,7 @@ isOneToOne: false
                   Row: {
                     "asset_id": string,"entry_id": string,"field_path": string,"space_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "asset_id": string,"entry_id": string,"field_path": string,"space_id": string
                   }
@@ -65,6 +67,7 @@ isOneToOne: false
                   Row: {
                     "alt": string | null,"created_at": string,"deleted_at": string | null,"filename": string,"focal_x": number | null,"focal_y": number | null,"folder": string | null,"height": number | null,"id": string,"mime": string,"path": string,"revision": number,"search": unknown,"size_bytes": number,"space_id": string,"tags": (string)[],"title": string | null,"updated_at": string,"uploaded_by": string | null,"width": number | null
                   }
+                  ComputedFields: never
                   Insert: {
                     "alt"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"filename": string,"focal_x"?: number | null,"focal_y"?: number | null,"folder"?: string | null,"height"?: number | null,"id"?: string,"mime": string,"path": string,"revision"?: number,"search"?: never,"size_bytes": number,"space_id": string,"tags"?: (string)[],"title"?: string | null,"updated_at"?: string,"uploaded_by"?: string | null,"width"?: number | null
                   }
@@ -84,6 +87,7 @@ isOneToOne: false
                   Row: {
                     "action": string,"actor_id": string | null,"created_at": string,"diff": Json | null,"id": string,"space_id": string,"target_id": string | null,"target_type": string | null
                   }
+                  ComputedFields: never
                   Insert: {
                     "action": string,"actor_id"?: string | null,"created_at"?: string,"diff"?: Json | null,"id"?: string,"space_id": string,"target_id"?: string | null,"target_type"?: string | null
                   }
@@ -103,6 +107,7 @@ isOneToOne: false
                   Row: {
                     "allowed_children": (string)[],"api_id": string,"created_at": string,"environment_id": string,"fields": NonNullable<Json>,"icon": string | null,"id": string,"name": string,"preview_image_path": string | null,"schema_version": number,"space_id": string,"style_options": NonNullable<Json>,"updated_at": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "allowed_children"?: (string)[],"api_id": string,"created_at"?: string,"environment_id": string,"fields"?: NonNullable<Json>,"icon"?: string | null,"id"?: string,"name": string,"preview_image_path"?: string | null,"schema_version"?: number,"space_id": string,"style_options"?: NonNullable<Json>,"updated_at"?: string
                   }
@@ -128,6 +133,7 @@ isOneToOne: false
                   Row: {
                     "api_id": string,"created_at": string,"description": string | null,"environment_id": string,"fields": NonNullable<Json>,"id": string,"kind": string,"name": string,"space_id": string,"updated_at": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "api_id": string,"created_at"?: string,"description"?: string | null,"environment_id": string,"fields"?: NonNullable<Json>,"id"?: string,"kind": string,"name": string,"space_id": string,"updated_at"?: string
                   }
@@ -153,6 +159,7 @@ isOneToOne: false
                   Row: {
                     "client_name": string,"created_at": string,"decided_at": string | null,"device_code_hash": string,"expires_at": string,"id": string,"last_polled_at": string | null,"status": string,"user_code": string,"user_id": string | null
                   }
+                  ComputedFields: never
                   Insert: {
                     "client_name": string,"created_at"?: string,"decided_at"?: string | null,"device_code_hash": string,"expires_at": string,"id"?: string,"last_polled_at"?: string | null,"status"?: string,"user_code": string,"user_id"?: string | null
                   }
@@ -166,6 +173,7 @@ isOneToOne: false
                   Row: {
                     "content_type_id": string,"created_at": string,"created_by": string | null,"current_version_id": string | null,"deleted_at": string | null,"environment_id": string,"folder_id": string | null,"id": string,"published_at": string | null,"published_version_id": string | null,"slug": string,"space_id": string,"status": string,"updated_at": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "content_type_id": string,"created_at"?: string,"created_by"?: string | null,"current_version_id"?: string | null,"deleted_at"?: string | null,"environment_id": string,"folder_id"?: string | null,"id"?: string,"published_at"?: string | null,"published_version_id"?: string | null,"slug": string,"space_id": string,"status"?: string,"updated_at"?: string
                   }
@@ -215,6 +223,7 @@ isOneToOne: false
                   Row: {
                     "entry_id": string,"environment_id": string,"search": unknown,"space_id": string,"title": string,"updated_at": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "entry_id": string,"environment_id": string,"search": unknown,"space_id": string,"title": string,"updated_at"?: string
                   }
@@ -240,6 +249,7 @@ isOneToOne: false
                   Row: {
                     "autosave": boolean,"created_at": string,"created_by": string | null,"data": NonNullable<Json>,"entry_id": string,"id": string,"message": string | null,"space_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "autosave"?: boolean,"created_at"?: string,"created_by"?: string | null,"data": NonNullable<Json>,"entry_id": string,"id"?: string,"message"?: string | null,"space_id": string
                   }
@@ -265,6 +275,7 @@ isOneToOne: false
                   Row: {
                     "cloned_from_id": string | null,"created_at": string,"id": string,"is_main": boolean,"name": string,"space_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "cloned_from_id"?: string | null,"created_at"?: string,"id"?: string,"is_main"?: boolean,"name": string,"space_id": string
                   }
@@ -290,6 +301,7 @@ isOneToOne: false
                   Row: {
                     "created_at": string,"environment_id": string,"id": string,"name": string,"parent_id": string | null,"path": string,"slug": string,"space_id": string,"updated_at": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "created_at"?: string,"environment_id": string,"id"?: string,"name": string,"parent_id"?: string | null,"path"?: string,"slug": string,"space_id": string,"updated_at"?: string
                   }
@@ -321,6 +333,7 @@ isOneToOne: false
                   Row: {
                     "recipients": (string)[],"retention_months": number,"space_id": string,"updated_at": string,"updated_by": string | null
                   }
+                  ComputedFields: never
                   Insert: {
                     "recipients"?: (string)[],"retention_months"?: number,"space_id": string,"updated_at"?: string,"updated_by"?: string | null
                   }
@@ -340,6 +353,7 @@ isOneToOne: true
                   Row: {
                     "created_at": string,"data": NonNullable<Json>,"entry_id": string | null,"fields": NonNullable<Json>,"form_name": string | null,"form_uid": string,"id": string,"locale": string | null,"page_path": string | null,"space_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "created_at"?: string,"data": NonNullable<Json>,"entry_id"?: string | null,"fields"?: NonNullable<Json>,"form_name"?: string | null,"form_uid": string,"id"?: string,"locale"?: string | null,"page_path"?: string | null,"space_id": string
                   }
@@ -365,6 +379,7 @@ isOneToOne: false
                   Row: {
                     "attempts": number,"enqueued_at": string,"error": string,"failed_at": string,"id": string,"message": NonNullable<Json>,"msg_id": number,"queue": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "attempts": number,"enqueued_at": string,"error": string,"failed_at"?: string,"id"?: string,"message": NonNullable<Json>,"msg_id": number,"queue": string
                   }
@@ -378,6 +393,7 @@ isOneToOne: false
                   Row: {
                     "created_at": string,"invited_by": string | null,"role_id": string,"space_id": string,"user_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "created_at"?: string,"invited_by"?: string | null,"role_id": string,"space_id": string,"user_id": string
                   }
@@ -403,6 +419,7 @@ isOneToOne: false
                   Row: {
                     "day": string,"hits": number,"last_referrer": string | null,"last_seen_at": string,"path": string,"space_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "day": string,"hits"?: number,"last_referrer"?: string | null,"last_seen_at"?: string,"path": string,"space_id": string
                   }
@@ -422,6 +439,7 @@ isOneToOne: false
                   Row: {
                     "created_at": string,"id": string,"name": string,"plan": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "created_at"?: string,"id"?: string,"name": string,"plan"?: string
                   }
@@ -435,6 +453,7 @@ isOneToOne: false
                   Row: {
                     "avatar_url": string | null,"display_name": string | null,"is_agency_staff": boolean,"user_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "avatar_url"?: string | null,"display_name"?: string | null,"is_agency_staff"?: boolean,"user_id": string
                   }
@@ -448,6 +467,7 @@ isOneToOne: false
                   Row: {
                     "cache_tags": (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"published_at": string,"search": unknown,"space_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "cache_tags"?: (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"published_at": string,"search"?: never,"space_id": string
                   }
@@ -485,6 +505,7 @@ isOneToOne: false
                   Row: {
                     "created_at": string,"created_by": string | null,"from_path": string,"id": string,"space_id": string,"status": number,"to_path": string,"updated_at": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "created_at"?: string,"created_by"?: string | null,"from_path": string,"id"?: string,"space_id": string,"status"?: number,"to_path": string,"updated_at"?: string
                   }
@@ -504,6 +525,7 @@ isOneToOne: false
                   Row: {
                     "added_at": string,"entry_id": string,"environment_id": string,"release_id": string,"space_id": string,"version_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "added_at"?: string,"entry_id": string,"environment_id": string,"release_id": string,"space_id": string,"version_id": string
                   }
@@ -541,6 +563,7 @@ isOneToOne: false
                   Row: {
                     "created_at": string,"created_by": string | null,"environment_id": string,"error": string | null,"id": string,"name": string,"published_at": string | null,"published_by": string | null,"scheduled_at": string | null,"space_id": string,"status": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "created_at"?: string,"created_by"?: string | null,"environment_id": string,"error"?: string | null,"id"?: string,"name": string,"published_at"?: string | null,"published_by"?: string | null,"scheduled_at"?: string | null,"space_id": string,"status"?: string
                   }
@@ -566,6 +589,7 @@ isOneToOne: false
                   Row: {
                     "comment": string | null,"decided_at": string | null,"decided_by": string | null,"decision": string | null,"entry_id": string,"id": string,"message": string | null,"requested_at": string,"requested_by": string | null,"space_id": string,"version_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "comment"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"decision"?: string | null,"entry_id": string,"id"?: string,"message"?: string | null,"requested_at"?: string,"requested_by"?: string | null,"space_id": string,"version_id": string
                   }
@@ -597,6 +621,7 @@ isOneToOne: false
                   Row: {
                     "id": string,"key": string,"name": string,"permissions": NonNullable<Json>,"space_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "id"?: string,"key": string,"name": string,"permissions"?: NonNullable<Json>,"space_id": string
                   }
@@ -616,6 +641,7 @@ isOneToOne: false
                   Row: {
                     "action": string,"created_at": string,"created_by": string | null,"entry_id": string | null,"error": string | null,"finished_at": string | null,"id": string,"release_id": string | null,"run_at": string,"space_id": string,"status": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "action": string,"created_at"?: string,"created_by"?: string | null,"entry_id"?: string | null,"error"?: string | null,"finished_at"?: string | null,"id"?: string,"release_id"?: string | null,"run_at": string,"space_id": string,"status"?: string
                   }
@@ -647,6 +673,7 @@ isOneToOne: false
                   Row: {
                     "code": string,"created_at": string,"fallback_code": string | null,"is_default": boolean,"name": string,"path_prefix": string,"space_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "code": string,"created_at"?: string,"fallback_code"?: string | null,"is_default"?: boolean,"name": string,"path_prefix": string,"space_id": string
                   }
@@ -672,6 +699,7 @@ isOneToOne: false
                   Row: {
                     "created_at": string,"id": string,"locale_prefixes": boolean,"name": string,"organisation_id": string,"preview_url": string | null,"require_approval": boolean,"settings": NonNullable<Json>,"slug": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "created_at"?: string,"id"?: string,"locale_prefixes"?: boolean,"name": string,"organisation_id": string,"preview_url"?: string | null,"require_approval"?: boolean,"settings"?: NonNullable<Json>,"slug": string
                   }
@@ -691,6 +719,7 @@ isOneToOne: false
                   Row: {
                     "attempt": number,"created_at": string,"error": string | null,"event": string,"event_id": string,"id": string,"payload": NonNullable<Json>,"resend_of": string | null,"response_code": number | null,"space_id": string,"status": string,"updated_at": string,"webhook_id": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "attempt"?: number,"created_at"?: string,"error"?: string | null,"event": string,"event_id": string,"id"?: string,"payload": NonNullable<Json>,"resend_of"?: string | null,"response_code"?: number | null,"space_id": string,"status"?: string,"updated_at"?: string,"webhook_id": string
                   }
@@ -716,6 +745,7 @@ isOneToOne: false
                   Row: {
                     "active": boolean,"created_at": string,"created_by": string | null,"events": (string)[],"id": string,"name": string,"secret": string,"space_id": string,"updated_at": string,"url": string
                   }
+                  ComputedFields: never
                   Insert: {
                     "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"events": (string)[],"id"?: string,"name": string,"secret": string,"space_id": string,"updated_at"?: string,"url": string
                   }
