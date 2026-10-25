@@ -1,6 +1,13 @@
 // components/hero/hero.component.ts — styles: src/styles/_hero.scss.
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { type NovanAsset, type NovanBlock, novanImage, type NovanLinkValue } from '@black-isle-beef/cms-angular';
+import {
+  type NovanAsset,
+  type NovanBlock,
+  novanImage,
+  type NovanLinkValue,
+  NovanBlockRoot,
+  NovanPart,
+} from '@black-isle-beef/cms-angular';
 
 import { BlockActionComponent, blockLink } from '../../block-action/block-action.component';
 import { blockId, blockText } from '../../block-text';
@@ -14,9 +21,10 @@ import { HERO_SCHEMA, type HeroFields, type HeroSettings } from './hero.schema';
  */
 @Component({
   selector: 'novan-hero-block',
-  imports: [BlockActionComponent],
+  imports: [NovanPart, BlockActionComponent],
   templateUrl: './hero.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [NovanBlockRoot],
   host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class HeroBlock implements NovanBlock<HeroFields> {

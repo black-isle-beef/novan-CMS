@@ -1,3 +1,4 @@
+import { type BlockOverrides, blockOverridesSchema } from '@novan/shared-design-system';
 import { z } from 'zod';
 import { ANY_LOCALE, isLocaleMap, type LocaleSettings, sharedValue } from './locales';
 
@@ -336,6 +337,8 @@ export interface BlockNode {
   _style?: BlockStyle;
   /** Kept in the page but not shown on the site (docs/build/12-visual-editor.md). */
   _hidden?: boolean;
+  /** Classes and tokens an editor added to the block's parts (docs/build/24-design-systems.md). */
+  _overrides?: BlockOverrides;
   children?: BlockNode[];
   [field: string]: unknown;
 }
@@ -613,6 +616,7 @@ class EntrySchemaBuilder {
         _block: allowed.length ? z.enum(allowed as [string, ...string[]], 'This block is not allowed here.') : apiIdSchema,
         _style: blockStyleSchema.optional(),
         _hidden: z.boolean().optional(),
+        _overrides: blockOverridesSchema.optional(),
         children: z.array(z.lazy(() => node)).optional(),
       }) as unknown as z.ZodType<BlockNode>;
       union = node;
@@ -648,6 +652,7 @@ class EntrySchemaBuilder {
       _block: z.literal(apiId),
       _style: blockStyleSchema.optional(),
       _hidden: z.boolean().optional(),
+      _overrides: blockOverridesSchema.optional(),
       ...this.shape(type.fields),
       children,
     });

@@ -1,6 +1,12 @@
 // components/rich-text/rich-text.component.ts — styles: src/styles/_rich-text.scss.
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { type NovanBlock, NovanRichText, type ProseMirrorNode } from '@black-isle-beef/cms-angular';
+import {
+  type NovanBlock,
+  NovanRichText,
+  type ProseMirrorNode,
+  NovanBlockRoot,
+  NovanPart,
+} from '@black-isle-beef/cms-angular';
 
 import { type CmsStoredSettings, modifierClasses, resolveSettings } from '../../cms-schema';
 import { RICH_TEXT_SCHEMA, type RichTextFields, type RichTextSettings } from './rich-text.schema';
@@ -11,8 +17,9 @@ import { RICH_TEXT_SCHEMA, type RichTextFields, type RichTextSettings } from './
  */
 @Component({
   selector: 'novan-rich-text-block',
-  imports: [NovanRichText],
+  imports: [NovanPart, NovanRichText],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [NovanBlockRoot],
   host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
   template: `
     @if (hasContent()) {

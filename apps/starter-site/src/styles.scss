@@ -1,8 +1,4 @@
-// Novan design system: tokens, Bootstrap 5, Bootstrap Icons and component styles. Its web fonts are served by the
-// site (below), not imported from Google Fonts: that import would hold back the first paint of every page.
-@use '@black-isle-beef/novan-design-system/styles/styles' with (
-  $ds-enable-web-fonts: false
-);
+@use 'sass:meta';
 // Inter (body) and Montserrat Alternates (headings), the weights the design system uses, Latin only.
 @use '@fontsource/inter/latin-400';
 @use '@fontsource/inter/latin-500';
@@ -11,5 +7,21 @@
 @use '@fontsource/montserrat-alternates/latin-500' as montserrat-alternates-500;
 @use '@fontsource/montserrat-alternates/latin-600' as montserrat-alternates-600;
 @use '@fontsource/montserrat-alternates/latin-700' as montserrat-alternates-700;
-// The CMS blocks (libs/blocks/src/styles, on the build's stylePreprocessorOptions.includePaths).
-@use 'novan-blocks';
+
+// Cascade layers, lowest first (docs/build/24-design-systems.md): the site's own styles, then an attached design
+// system's, then the classes and tokens editors add to blocks. Unlayered CSS would beat every layer, so all of the
+// site's styles go in `novan-base`. This must be the first `@layer` in the page.
+@layer novan-base, ds-vendor, ds-components, novan-overrides;
+
+@layer novan-base {
+  // Novan design system: tokens, Bootstrap 5, Bootstrap Icons and component styles. Its web fonts are served by the
+  // site (above), not imported from Google Fonts: that import would hold back the first paint of every page.
+  @include meta.load-css(
+    '@black-isle-beef/novan-design-system/styles/styles',
+    $with: (
+      'ds-enable-web-fonts': false,
+    )
+  );
+  // The CMS blocks (libs/blocks/src/styles, on the build's stylePreprocessorOptions.includePaths).
+  @include meta.load-css('novan-blocks');
+}

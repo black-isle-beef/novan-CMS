@@ -263,6 +263,11 @@ export class VisualEditorPage implements HasUnsavedChanges {
     const place = this.selection();
     return place ? this.typeOf(place.node._block) : undefined;
   });
+  /** The parts the site says the selected block rendered; null until it says. */
+  protected readonly selectedParts = computed(() => {
+    const reported = this.bridge.parts();
+    return reported && reported.uid === this.selection()?.node._uid ? reported.parts : null;
+  });
   protected readonly selectionName = computed(() => this.nameOf(this.selection()?.node));
   protected readonly selectionPath = computed(() => {
     const place = this.selection();
@@ -560,6 +565,12 @@ export class VisualEditorPage implements HasUnsavedChanges {
     this.store.selected.set(uid);
     this.bridge.send({ type: 'select', payload: { uid } });
     this.bridge.send({ type: 'scrollTo', payload: { uid } });
+  }
+
+  /** Outlines the part the editor is adding classes to, in the selected block on the page. */
+  protected pointPart(part: string | null): void {
+    const uid = this.selection()?.node._uid ?? null;
+    this.bridge.send({ type: 'part', payload: { uid: part ? uid : null, part } });
   }
 
   /** Applies the panel's changed keys to the block as it is now. */

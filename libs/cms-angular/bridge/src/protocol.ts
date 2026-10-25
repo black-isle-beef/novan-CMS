@@ -29,7 +29,12 @@ export type SiteMessage =
   /** The editor typed in a text field on the page; `done` once they leave it. */
   | { type: 'text'; payload: { uid: string; field: string; value: string; done: boolean } }
   /** The page's headings in order, after each render, for the pre-publish checklist. */
-  | { type: 'headings'; payload: { headings: PageHeading[] } };
+  | { type: 'headings'; payload: { headings: PageHeading[] } }
+  /**
+   * The parts (`data-novan-part`) the selected block rendered, in page order, after it is selected and after each
+   * render; the editor's Classes section offers these (docs/build/24-design-systems.md).
+   */
+  | { type: 'parts'; payload: { uid: string; parts: string[] } };
 
 /** A heading on the page, and the block it is in (null outside blocks, e.g. in the site's header). */
 export interface PageHeading {
@@ -65,7 +70,9 @@ export type AdminMessage =
    * What the editor may change on the page: the selected block's plain text fields, and whether "+" buttons are
    * drawn for adding blocks. Read-only editors get neither.
    */
-  | { type: 'editable'; payload: { uid: string | null; fields: EditableText[]; insert: boolean } };
+  | { type: 'editable'; payload: { uid: string | null; fields: EditableText[]; insert: boolean } }
+  /** Outline one part of a block (the editor is pointing at it in the Classes section), or none. */
+  | { type: 'part'; payload: { uid: string | null; part: string | null } };
 
 export type BridgeEnvelope<M> = M & { source: typeof BRIDGE_SOURCE; v: typeof BRIDGE_VERSION };
 
@@ -82,6 +89,7 @@ const MAX_FIELD = 64;
 const MAX_TEXT = 10_000;
 const MAX_EDITABLE = 50;
 const MAX_HEADINGS = 500;
+const MAX_PARTS = 30;
 
 /** A message from the site, or null when `data` is not one (wrong source or version, unknown type, bad payload). */
 export function parseSiteMessage(data: unknown): SiteMessage | null {
@@ -139,6 +147,12 @@ export function parseSiteMessage(data: unknown): SiteMessage | null {
       }
       return { type, payload: { headings } };
     }
+    case 'parts': {
+      const parts = isObject(payload) ? payload['parts'] : null;
+      if (!isObject(payload) || !isUid(payload['uid']) || !Array.isArray(parts) || parts.length > MAX_PARTS) return null;
+      if (!parts.every(isPartName) || new Set(parts).size !== parts.length) return null;
+      return { type, payload: { uid: payload['uid'], parts: [...parts] } };
+    }
     default:
       return null;
   }
@@ -174,6 +188,10 @@ export function parseAdminMessage(data: unknown): AdminMessage | null {
       }
       return { type, payload: { uid: payload['uid'], fields: editable, insert: payload['insert'] } };
     }
+    case 'part':
+      return isObject(payload) && isUidOrNull(payload['uid']) && (payload['part'] === null || isPartName(payload['part']))
+        ? { type, payload: { uid: payload['uid'], part: payload['part'] } }
+        : null;
     default:
       return null;
   }
@@ -198,6 +216,11 @@ function isUid(value: unknown): value is string {
 
 function isFieldName(value: unknown): value is string {
   return isString(value, MAX_FIELD) && /^[A-Za-z][A-Za-z0-9_]*$/.test(value);
+}
+
+/** A block part's name (`PART_NAME` in @novan/shared-design-system; repeated here so the protocol has no imports). */
+function isPartName(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-z][a-z0-9-]{0,39}$/.test(value);
 }
 
 function isUidOrNull(value: unknown): value is string | null {
