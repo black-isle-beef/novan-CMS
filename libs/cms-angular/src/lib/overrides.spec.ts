@@ -45,7 +45,7 @@ describe('class override helpers copy', () => {
       const theirs = (shared as Record<string, unknown>)[name];
       expect(typeof theirs, name).toBe(typeof value);
       if (value instanceof RegExp) expect(String(theirs), name).toBe(String(value));
-      else if (typeof value !== 'function' && name !== 'plainAdapter') expect(theirs, name).toEqual(value);
+      else if (typeof value !== 'function' && !name.endsWith('Adapter')) expect(theirs, name).toEqual(value);
     }
   });
 
@@ -78,6 +78,26 @@ describe('class override helpers copy', () => {
       expect(sdk.splitClasses(value)).toEqual(shared.splitClasses(value));
     },
   );
+
+  it('writes Bootstrap breakpoints and chooses adapters the same way', () => {
+    const buckets = { base: ['btn', 'px-2'], md: ['px-4', 'text-primary', 'col'], lg: ['d-none', 'p-md-3'], hover: ['shadow'] };
+    expect(sdk.bootstrapAdapter.toClassList(buckets)).toEqual(shared.bootstrapAdapter.toClassList(buckets));
+    for (const name of ['px-3', 'col', 'text-center', 'text-primary', 'p-md-3', 'row-cols-2', 'a b']) {
+      for (const bucket of sdk.BUCKETS) {
+        expect(sdk.bootstrapAdapter.canWrite(name, bucket), `${name} ${bucket}`).toBe(shared.bootstrapAdapter.canWrite(name, bucket));
+        expect(sdk.createTemplateAdapter('x', templates).canWrite(name, bucket)).toBe(shared.createTemplateAdapter('x', templates).canWrite(name, bucket));
+      }
+    }
+    for (const source of [null, { framework: 'bootstrap' }, { framework: 'css', breakpoints: { md: '{class}@md' } }]) {
+      const [ours, theirs] = [sdk.adapterFor(source), shared.adapterFor(source)];
+      expect([ours.framework, ours.breakpoints, ours.states, ours.toClassList(buckets)]).toEqual([
+        theirs.framework,
+        theirs.breakpoints,
+        theirs.states,
+        theirs.toClassList(buckets),
+      ]);
+    }
+  });
 
   it('builds adapters and layers the same way', () => {
     const ours = sdk.createTemplateAdapter('x', templates);

@@ -169,6 +169,8 @@ test.describe('@shell', () => {
       'Team',
       'API tokens',
       'Webhooks',
+      // The demo space has design systems turned on in the seed.
+      'Design systems',
       'Space settings',
     ]);
     await expectNoAxeViolations(page);

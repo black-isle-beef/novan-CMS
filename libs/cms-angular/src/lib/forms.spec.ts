@@ -19,7 +19,7 @@ function setup(platform: 'browser' | 'server' = 'browser', config: Partial<Novan
       provideHttpClientTesting(),
       { provide: PLATFORM_ID, useValue: platform },
       { provide: NOVAN_BRIDGE_LOADER, useValue: () => Promise.reject(new Error('no bridge in tests')) },
-      provideNovanCms({ blocks: defineBlocks({}), ...config }),
+      provideNovanCms({ blocks: defineBlocks({}), designSystems: false, ...config }),
     ],
   });
   return { forms: TestBed.inject(NovanForms), http: TestBed.inject(HttpTestingController) };

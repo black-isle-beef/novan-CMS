@@ -155,6 +155,86 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"design_system_classes": {
+                  Row: {
+                    "class_group": string | null,"class_name": string,"source_file": string,"space_id": string,"version_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "class_group"?: string | null,"class_name": string,"source_file": string,"space_id": string,"version_id": string
+                  }
+                  Update: {
+                    "class_group"?: string | null,"class_name"?: string,"source_file"?: string,"space_id"?: string,"version_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "design_system_classes_version_id_space_id_fkey"
+      columns: ["version_id","space_id"]
+isOneToOne: false
+      referencedRelation: "design_system_versions"
+      referencedColumns: ["id","space_id"]
+    }
+                  ]
+                },"design_system_components": {
+                  Row: {
+                    "component_key": string,"definition": NonNullable<Json>,"id": string,"space_id": string,"tag": string | null,"version_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "component_key": string,"definition": NonNullable<Json>,"id"?: string,"space_id": string,"tag"?: string | null,"version_id": string
+                  }
+                  Update: {
+                    "component_key"?: string,"definition"?: NonNullable<Json>,"id"?: string,"space_id"?: string,"tag"?: string | null,"version_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "design_system_components_version_id_space_id_fkey"
+      columns: ["version_id","space_id"]
+isOneToOne: false
+      referencedRelation: "design_system_versions"
+      referencedColumns: ["id","space_id"]
+    }
+                  ]
+                },"design_system_versions": {
+                  Row: {
+                    "checksum": string | null,"created_at": string,"created_by": string | null,"css_entry": (string)[],"design_system_id": string,"filename": string | null,"id": string,"js_entry": (string)[],"manifest": Json | null,"processed_at": string | null,"source": string,"source_url": string | null,"space_id": string,"status": string,"validation_report": Json | null,"version": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "checksum"?: string | null,"created_at"?: string,"created_by"?: string | null,"css_entry"?: (string)[],"design_system_id": string,"filename"?: string | null,"id"?: string,"js_entry"?: (string)[],"manifest"?: Json | null,"processed_at"?: string | null,"source": string,"source_url"?: string | null,"space_id": string,"status"?: string,"validation_report"?: Json | null,"version": string
+                  }
+                  Update: {
+                    "checksum"?: string | null,"created_at"?: string,"created_by"?: string | null,"css_entry"?: (string)[],"design_system_id"?: string,"filename"?: string | null,"id"?: string,"js_entry"?: (string)[],"manifest"?: Json | null,"processed_at"?: string | null,"source"?: string,"source_url"?: string | null,"space_id"?: string,"status"?: string,"validation_report"?: Json | null,"version"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "design_system_versions_design_system_id_space_id_fkey"
+      columns: ["design_system_id","space_id"]
+isOneToOne: false
+      referencedRelation: "design_systems"
+      referencedColumns: ["id","space_id"]
+    }
+                  ]
+                },"design_systems": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"framework": string,"id": string,"name": string,"slug": string,"space_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"framework": string,"id"?: string,"name": string,"slug": string,"space_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"framework"?: string,"id"?: string,"name"?: string,"slug"?: string,"space_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "design_systems_space_id_fkey"
+      columns: ["space_id"]
+isOneToOne: false
+      referencedRelation: "spaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"device_authorizations": {
                   Row: {
                     "client_name": string,"created_at": string,"decided_at": string | null,"device_code_hash": string,"expires_at": string,"id": string,"last_polled_at": string | null,"status": string,"user_code": string,"user_id": string | null
@@ -667,6 +747,32 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "spaces"
       referencedColumns: ["id"]
+    }
+                  ]
+                },"space_design_systems": {
+                  Row: {
+                    "created_at": string,"design_system_id": string,"enabled": boolean,"environment_id": string,"load_order": number,"space_id": string,"version_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"design_system_id": string,"enabled"?: boolean,"environment_id": string,"load_order": number,"space_id": string,"version_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"design_system_id"?: string,"enabled"?: boolean,"environment_id"?: string,"load_order"?: number,"space_id"?: string,"version_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "space_design_systems_environment_id_space_id_fkey"
+      columns: ["environment_id","space_id"]
+isOneToOne: false
+      referencedRelation: "environments"
+      referencedColumns: ["id","space_id"]
+    },{
+      foreignKeyName: "space_design_systems_version_id_design_system_id_space_id_fkey"
+      columns: ["version_id","design_system_id","space_id"]
+isOneToOne: false
+      referencedRelation: "design_system_versions"
+      referencedColumns: ["id","design_system_id","space_id"]
     }
                   ]
                 },"space_locales": {

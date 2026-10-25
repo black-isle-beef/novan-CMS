@@ -123,6 +123,12 @@ describe('CachePurge', () => {
     expect(purgeTags).toHaveBeenCalledExactlyOnceWith([`space:${spaceId}`, `redirects:${spaceId}`, `overflow:${spaceId}`]);
   });
 
+  it('purges the whole space when the design systems its site loads change', async () => {
+    const { purge, purgeTags } = setup();
+    await purge.contentChanged({ type: 'site-styles.changed', spaceId, environmentId: 'env-1', actorId: 'user-1' });
+    expect(purgeTags).toHaveBeenCalledExactlyOnceWith([`space:${spaceId}`, 'site-styles:env-1', `overflow:${spaceId}`]);
+  });
+
   it('sends at most 30 tags or URLs a request', async () => {
     const { purge, purgeTags } = setup();
     await purge.contentChanged({ ...published, cacheTags: Array.from({ length: 40 }, (_, i) => `entry:${i}`) });

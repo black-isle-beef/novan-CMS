@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import type { BlockOverrides } from '@novan/shared-design-system';
+import { type BlockOverrides, bootstrapAdapter } from '@novan/shared-design-system';
 import axe from 'axe-core';
+import { EditorClassIndex } from '../class-index';
 import { ClassOverrides, partLabel } from './class-overrides';
 
 @Component({
@@ -118,6 +119,57 @@ describe('ClassOverrides', () => {
     expect(el.querySelector('input[type="text"]')).toBeNull();
     expect([...el.querySelectorAll('button')]).toEqual([]);
     expect(el.querySelector('.nv-class-chip__name')?.textContent?.trim()).toBe('mt-8');
+  });
+
+  describe('with the site’s design systems', () => {
+    const index = {
+      adapter: signal(bootstrapAdapter),
+      label: signal<string | null>('Bootstrap 5.3.8'),
+      suggest: vi.fn(async () => []),
+      exists: vi.fn(async (name: string) => name !== 'made-up'),
+    };
+
+    function renderWithIndex(overrides?: BlockOverrides) {
+      TestBed.configureTestingModule({ providers: [{ provide: EditorClassIndex, useValue: index }] });
+      return render(overrides);
+    }
+
+    it('offers the breakpoints the design system can write, and writes to the one chosen', async () => {
+      const { el, fixture, add, host } = renderWithIndex();
+      const applies = el.querySelector<HTMLSelectElement>('#nv-classes-b1-bucket') as HTMLSelectElement;
+      expect([...applies.options].map((option) => option.textContent?.trim())).toEqual([
+        'All screen sizes',
+        'Small screens and up',
+        'Medium screens and up',
+        'Large screens and up',
+        'Extra-large screens and up',
+      ]);
+      applies.value = 'md';
+      applies.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      expect(el.querySelector('label[for="nv-classes-b1-md"]')?.textContent).toBe('Classes on Whole block, medium screens and up');
+      add('px-4');
+      expect(host.changes.at(-1)).toEqual({ parts: { root: { md: ['px-4'] } } });
+    });
+
+    it('says when a class does nothing at that size, or no design system has it', async () => {
+      const { el, fixture } = renderWithIndex({ parts: { root: { base: ['made-up'], md: ['text-primary'] } } });
+      await vi.waitFor(() => expect(index.exists).toHaveBeenCalledWith('made-up'));
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(el.textContent).toContain('made-up: Not found in Bootstrap 5.3.8.');
+      const applies = el.querySelector<HTMLSelectElement>('#nv-classes-b1-bucket') as HTMLSelectElement;
+      applies.value = 'md';
+      applies.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      expect(el.textContent).toContain('text-primary: Bootstrap cannot apply this medium screens and up, so it does nothing here.');
+    });
+
+    it('still shows buckets that hold classes but the site cannot write', () => {
+      const { el } = renderWithIndex({ parts: { root: { hover: ['shadow'] } } });
+      const applies = el.querySelector<HTMLSelectElement>('#nv-classes-b1-bucket') as HTMLSelectElement;
+      expect([...applies.options].map((option) => option.value)).toContain('hover');
+    });
   });
 
   it.each([

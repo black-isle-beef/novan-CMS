@@ -48,6 +48,7 @@
       "@novan/admin-shell": ["./libs/admin/shell/src/index.ts"],
       "@novan/admin-spaces": ["./libs/admin/spaces/src/index.ts"],
       "@novan/api-delivery": ["./libs/api/delivery/src/index.ts"],
+      "@novan/api-design-systems": ["./libs/api/design-systems/src/index.ts"],
       "@novan/api-device-auth": ["./libs/api/device-auth/src/index.ts"],
       "@novan/marketing-ui": ["./libs/marketing/ui/src/index.ts"],
       "@novan/marketing-content": ["./libs/marketing/content/src/index.ts"]

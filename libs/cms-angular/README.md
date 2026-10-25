@@ -332,8 +332,12 @@ A block opts in by marking its parts: `data-novan-part="root"` on the host with 
 and `data-novan-part="<part>"` on elements in its template, with `NovanPart` in its `imports`. The classes are
 added with Angular bindings, so they sit alongside the block's own (`[class]` bindings included) and are never
 written into markup as text; tokens become custom properties on the host. Classes for breakpoints and states are
-written by `NOVAN_CLASS_ADAPTER` (plain CSS, base classes only, unless the site provides another). Unmarked blocks
-are unaffected.
+written by `NOVAN_CLASS_ADAPTER`: the adapter of the site's first attached design system (Bootstrap writes `px-md-3`,
+others their manifest's templates), else plain CSS, which has base classes only. Unmarked blocks are unaffected.
+
+`provideNovanCms` also loads the design systems attached to the site in Novan CMS (`NovanDesignSystems`, from
+`GET site-styles`): their stylesheets are linked in `<head>` before the first render, so the server's HTML has
+them. Pass `designSystems: false` for a site that loads its own.
 
 So that an editor's classes can beat the site's own styles, put the site's CSS in cascade layers, declared before
 any other `@layer` (`cascadeLayers()` returns the statement):

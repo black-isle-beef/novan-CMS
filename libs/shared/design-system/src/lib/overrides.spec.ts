@@ -1,4 +1,7 @@
 import {
+  adapterFor,
+  bootstrapAdapter,
+  bootstrapResponsive,
   cascadeLayers,
   CLASS_TOKEN,
   createTemplateAdapter,
@@ -98,6 +101,60 @@ describe('template adapter', () => {
     ['{class}"', false],
     ['{class}{class}', false],
   ])('treats %j as a template: %s', (template, valid) => expect(isClassTemplate(template)).toBe(valid));
+});
+
+describe('bootstrap adapter', () => {
+  it('offers the breakpoints and no states', () => {
+    expect(bootstrapAdapter.breakpoints).toEqual(['sm', 'md', 'lg', 'xl']);
+    expect(bootstrapAdapter.states).toEqual([]);
+  });
+
+  it.each([
+    ['px-3', 'md', 'px-md-3'],
+    ['p-0', 'sm', 'p-sm-0'],
+    ['mx-auto', 'lg', 'mx-lg-auto'],
+    ['d-none', 'md', 'd-md-none'],
+    ['col', 'md', 'col-md'],
+    ['col-6', 'xl', 'col-xl-6'],
+    ['col-auto', 'md', 'col-md-auto'],
+    ['row-cols-3', 'lg', 'row-cols-lg-3'],
+    ['text-center', 'md', 'text-md-center'],
+    ['flex-column', 'md', 'flex-md-column'],
+    ['justify-content-between', 'lg', 'justify-content-lg-between'],
+    ['g-4', 'md', 'g-md-4'],
+    ['order-first', 'sm', 'order-sm-first'],
+    ['float-end', 'md', 'float-md-end'],
+  ] as const)('writes %s at %s as %s', (name, breakpoint, written) => {
+    expect(bootstrapResponsive(name, breakpoint)).toBe(written);
+    expect(bootstrapAdapter.canWrite(name, breakpoint)).toBe(true);
+  });
+
+  it.each(['text-primary', 'btn-primary', 'shadow', 'p-md-3', 'd-xxl-none', 'col-md-6', 'rounded', 'p-', 'a b'])(
+    'has no breakpoint version of %s',
+    (name) => {
+      expect(bootstrapResponsive(name, 'md')).toBeNull();
+      expect(bootstrapAdapter.canWrite(name, 'md')).toBe(false);
+    },
+  );
+
+  it('writes every bucket it can, and leaves out the rest', () => {
+    expect(
+      bootstrapAdapter.toClassList({ base: ['btn', 'px-2'], md: ['px-4', 'text-primary'], lg: ['d-none'], hover: ['shadow'] }),
+    ).toEqual(['btn', 'px-2', 'px-md-4', 'd-lg-none']);
+    expect(bootstrapAdapter.canWrite('shadow', 'hover')).toBe(false);
+  });
+});
+
+describe('choosing an adapter', () => {
+  it('uses plain CSS without a design system, Bootstrap for Bootstrap, else the manifest templates', () => {
+    expect(adapterFor(null)).toBe(plainAdapter);
+    expect(adapterFor({ framework: 'bootstrap' })).toBe(bootstrapAdapter);
+    const custom = adapterFor({ framework: 'css', breakpoints: { md: '{class}@md' } });
+    expect(custom.breakpoints).toEqual(['md']);
+    expect(custom.toClassList({ md: ['card'] })).toEqual(['card@md']);
+    expect(custom.canWrite('card', 'md')).toBe(true);
+    expect(custom.canWrite('card', 'lg')).toBe(false);
+  });
 });
 
 describe('merging overrides', () => {

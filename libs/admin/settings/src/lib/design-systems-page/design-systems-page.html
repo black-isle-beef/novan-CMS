@@ -1,0 +1,338 @@
+<h1 class="mb-1">Design systems</h1>
+<p class="lead text-muted mb-4">
+  Stylesheets {{ context.currentSpace()?.name ?? 'the site' }} loads on every page, such as Bootstrap or your own
+  framework. Editors add their classes to blocks in the visual editor.
+</p>
+
+<div class="visually-hidden" role="status" aria-live="polite">{{ status() }}</div>
+
+@if (!enabled()) {
+  <ds-alert variant="info">Design systems are not turned on for this space. Ask the agency to turn them on in Space settings.</ds-alert>
+} @else if (loadError(); as message) {
+  <ds-alert variant="danger">{{ message }}</ds-alert>
+} @else if (systems(); as list) {
+  @if (error(); as message) {
+    <ds-alert variant="danger" class="mb-3">{{ message }}</ds-alert>
+  }
+  @if (status()) {
+    <p class="small text-body-secondary" aria-hidden="true">{{ status() }}</p>
+  }
+
+  <section aria-labelledby="ds-site-heading" class="mb-5">
+    <h2 id="ds-site-heading" class="h4">On the site</h2>
+    <p class="text-body-secondary">Loaded in this order: a later one wins where two set the same thing. Its first framework decides how screen sizes are written in classes.</p>
+
+    @if (site().length) {
+      <ol class="list-group list-group-numbered mb-3">
+        @for (item of site(); track item.versionId; let i = $index, first = $first, last = $last) {
+          <li class="list-group-item d-flex flex-wrap align-items-center gap-3">
+            <span class="me-auto">
+              <span class="fw-semibold">{{ item.name }}</span> {{ item.version }}
+              <span class="text-body-secondary">· {{ frameworkLabels[item.framework] }}</span>
+              @if (item.status === 'deprecated') {
+                <ds-badge variant="secondary" class="ms-1">Deprecated</ds-badge>
+              }
+            </span>
+            <span class="form-check form-switch mb-0">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
+                [id]="'ds-site-on-' + item.versionId"
+                [checked]="item.enabled"
+                (change)="toggle(i, $event)"
+              />
+              <label class="form-check-label" [for]="'ds-site-on-' + item.versionId">Load<span class="visually-hidden"> {{ item.name }}</span></label>
+            </span>
+            <span class="btn-group btn-group-sm" role="group" [attr.aria-label]="'Order of ' + item.name">
+              <button type="button" class="btn btn-secondary" [disabled]="first" (click)="move(i, -1)">
+                <i class="bi bi-arrow-up" aria-hidden="true"></i><span class="visually-hidden">Move {{ item.name }} up</span>
+              </button>
+              <button type="button" class="btn btn-secondary" [disabled]="last" (click)="move(i, 1)">
+                <i class="bi bi-arrow-down" aria-hidden="true"></i><span class="visually-hidden">Move {{ item.name }} down</span>
+              </button>
+            </span>
+            <button type="button" class="btn btn-sm btn-secondary" (click)="detach(i)">Remove<span class="visually-hidden"> {{ item.name }}</span></button>
+          </li>
+        }
+      </ol>
+    } @else {
+      <p>The site loads no design system yet: it has only its own styles.</p>
+    }
+
+    @if (attachable().length) {
+      <div class="row g-2 align-items-end mb-3">
+        <div class="col-sm-8 col-lg-5">
+          <label for="ds-attach" class="form-label">Add to the site</label>
+          <select id="ds-attach" class="form-select" [value]="attachChoice()" (change)="attachChoice.set($any($event.target).value)">
+            <option value="">Choose a ready version</option>
+            @for (option of attachable(); track option.version.id) {
+              <option [value]="option.version.id">{{ option.system.name }} {{ option.version.version }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-auto">
+          <button type="button" class="btn btn-secondary" [disabled]="!attachChoice()" (click)="attach()">Add</button>
+        </div>
+      </div>
+    }
+
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-primary" [disabled]="!siteDirty() || busy()" [attr.aria-busy]="busy()" (click)="saveSite()">
+        Save what the site loads
+      </button>
+      @if (siteDirty()) {
+        <button type="button" class="btn btn-secondary" (click)="revertSite()">Undo changes</button>
+      }
+    </div>
+  </section>
+
+  @for (system of list; track system.id) {
+    <section [attr.aria-labelledby]="'ds-' + system.id" class="mb-5">
+      <h2 [id]="'ds-' + system.id" class="h4">
+        {{ system.name }} <span class="fs-6 text-body-secondary fw-normal">{{ frameworkLabels[system.framework] }} · {{ system.slug }}</span>
+      </h2>
+      @if (system.versions.length) {
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <caption class="visually-hidden">Versions of {{ system.name }}</caption>
+            <thead>
+              <tr>
+                <th scope="col">Version</th>
+                <th scope="col">Status</th>
+                <th scope="col">From</th>
+                <th scope="col">Added</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (version of system.versions; track version.id) {
+                <tr>
+                  <th scope="row" class="fw-normal">{{ version.version }}</th>
+                  <td><ds-badge [variant]="statusOf(version.status).variant">{{ statusOf(version.status).label }}</ds-badge></td>
+                  <td class="text-break">{{ version.sourceUrl ?? version.filename }}</td>
+                  <td>{{ version.createdAt | date: 'd MMM y' }}</td>
+                  <td class="text-end text-nowrap">
+                    @if (version.status === 'ready' || version.status === 'deprecated') {
+                      <button type="button" class="btn btn-sm btn-secondary" (click)="browse(system, version)">
+                        Classes<span class="visually-hidden"> in {{ system.name }} {{ version.version }}</span>
+                      </button>
+                    }
+                    @if (version.status === 'ready') {
+                      <button type="button" class="btn btn-sm btn-secondary ms-1" (click)="deprecate(system, version)">
+                        Deprecate<span class="visually-hidden"> {{ system.name }} {{ version.version }}</span>
+                      </button>
+                    }
+                  </td>
+                </tr>
+                @if (version.report; as report) {
+                  @if (report.errors.length || report.warnings.length) {
+                    <tr>
+                      <td colspan="5" class="pt-0">
+                        <details [open]="report.errors.length > 0">
+                          <summary>What checking {{ version.version }} found: {{ report.errors.length }} problem{{ report.errors.length === 1 ? '' : 's' }}, {{ report.warnings.length }} note{{ report.warnings.length === 1 ? '' : 's' }}</summary>
+                          <ul class="small mb-0 mt-2">
+                            @for (issue of report.errors; track $index) {
+                              <li><span class="fw-semibold">Problem:</span> {{ issue.message }}@if (issue.line) { (line {{ issue.line }})}</li>
+                            }
+                            @for (issue of report.warnings; track $index) {
+                              <li>{{ issue.message }}@if (issue.line) { (line {{ issue.line }})}</li>
+                            }
+                          </ul>
+                        </details>
+                      </td>
+                    </tr>
+                  }
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p>No versions yet.</p>
+      }
+    </section>
+  }
+
+  @if (browsing(); as b) {
+    <section aria-labelledby="ds-classes-heading" class="mb-5" role="region">
+      <h2 id="ds-classes-heading" class="h4">Classes in {{ b.system.name }} {{ b.version.version }}</h2>
+      <div class="row g-2 mb-3">
+        <div class="col-sm-6 col-lg-4">
+          <label for="ds-classes-q" class="form-label">Starting with</label>
+          <input id="ds-classes-q" type="search" class="form-control font-monospace" autocomplete="off" spellcheck="false" [value]="classQuery()" (input)="setClassQuery($event)" />
+        </div>
+        @if (classes(); as found) {
+          <div class="col-sm-6 col-lg-4">
+            <label for="ds-classes-group" class="form-label">Group</label>
+            <select id="ds-classes-group" class="form-select" (change)="setClassGroup($event)">
+              <option value="*">All ({{ found.total }})</option>
+              @for (group of found.groups; track group.group) {
+                <option [value]="group.group ?? ''" [selected]="classGroup() === (group.group ?? '')">{{ group.group ?? 'Other' }} ({{ group.count }})</option>
+              }
+            </select>
+          </div>
+        }
+      </div>
+      @if (classes(); as found) {
+        @if (found.items.length) {
+          <ul class="nv-class-chips" aria-label="Classes found">
+            @for (item of found.items; track item.name) {
+              <li class="nv-class-chip pe-2"><span class="nv-class-chip__name">{{ item.name }}</span></li>
+            }
+          </ul>
+          @if (found.items.length === 100) {
+            <p class="form-text">Showing the first 100. Type more of a name to narrow them down.</p>
+          }
+        } @else {
+          <p>No classes match.</p>
+        }
+      }
+    </section>
+  }
+
+  <section aria-labelledby="ds-version-heading" class="col-lg-8 mb-5">
+    <h2 id="ds-version-heading" class="h4">Add a version</h2>
+    @if (list.length) {
+      <form [formGroup]="versionForm" (ngSubmit)="addVersion()" novalidate>
+        <div class="row g-3 mb-3">
+          <div class="col-sm-7">
+            <label for="ds-version-system" class="form-label">Design system</label>
+            <select id="ds-version-system" class="form-select" formControlName="designSystemId">
+              @for (system of list; track system.id) {
+                <option [value]="system.id">{{ system.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="col-sm-5">
+            <label for="ds-version-number" class="form-label">Version</label>
+            <input
+              id="ds-version-number"
+              type="text"
+              class="form-control"
+              formControlName="version"
+              autocomplete="off"
+              [class.is-invalid]="versionInvalid('version')"
+              [attr.aria-invalid]="versionInvalid('version')"
+              [attr.aria-describedby]="versionInvalid('version') ? 'ds-version-number-hint ds-version-number-error' : 'ds-version-number-hint'"
+            />
+            <div id="ds-version-number-hint" class="form-text">Like 1.2.0. A version never changes once it is ready.</div>
+            @if (versionInvalid('version')) {
+              <div id="ds-version-number-error" class="invalid-feedback d-block">{{ fieldError(versionErrors(), 'version') ?? 'Use a version like 1.2.0, new for this design system.' }}</div>
+            }
+          </div>
+        </div>
+
+        <fieldset class="mb-3">
+          <legend class="form-label fs-6">Stylesheet</legend>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" id="ds-version-source-css" formControlName="source" value="css" />
+            <label class="form-check-label" for="ds-version-source-css">Upload a file</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" id="ds-version-source-url" formControlName="source" value="url" />
+            <label class="form-check-label" for="ds-version-source-url">From an address</label>
+          </div>
+        </fieldset>
+
+        @if (versionForm.controls.source.value === 'css') {
+          <div class="mb-3">
+            <label for="ds-version-file" class="form-label">CSS file</label>
+            <input
+              id="ds-version-file"
+              type="file"
+              class="form-control"
+              accept=".css,text/css"
+              [class.is-invalid]="versionInvalid('file')"
+              [attr.aria-invalid]="versionInvalid('file')"
+              [attr.aria-describedby]="versionInvalid('file') ? 'ds-version-file-hint ds-version-file-error' : 'ds-version-file-hint'"
+              (change)="chooseFile($event)"
+            />
+            <div id="ds-version-file-hint" class="form-text">Up to 5 MB. Files it links to (fonts, images) need a zip package, coming later.</div>
+            @if (versionInvalid('file')) {
+              <div id="ds-version-file-error" class="invalid-feedback d-block">{{ fieldError(versionErrors(), 'filename') ?? 'Choose a .css file.' }}</div>
+            }
+          </div>
+        } @else {
+          <div class="mb-3">
+            <label for="ds-version-url" class="form-label">Address of the stylesheet</label>
+            <input
+              id="ds-version-url"
+              type="url"
+              class="form-control"
+              formControlName="url"
+              autocomplete="off"
+              placeholder="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+              [class.is-invalid]="versionInvalid('url')"
+              [attr.aria-invalid]="versionInvalid('url')"
+              [attr.aria-describedby]="versionInvalid('url') ? 'ds-version-url-hint ds-version-url-error' : 'ds-version-url-hint'"
+            />
+            <div id="ds-version-url-hint" class="form-text">An https address. Novan keeps its own copy, so the site does not depend on it.</div>
+            @if (versionInvalid('url')) {
+              <div id="ds-version-url-error" class="invalid-feedback d-block">{{ fieldError(versionErrors(), 'url') ?? 'Enter an https address.' }}</div>
+            }
+          </div>
+        }
+
+        <button type="submit" class="btn btn-primary" [disabled]="busy()" [attr.aria-busy]="busy()">Add version</button>
+      </form>
+    } @else {
+      <p>Add a design system first.</p>
+    }
+  </section>
+
+  <section aria-labelledby="ds-create-heading" class="col-lg-8">
+    <h2 id="ds-create-heading" class="h4">Add a design system</h2>
+    <form [formGroup]="createForm" (ngSubmit)="create()" novalidate>
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+          <label for="ds-create-name" class="form-label">Name</label>
+          <input
+            id="ds-create-name"
+            type="text"
+            class="form-control"
+            formControlName="name"
+            autocomplete="off"
+            maxlength="80"
+            (input)="suggestSlug()"
+            [class.is-invalid]="createInvalid('name')"
+            [attr.aria-invalid]="createInvalid('name')"
+            [attr.aria-describedby]="createInvalid('name') ? 'ds-create-name-error' : null"
+          />
+          @if (createInvalid('name')) {
+            <div id="ds-create-name-error" class="invalid-feedback d-block">{{ fieldError(createErrors(), 'name') ?? 'Give it a name.' }}</div>
+          }
+        </div>
+        <div class="col-sm-6">
+          <label for="ds-create-slug" class="form-label">Short name</label>
+          <input
+            id="ds-create-slug"
+            type="text"
+            class="form-control font-monospace"
+            formControlName="slug"
+            autocomplete="off"
+            maxlength="40"
+            [class.is-invalid]="createInvalid('slug')"
+            [attr.aria-invalid]="createInvalid('slug')"
+            [attr.aria-describedby]="createInvalid('slug') ? 'ds-create-slug-hint ds-create-slug-error' : 'ds-create-slug-hint'"
+          />
+          <div id="ds-create-slug-hint" class="form-text">Lowercase letters, numbers and hyphens, like "bootstrap".</div>
+          @if (createInvalid('slug')) {
+            <div id="ds-create-slug-error" class="invalid-feedback d-block">{{ fieldError(createErrors(), 'slug') ?? 'Use lowercase letters, numbers and single hyphens.' }}</div>
+          }
+        </div>
+      </div>
+      <div class="mb-3 col-sm-6 px-0">
+        <label for="ds-create-framework" class="form-label">Framework</label>
+        <select id="ds-create-framework" class="form-select" formControlName="framework">
+          @for (framework of frameworks; track framework) {
+            <option [value]="framework">{{ frameworkLabels[framework] }}</option>
+          }
+        </select>
+      </div>
+      <button type="submit" class="btn btn-secondary" [disabled]="busy()">Add design system</button>
+    </form>
+  </section>
+} @else {
+  <ds-spinner label="Loading design systems" />
+}

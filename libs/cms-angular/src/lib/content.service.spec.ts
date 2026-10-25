@@ -49,7 +49,7 @@ function setup({ platform, url = 'http://site.test/about', config = {}, server =
   TestBed.configureTestingModule({
     providers: [
       ...providers,
-      provideNovanCms({ blocks: defineBlocks({}), locale: 'en-GB', ...config }),
+      provideNovanCms({ blocks: defineBlocks({}), locale: 'en-GB', designSystems: false, ...config }),
       ...(platform === 'server' && server !== null
         ? [provideNovanCmsServer({ apiUrl: API, deliveryToken: DELIVERY, previewToken: PREVIEW, ...server })]
         : []),

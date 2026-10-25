@@ -1583,3 +1583,273 @@ export const spaceLocales = pgTable(
     ),
   ],
 );
+
+export const designSystems = pgTable(
+  'design_systems',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    spaceId: uuid('space_id').notNull(),
+    name: text().notNull(),
+    slug: text().notNull(),
+    framework: text().notNull(),
+    createdBy: uuid('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+  },
+  (table): PgTableExtraConfigValue[] => [
+    index('design_systems_created_by_idx').using('btree', table.createdBy.asc().nullsLast().op('uuid_ops')),
+    foreignKey({
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+      name: 'design_systems_created_by_fkey',
+    }).onDelete('set null'),
+    foreignKey({
+      columns: [table.spaceId],
+      foreignColumns: [spaces.id],
+      name: 'design_systems_space_id_fkey',
+    }).onDelete('cascade'),
+    unique('design_systems_id_space_id_key').on(table.id, table.spaceId),
+    unique('design_systems_space_id_slug_key').on(table.spaceId, table.slug),
+    pgPolicy('design systems: admins and developers add', {
+      as: 'permissive',
+      for: 'insert',
+      to: ['authenticated'],
+      withCheck: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(design_systems.space_id, '{admin,developer}'::text[]) AS has_space_role))`,
+    }),
+    pgPolicy('design systems: admins and developers change', {
+      as: 'permissive',
+      for: 'update',
+      to: ['authenticated'],
+    }),
+    pgPolicy('design systems: admins and developers remove', {
+      as: 'permissive',
+      for: 'delete',
+      to: ['authenticated'],
+    }),
+    pgPolicy('design systems: members and agency staff read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+    }),
+    check(
+      'design_systems_framework_check',
+      sql`framework = ANY (ARRAY['css'::text, 'tailwind'::text, 'bootstrap'::text, 'web-components'::text])`,
+    ),
+    check(
+      'design_systems_name_check',
+      sql`(length(TRIM(BOTH FROM name)) >= 1) AND (length(TRIM(BOTH FROM name)) <= 80)`,
+    ),
+    check('design_systems_slug_check', sql`(slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text) AND (length(slug) <= 40)`),
+  ],
+);
+
+export const designSystemVersions = pgTable(
+  'design_system_versions',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    spaceId: uuid('space_id').notNull(),
+    designSystemId: uuid('design_system_id').notNull(),
+    version: text().notNull(),
+    status: text().default('uploaded').notNull(),
+    source: text().notNull(),
+    sourceUrl: text('source_url'),
+    filename: text(),
+    manifest: jsonb(),
+    cssEntry: text('css_entry').array().default([]).notNull(),
+    jsEntry: text('js_entry').array().default([]).notNull(),
+    validationReport: jsonb('validation_report'),
+    checksum: text(),
+    createdBy: uuid('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+    processedAt: timestamp('processed_at', { withTimezone: true, mode: 'string' }),
+  },
+  (table): PgTableExtraConfigValue[] => [
+    index('design_system_versions_created_by_idx').using('btree', table.createdBy.asc().nullsLast().op('uuid_ops')),
+    index('design_system_versions_space_id_idx').using('btree', table.spaceId.asc().nullsLast().op('uuid_ops')),
+    foreignKey({
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+      name: 'design_system_versions_created_by_fkey',
+    }).onDelete('set null'),
+    foreignKey({
+      columns: [table.designSystemId, table.spaceId],
+      foreignColumns: [designSystems.id, designSystems.spaceId],
+      name: 'design_system_versions_design_system_id_space_id_fkey',
+    }).onDelete('cascade'),
+    unique('design_system_versions_id_space_id_key').on(table.id, table.spaceId),
+    unique('design_system_versions_id_design_system_id_space_id_key').on(table.id, table.spaceId, table.designSystemId),
+    unique('design_system_versions_design_system_id_version_key').on(table.designSystemId, table.version),
+    pgPolicy('design system versions: admins and developers add', {
+      as: 'permissive',
+      for: 'insert',
+      to: ['authenticated'],
+      withCheck: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(design_system_versions.space_id, '{admin,developer}'::text[]) AS has_space_role))`,
+    }),
+    pgPolicy('design system versions: admins and developers change status', {
+      as: 'permissive',
+      for: 'update',
+      to: ['authenticated'],
+    }),
+    pgPolicy('design system versions: members and agency staff read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+    }),
+    check('design_system_versions_check', sql`(source = 'url'::text) = (source_url IS NOT NULL)`),
+    check('design_system_versions_check1', sql`(source = 'url'::text) OR (filename IS NOT NULL)`),
+    check('design_system_versions_checksum_check', sql`checksum ~ '^[0-9a-f]{64}$'::text`),
+    check('design_system_versions_filename_check', sql`filename ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,149}$'::text`),
+    check(
+      'design_system_versions_manifest_check',
+      sql`(manifest IS NULL) OR (jsonb_typeof(manifest) = 'object'::text)`,
+    ),
+    check('design_system_versions_source_check', sql`source = ANY (ARRAY['css'::text, 'zip'::text, 'url'::text])`),
+    check(
+      'design_system_versions_source_url_check',
+      sql`(source_url ~ '^https://[^[:space:]]+$'::text) AND (length(source_url) <= 2048)`,
+    ),
+    check(
+      'design_system_versions_status_check',
+      sql`status = ANY (ARRAY['uploaded'::text, 'validating'::text, 'invalid'::text, 'ready'::text, 'deprecated'::text])`,
+    ),
+    check(
+      'design_system_versions_validation_report_check',
+      sql`(validation_report IS NULL) OR (jsonb_typeof(validation_report) = 'object'::text)`,
+    ),
+    check(
+      'design_system_versions_version_check',
+      sql`(version ~ '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'::text) AND (length(version) <= 64)`,
+    ),
+  ],
+);
+
+export const designSystemComponents = pgTable(
+  'design_system_components',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    spaceId: uuid('space_id').notNull(),
+    versionId: uuid('version_id').notNull(),
+    componentKey: text('component_key').notNull(),
+    tag: text(),
+    definition: jsonb().notNull(),
+  },
+  (table): PgTableExtraConfigValue[] => [
+    index('design_system_components_space_id_idx').using('btree', table.spaceId.asc().nullsLast().op('uuid_ops')),
+    foreignKey({
+      columns: [table.versionId, table.spaceId],
+      foreignColumns: [designSystemVersions.id, designSystemVersions.spaceId],
+      name: 'design_system_components_version_id_space_id_fkey',
+    }).onDelete('cascade'),
+    unique('design_system_components_id_space_id_key').on(table.id, table.spaceId),
+    unique('design_system_components_version_id_component_key_key').on(table.versionId, table.componentKey),
+    pgPolicy('design system components: members and agency staff read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+      using: sql`((space_id = ANY (( SELECT auth_space_ids() AS auth_space_ids)::uuid[])) OR ( SELECT is_agency_staff() AS is_agency_staff))`,
+    }),
+    check(
+      'design_system_components_component_key_check',
+      sql`(component_key ~ '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'::text) AND (length(component_key) <= 64)`,
+    ),
+    check('design_system_components_definition_check', sql`jsonb_typeof(definition) = 'object'::text`),
+    check(
+      'design_system_components_tag_check',
+      sql`(tag ~ '^[a-z][a-z0-9._]*-[a-z0-9._-]*$'::text) AND (length(tag) <= 64)`,
+    ),
+  ],
+);
+
+export const designSystemClasses = pgTable(
+  'design_system_classes',
+  {
+    versionId: uuid('version_id').notNull(),
+    spaceId: uuid('space_id').notNull(),
+    className: text('class_name').notNull(),
+    classGroup: text('class_group'),
+    sourceFile: text('source_file').notNull(),
+  },
+  (table): PgTableExtraConfigValue[] => [
+    index('design_system_classes_group_idx').using(
+      'btree',
+      table.versionId.asc().nullsLast().op('uuid_ops'),
+      table.classGroup.asc().nullsLast().op('uuid_ops'),
+      table.className.asc().nullsLast().op('uuid_ops'),
+    ),
+    index('design_system_classes_prefix_idx').using(
+      'btree',
+      table.versionId.asc().nullsLast().op('text_pattern_ops'),
+      table.className.asc().nullsLast().op('uuid_ops'),
+    ),
+    index('design_system_classes_space_id_idx').using('btree', table.spaceId.asc().nullsLast().op('uuid_ops')),
+    foreignKey({
+      columns: [table.versionId, table.spaceId],
+      foreignColumns: [designSystemVersions.id, designSystemVersions.spaceId],
+      name: 'design_system_classes_version_id_space_id_fkey',
+    }).onDelete('cascade'),
+    primaryKey({ columns: [table.versionId, table.className], name: 'design_system_classes_pkey' }),
+    pgPolicy('design system classes: members and agency staff read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+      using: sql`((space_id = ANY (( SELECT auth_space_ids() AS auth_space_ids)::uuid[])) OR ( SELECT is_agency_staff() AS is_agency_staff))`,
+    }),
+    check(
+      'design_system_classes_class_group_check',
+      sql`(class_group ~ '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'::text) AND (length(class_group) <= 40)`,
+    ),
+    check('design_system_classes_class_name_check', sql`(length(class_name) >= 1) AND (length(class_name) <= 120)`),
+    check('design_system_classes_source_file_check', sql`length(source_file) <= 200`),
+  ],
+);
+
+export const spaceDesignSystems = pgTable(
+  'space_design_systems',
+  {
+    spaceId: uuid('space_id').notNull(),
+    environmentId: uuid('environment_id').notNull(),
+    designSystemId: uuid('design_system_id').notNull(),
+    versionId: uuid('version_id').notNull(),
+    loadOrder: integer('load_order').notNull(),
+    enabled: boolean().default(true).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+  },
+  (table): PgTableExtraConfigValue[] => [
+    index('space_design_systems_space_id_idx').using('btree', table.spaceId.asc().nullsLast().op('uuid_ops')),
+    index('space_design_systems_version_id_idx').using('btree', table.versionId.asc().nullsLast().op('uuid_ops')),
+    foreignKey({
+      columns: [table.environmentId, table.spaceId],
+      foreignColumns: [environments.id, environments.spaceId],
+      name: 'space_design_systems_environment_id_space_id_fkey',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.versionId, table.designSystemId, table.spaceId],
+      foreignColumns: [designSystemVersions.id, designSystemVersions.designSystemId, designSystemVersions.spaceId],
+      name: 'space_design_systems_version_id_design_system_id_space_id_fkey',
+    }).onDelete('cascade'),
+    primaryKey({ columns: [table.environmentId, table.versionId], name: 'space_design_systems_pkey' }),
+    unique('space_design_systems_environment_id_design_system_id_key').on(table.environmentId, table.designSystemId),
+    pgPolicy('space design systems: admins and developers attach', {
+      as: 'permissive',
+      for: 'insert',
+      to: ['authenticated'],
+      withCheck: sql`(( SELECT is_agency_staff() AS is_agency_staff) OR ( SELECT has_space_role(space_design_systems.space_id, '{admin,developer}'::text[]) AS has_space_role))`,
+    }),
+    pgPolicy('space design systems: admins and developers change', {
+      as: 'permissive',
+      for: 'update',
+      to: ['authenticated'],
+    }),
+    pgPolicy('space design systems: admins and developers detach', {
+      as: 'permissive',
+      for: 'delete',
+      to: ['authenticated'],
+    }),
+    pgPolicy('space design systems: members and agency staff read', {
+      as: 'permissive',
+      for: 'select',
+      to: ['authenticated'],
+    }),
+    check('space_design_systems_load_order_check', sql`(load_order >= 0) AND (load_order <= 99)`),
+  ],
+);

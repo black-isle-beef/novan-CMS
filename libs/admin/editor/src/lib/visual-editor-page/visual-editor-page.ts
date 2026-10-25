@@ -64,6 +64,7 @@ import {
 import { EditorApi } from '../editor-api';
 import { EditorStore } from '../editor-store';
 import { getIn } from '../patches';
+import { EditorClassIndex } from '../class-index';
 import { PreviewBridge } from '../preview-bridge';
 import { type SeoDefaults, SeoPanel } from '../seo-panel/seo-panel';
 import { EditorPresence } from '../presence/editor-presence';
@@ -125,7 +126,7 @@ const clock = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
     SeoPanel,
     Skeleton,
   ],
-  providers: [PreviewBridge, EditorStore, EditorPresence, FieldFormContext, MediaPicker],
+  providers: [PreviewBridge, EditorStore, EditorPresence, FieldFormContext, MediaPicker, EditorClassIndex],
   templateUrl: './visual-editor-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -139,6 +140,7 @@ export class VisualEditorPage implements HasUnsavedChanges {
   private readonly document = inject(DOCUMENT);
   protected readonly context = inject(SpaceContext);
   protected readonly bridge = inject(PreviewBridge);
+  private readonly classIndex = inject(EditorClassIndex);
   protected readonly store = inject(EditorStore);
   protected readonly presence = inject(EditorPresence);
   protected readonly copy = copy;
@@ -383,6 +385,12 @@ export class VisualEditorPage implements HasUnsavedChanges {
         this.mediaPicker.connect(this.form, spaceId);
         void this.load(spaceId, entryId);
       });
+    });
+    // The site's design systems, for class suggestions and how breakpoints are written (package 24).
+    effect(() => {
+      const spaceId = this.spaceId();
+      const enabled = this.context.currentSpace()?.designSystems === true;
+      untracked(() => void this.classIndex.load(spaceId, enabled));
     });
     // A new address: load it, and listen to the frame's new page (it says when it is ready).
     effect(() => {

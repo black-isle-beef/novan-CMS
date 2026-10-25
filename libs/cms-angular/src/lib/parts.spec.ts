@@ -52,7 +52,7 @@ function render(blocks: unknown[], adapter?: ClassAdapter) {
     providers: [
       { provide: NOVAN_CMS_CONFIG, useValue: { blocks: defineBlocks({ card: CardBlock }) } },
       { provide: NovanPreview, useValue: { active: signal(false) } },
-      ...(adapter ? [{ provide: NOVAN_CLASS_ADAPTER, useValue: adapter }] : []),
+      ...(adapter ? [{ provide: NOVAN_CLASS_ADAPTER, useValue: () => adapter }] : []),
     ],
   });
   const fixture = TestBed.createComponent(Host);

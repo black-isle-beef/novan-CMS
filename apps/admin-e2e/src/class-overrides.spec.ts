@@ -28,7 +28,7 @@ test.describe('@editor @classes', () => {
       await expect(part.getByRole('option', { name: 'Heading', exact: true })).toBeAttached();
 
       // Classes on the whole block, typed and added with Enter; the page follows without reloading.
-      const classes = panel.getByRole('textbox', { name: 'Classes on Whole block' });
+      const classes = panel.getByRole('combobox', { name: 'Classes on Whole block' });
       await classes.fill('mt-5 shadow-lg');
       await classes.press('Enter');
       await expect(hero).toHaveClass(/(^|\s)mt-5(\s|$)/);
@@ -38,7 +38,7 @@ test.describe('@editor @classes', () => {
 
       // And on the heading, while the site outlines the part being edited.
       await part.selectOption({ label: 'Heading' });
-      const headingClasses = panel.getByRole('textbox', { name: 'Classes on Heading' });
+      const headingClasses = panel.getByRole('combobox', { name: 'Classes on Heading' });
       await headingClasses.focus();
       await expect(frame.locator('[data-novan-part-outline]').first()).toBeVisible();
       await headingClasses.fill('display-1');

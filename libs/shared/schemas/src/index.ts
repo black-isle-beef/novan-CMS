@@ -1,6 +1,7 @@
 export * from './lib/audit';
 export * from './lib/content-model';
 export * from './lib/delivery';
+export * from './lib/design-systems';
 export * from './lib/device-auth';
 export * from './lib/entries';
 export * from './lib/entry-diff';

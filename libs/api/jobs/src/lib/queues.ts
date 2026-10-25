@@ -2,7 +2,7 @@ import type { Database, DbTransaction } from '@novan/api-db';
 import { sql } from 'drizzle-orm';
 
 /** The Supabase Queues (pgmq) the worker reads, created in 0014_jobs.sql (and `notifications` in 0020_forms.sql). */
-export const QUEUES = ['publish', 'purge', 'webhooks', 'housekeeping', 'notifications'] as const;
+export const QUEUES = ['publish', 'purge', 'webhooks', 'housekeeping', 'notifications', 'design-systems'] as const;
 export type QueueName = (typeof QUEUES)[number];
 
 /**

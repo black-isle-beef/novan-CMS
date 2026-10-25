@@ -9,7 +9,8 @@ import { firstValueFrom } from 'rxjs';
 /**
  * Space admins and agency staff rename the space, set the address of its site (used for "View live page") and choose
  * whether publishing needs their approval (docs/build/13-workflow-publishing.md). Agency staff also choose whether the
- * media library takes SVG files (docs/build/07-media-library.md).
+ * media library takes SVG files (docs/build/07-media-library.md) and whether developers may upload design systems
+ * (docs/build/24-design-systems.md).
  */
 @Component({
   selector: 'nv-space-settings-page',
@@ -36,11 +37,12 @@ export class SpaceSettingsPage implements HasUnsavedChanges {
     previewUrl: ['', [Validators.maxLength(2048), Validators.pattern(/^https?:\/\/\S+$/i)]],
     requireApproval: [false],
     allowSvg: [false],
+    designSystems: [false],
   });
   private readonly value = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
 
   protected readonly space = computed(() => this.context.currentSpace());
-  /** SVG uploads are an agency decision: the switch is shown to agency staff only, and not while viewing as a role. */
+  /** SVG uploads and design systems are agency decisions: the switch is shown to agency staff only, and not while viewing as a role. */
   protected readonly staff = computed(() => this.context.currentAccess()?.agencyStaff === true);
   private readonly dirty = computed(() => {
     const space = this.space();
@@ -50,7 +52,8 @@ export class SpaceSettingsPage implements HasUnsavedChanges {
       (value.name !== space.name ||
         (value.previewUrl ?? '') !== (space.previewUrl ?? '') ||
         (value.requireApproval ?? false) !== space.requireApproval ||
-        (value.allowSvg ?? false) !== space.allowSvg)
+        (value.allowSvg ?? false) !== space.allowSvg ||
+        (value.designSystems ?? false) !== space.designSystems)
     );
   });
 
@@ -64,6 +67,7 @@ export class SpaceSettingsPage implements HasUnsavedChanges {
             previewUrl: space.previewUrl ?? '',
             requireApproval: space.requireApproval,
             allowSvg: space.allowSvg,
+            designSystems: space.designSystems,
           }));
       }
     });
@@ -85,7 +89,7 @@ export class SpaceSettingsPage implements HasUnsavedChanges {
     this.serverErrors.set({});
     if (this.form.invalid || this.busy()) return;
 
-    const { name, previewUrl, requireApproval, allowSvg } = this.form.getRawValue();
+    const { name, previewUrl, requireApproval, allowSvg, designSystems } = this.form.getRawValue();
     this.busy.set(true);
     try {
       const space = await firstValueFrom(
@@ -93,7 +97,7 @@ export class SpaceSettingsPage implements HasUnsavedChanges {
           name: name.trim(),
           previewUrl: previewUrl.trim() || null,
           requireApproval,
-          ...(this.staff() ? { allowSvg } : {}),
+          ...(this.staff() ? { allowSvg, designSystems } : {}),
         }),
       );
       this.context.replace(space);

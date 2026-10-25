@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { AuthService } from '@novan/admin-auth';
 import { ContentApi } from '@novan/admin-content';
 import { MediaApi, Thumbnails } from '@novan/admin-media';
-import { ManagementApi, SpaceContext, SpaceLocales } from '@novan/admin-spaces';
+import { DesignSystemsApi, ManagementApi, SpaceContext, SpaceLocales } from '@novan/admin-spaces';
 import {
   type BlockNode,
   type BlockType,
@@ -211,6 +211,7 @@ async function render({
       { provide: ContentApi, useValue: content },
       { provide: EditorApi, useValue: { previewToken, previewData } },
       { provide: MediaApi, useValue: { list: () => of([]) } },
+      { provide: DesignSystemsApi, useValue: { site: () => of([]) } },
       { provide: Thumbnails, useValue: { urls: () => Promise.resolve(new Map()) } },
       { provide: PRESENCE_TRANSPORT, useValue: presence.transport },
       { provide: AuthService, useValue: { claims: signal({ sub: 'me' }), email: signal('me@novan.test') } },

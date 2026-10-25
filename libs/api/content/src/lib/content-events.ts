@@ -60,7 +60,24 @@ export interface LocalesChangedEvent {
   actorId: string;
 }
 
-export type ContentEvent = EntryPublishedEvent | EntryUnpublishedEvent | PathsChangedEvent | RedirectsChangedEvent | LocalesChangedEvent;
+/**
+ * The design systems an environment's site loads changed: attached, detached, reordered, upgraded or deprecated
+ * (package 24). Every page links the stylesheets, so every page changes.
+ */
+export interface SiteStylesChangedEvent {
+  type: 'site-styles.changed';
+  spaceId: string;
+  environmentId: string;
+  actorId: string;
+}
+
+export type ContentEvent =
+  | EntryPublishedEvent
+  | EntryUnpublishedEvent
+  | PathsChangedEvent
+  | RedirectsChangedEvent
+  | LocalesChangedEvent
+  | SiteStylesChangedEvent;
 export type ContentEventType = ContentEvent['type'];
 
 /** The purge job a content event becomes (`@novan/api-delivery` runs it). */

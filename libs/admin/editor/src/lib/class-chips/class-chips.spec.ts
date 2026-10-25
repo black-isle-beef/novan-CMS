@@ -1,16 +1,27 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import axe from 'axe-core';
+import type { ClassSuggestion } from '../class-index';
 import { ClassChips } from './class-chips';
 
 @Component({
   imports: [ClassChips],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<nv-class-chips label="Classes on heading" inputId="chips" [classes]="classes()" [disabled]="disabled()" (classesChange)="changed($event)" />`,
+  template: `<nv-class-chips
+    label="Classes on heading"
+    inputId="chips"
+    [classes]="classes()"
+    [disabled]="disabled()"
+    [suggest]="suggest()"
+    [warnings]="warnings()"
+    (classesChange)="changed($event)"
+  />`,
 })
 class Host {
   readonly classes = signal<string[]>([]);
   readonly disabled = signal(false);
+  readonly suggest = signal<((query: string) => Promise<ClassSuggestion[]>) | null>(null);
+  readonly warnings = signal<Record<string, string>>({});
   readonly changes: string[][] = [];
   changed(classes: string[]): void {
     this.changes.push(classes);
@@ -96,6 +107,88 @@ describe('ClassChips', () => {
     expect(chips()).toEqual(['mt-8']);
     expect(el.querySelector('input, button')).toBeNull();
     expect(el.querySelector('label')).toBeNull();
+  });
+
+  describe('with suggestions', () => {
+    const suggest = vi.fn(async (query: string) =>
+      ['btn', 'btn-primary', 'btn-secondary'].filter((name) => name.startsWith(query)).map((name) => ({ name, group: 'buttons', source: 'Acme' })),
+    );
+
+    function renderWithSuggestions(classes: string[] = []) {
+      const result = render(classes);
+      result.host.suggest.set(suggest);
+      result.host.warnings.set({ 'text-primary': 'Bootstrap cannot apply this on medium screens and up, so it does nothing here.' });
+      result.fixture.detectChanges();
+      return result;
+    }
+
+    const typeSlowly = async (fixture: ReturnType<typeof render>['fixture'], box: HTMLInputElement, text: string) => {
+      box.value = text;
+      box.dispatchEvent(new Event('input'));
+      await new Promise((resolve) => setTimeout(resolve, 260));
+      fixture.detectChanges();
+    };
+    const press = (fixture: ReturnType<typeof render>['fixture'], box: HTMLInputElement, key: string) => {
+      box.dispatchEvent(new KeyboardEvent('keydown', { key, cancelable: true }));
+      fixture.detectChanges();
+    };
+
+    beforeEach(() => suggest.mockClear());
+
+    it('offers classes for the word being typed, leaving out those already added', async () => {
+      const { fixture, el, box } = renderWithSuggestions(['btn']);
+      await typeSlowly(fixture, box() as HTMLInputElement, 'mt-2 bt');
+      expect(suggest).toHaveBeenCalledWith('bt');
+      expect([...el.querySelectorAll('[role="option"] .font-monospace')].map((option) => option.textContent)).toEqual(['btn-primary', 'btn-secondary']);
+      expect(box()?.getAttribute('aria-expanded')).toBe('true');
+      expect(box()?.getAttribute('aria-controls')).toBe('chips-suggestions');
+    });
+
+    it('chooses with the arrow keys and Enter, replacing the word', async () => {
+      const { fixture, box, chips, host } = renderWithSuggestions();
+      const input = box() as HTMLInputElement;
+      await typeSlowly(fixture, input, 'mt-2 btn-');
+      press(fixture, input, 'ArrowDown');
+      press(fixture, input, 'ArrowDown');
+      expect(input.getAttribute('aria-activedescendant')).toBe('chips-suggestions-1');
+      press(fixture, input, 'Enter');
+      expect(host.changes.at(-1)).toEqual(['mt-2', 'btn-secondary']);
+      expect(chips()).toEqual(['mt-2', 'btn-secondary']);
+      expect(input.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('closes the suggestions with Escape, keeping what was typed', async () => {
+      const { fixture, box } = renderWithSuggestions();
+      const input = box() as HTMLInputElement;
+      await typeSlowly(fixture, input, 'btn');
+      press(fixture, input, 'Escape');
+      expect(input.getAttribute('aria-expanded')).toBe('false');
+      expect(input.value).toBe('btn');
+    });
+
+    it('shows only the latest answer', async () => {
+      const { fixture, el, box } = renderWithSuggestions();
+      const input = box() as HTMLInputElement;
+      input.value = 'btn-p';
+      input.dispatchEvent(new Event('input'));
+      await typeSlowly(fixture, input, 'xyz');
+      expect(el.querySelectorAll('[role="option"]')).toHaveLength(0);
+      expect(suggest).toHaveBeenCalledTimes(1);
+    });
+
+    it('writes out what to know about a class', () => {
+      const { el } = renderWithSuggestions(['text-primary']);
+      expect(el.querySelector('.nv-class-chip--warning')).not.toBeNull();
+      expect(el.textContent).toContain('text-primary: Bootstrap cannot apply this on medium screens and up, so it does nothing here.');
+    });
+
+    it('has no axe violations with suggestions open', async () => {
+      const { fixture, el, box } = renderWithSuggestions(['text-primary']);
+      await typeSlowly(fixture, box() as HTMLInputElement, 'btn');
+      press(fixture, box() as HTMLInputElement, 'ArrowDown');
+      const results = await axe.run(el, { rules: { 'color-contrast': { enabled: false } } });
+      expect(results.violations.map((violation) => violation.id)).toEqual([]);
+    });
   });
 
   it.each([

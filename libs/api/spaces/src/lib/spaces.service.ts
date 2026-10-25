@@ -37,6 +37,7 @@ const summaryColumns = {
   previewUrl: spaces.previewUrl,
   requireApproval: spaces.requireApproval,
   allowSvg: sql<boolean>`coalesce((${spaces.settings} #>> '{media,allowSvg}')::boolean, false)`,
+  designSystems: sql<boolean>`coalesce((${spaces.settings} #>> '{designSystems,enabled}')::boolean, false)`,
   createdAt: spaces.createdAt,
 };
 
@@ -102,6 +103,9 @@ export class SpacesService {
     if (body.allowSvg !== undefined && !hasStaffAccess(user)) {
       throw forbidden('agency_staff_only', 'Only agency staff can turn SVG uploads on or off.');
     }
+    if (body.designSystems !== undefined && !hasStaffAccess(user)) {
+      throw forbidden('agency_staff_only', 'Only agency staff can turn design systems on or off.');
+    }
     try {
       return await this.db.userDb(user.claims, async (tx) => {
         const [before] = await tx.select(summaryColumns).from(spaces).where(eq(spaces.id, spaceId));
@@ -111,20 +115,30 @@ export class SpacesService {
           ...(body.previewUrl !== undefined ? { previewUrl: body.previewUrl } : {}),
           ...(body.requireApproval !== undefined ? { requireApproval: body.requireApproval } : {}),
         };
-        // Only `settings.media.allowSvg` changes: the rest of the settings (the onboarding checklist) stay as they are.
-        const settings =
-          body.allowSvg === undefined
-            ? {}
-            : {
-                settings: sql`${spaces.settings} || jsonb_build_object('media', coalesce(${spaces.settings} -> 'media', '{}'::jsonb) || jsonb_build_object('allowSvg', ${body.allowSvg}::boolean))`,
-              };
+        // Only `settings.media.allowSvg` and `settings.designSystems.enabled` change: the rest of the settings (the
+        // onboarding checklist) stay as they are.
+        const patches = [
+          ...(body.allowSvg === undefined
+            ? []
+            : [sql`jsonb_build_object('media', coalesce(${spaces.settings} -> 'media', '{}'::jsonb) || jsonb_build_object('allowSvg', ${body.allowSvg}::boolean))`]),
+          ...(body.designSystems === undefined
+            ? []
+            : [
+                sql`jsonb_build_object('designSystems', coalesce(${spaces.settings} -> 'designSystems', '{}'::jsonb) || jsonb_build_object('enabled', ${body.designSystems}::boolean))`,
+              ]),
+        ];
+        const settings = patches.length ? { settings: sql`${spaces.settings} || ${sql.join(patches, sql` || `)}` } : {};
         const [space] = await tx
           .update(spaces)
           .set({ ...changes, ...settings })
           .where(eq(spaces.id, spaceId))
           .returning(summaryColumns);
         if (!space) throw forbidden('insufficient_role', 'Only space admins can change the space settings.');
-        const changed = { ...changes, ...(body.allowSvg !== undefined ? { allowSvg: body.allowSvg } : {}) };
+        const changed = {
+          ...changes,
+          ...(body.allowSvg !== undefined ? { allowSvg: body.allowSvg } : {}),
+          ...(body.designSystems !== undefined ? { designSystems: body.designSystems } : {}),
+        };
         await recordAudit(tx, {
           spaceId,
           actorId: user.id,

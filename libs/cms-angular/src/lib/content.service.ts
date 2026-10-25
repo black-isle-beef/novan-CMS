@@ -6,7 +6,7 @@ import { catchError, from, map, type Observable, of, switchMap, tap, throwError 
 import { DEFAULT_PROXY_PATH, NOVAN_CMS_CONFIG, NOVAN_CMS_SERVER } from './config';
 import { NovanLocale } from './locale-state';
 import { NovanPreview } from './preview';
-import type { NovanEntry, NovanLocales, Page, PageData, Paged } from './types';
+import type { NovanEntry, NovanLocales, NovanSiteStyles, Page, PageData, Paged } from './types';
 
 type Scalar = string | number | boolean;
 
@@ -123,6 +123,11 @@ export class NovanContentService {
   /** The site's locales, and whether its addresses start with the locale (docs/build/16-localisation.md). */
   locales(): Observable<NovanLocales> {
     return this.get<NovanLocales>('locales', {}, false).pipe(map((locales) => locales as NovanLocales));
+  }
+
+  /** What the site loads from its attached design systems; null from an API without them. */
+  siteStyles(): Observable<NovanSiteStyles | null> {
+    return this.get<NovanSiteStyles>('site-styles', {}, true);
   }
 
   /** A singleton's content, e.g. site settings or navigation. */

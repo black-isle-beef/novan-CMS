@@ -17,19 +17,32 @@
   </select>
 </div>
 
+@if (buckets().length > 1) {
+  <div class="mb-3">
+    <label class="form-label" [for]="idPrefix() + '-bucket'">Applies</label>
+    <select class="form-select" [id]="idPrefix() + '-bucket'" (change)="chooseBucket($event)">
+      @for (option of buckets(); track option) {
+        <option [value]="option" [selected]="option === bucket()">{{ bucketLabels[option] }}</option>
+      }
+    </select>
+  </div>
+}
+
 <div class="mb-3" (focusin)="point(part())" (focusout)="point(null)">
   <nv-class-chips
     [classes]="classes()"
-    [label]="'Classes on ' + label()"
-    [inputId]="idPrefix() + '-base'"
+    [label]="chipsLabel()"
+    [inputId]="idPrefix() + '-' + bucket()"
     [disabled]="readonly()"
+    [suggest]="suggest()"
+    [warnings]="warnings()"
     (classesChange)="setClasses($event)"
   />
 </div>
 
 @if (!readonly() && anyClasses()) {
   <div class="d-flex flex-wrap gap-2">
-    @if (classes().length) {
+    @if (count(part())) {
       <button type="button" class="btn btn-sm btn-secondary" (click)="clearPart()">Clear classes on {{ label().toLowerCase() }}</button>
     }
     <button type="button" class="btn btn-sm btn-secondary" (click)="clearAll()">Clear all classes</button>

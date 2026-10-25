@@ -1,0 +1,9 @@
+{
+  "name": "api-design-systems",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/api/design-systems/src",
+  "projectType": "library",
+  "tags": ["scope:api", "type:feature"],
+  "// targets": "to see all targets run: nx show project api-design-systems --web",
+  "targets": {}
+}

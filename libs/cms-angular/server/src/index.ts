@@ -32,7 +32,7 @@ export interface NovanProxyOptions extends NovanServerOptions {
 export type NovanProxyHandler = (req: NovanProxyRequest, res: NovanProxyResponse, next?: (error?: unknown) => void) => Promise<void>;
 
 /** The read routes of the Delivery and Preview APIs, and nothing else. */
-const ROUTE = /^\/(delivery|preview)\/(pages|entries|entries\/[0-9a-fA-F-]{36}|singletons\/[a-z][a-zA-Z0-9]{0,63}|sitemap|locales)$/;
+const ROUTE = /^\/(delivery|preview)\/(pages|entries|entries\/[0-9a-fA-F-]{36}|singletons\/[a-z][a-zA-Z0-9]{0,63}|sitemap|locales|site-styles)$/;
 /** Where forms are sent (package 18): the one route that takes a POST. */
 const FORM_ROUTE = /^\/delivery\/forms\/[A-Za-z0-9_-]{1,100}\/submit$/;
 /** A form's answers are small; anything larger is refused before it reaches the API. */

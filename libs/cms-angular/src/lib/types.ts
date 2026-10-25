@@ -112,6 +112,15 @@ export interface NovanBlockNode {
   [field: string]: unknown;
 }
 
+/** What the site loads from its attached design systems (`GET site-styles`). */
+export interface NovanSiteStyles {
+  /** The cascade layer order, which also starts every stylesheet. */
+  layers: string;
+  stylesheets: { href: string; designSystem: string; version: string }[];
+  /** The first design system's framework and class templates; null without one. */
+  adapter: { framework: string; breakpoints?: Record<string, string>; states?: Record<string, string> } | null;
+}
+
 /** A `link` field's value. Internal links carry the `path` of the page (null when it is not published). */
 export type NovanLinkValue =
   | { type: 'internal'; entryId: string; path?: string | null; anchor?: string; text?: string }

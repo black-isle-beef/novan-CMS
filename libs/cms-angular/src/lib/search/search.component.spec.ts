@@ -39,7 +39,7 @@ function setup(query = '') {
       provideRouter([]),
       { provide: PLATFORM_ID, useValue: 'browser' },
       { provide: NOVAN_BRIDGE_LOADER, useValue: () => Promise.reject(new Error('no bridge in tests')) },
-      provideNovanCms({ blocks: defineBlocks({}) }),
+      provideNovanCms({ blocks: defineBlocks({}), designSystems: false }),
     ],
   });
   const fixture = TestBed.createComponent(NovanSearch);
