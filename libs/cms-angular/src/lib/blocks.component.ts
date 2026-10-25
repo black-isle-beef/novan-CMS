@@ -2,6 +2,8 @@ import { NgComponentOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, Injector, input, reflectComponentType, type Type } from '@angular/core';
 import { NOVAN_BLOCK_CONTEXT, type NovanBlockContext } from './block-context';
 import { NOVAN_CMS_CONFIG } from './config';
+import { mergeOverrides, overrideTokens } from './overrides';
+import { NOVAN_CLASS_ADAPTER } from './parts';
 import { NovanPreview } from './preview';
 import type { NovanBlockNode } from './types';
 
@@ -26,7 +28,8 @@ interface RenderedBlock {
  * are never shown.
  *
  * Each component can inject {@link NOVAN_BLOCK_CONTEXT}: its _uid, block type and the entryId given here (or to an
- * outer <novan-blocks>), so a form knows what it belongs to.
+ * outer <novan-blocks>), so a form knows what it belongs to, and the classes and tokens an editor added to its parts
+ * (`_overrides`), which `NovanPart` and `NovanBlockRoot` apply.
  *
  * In preview mode each block is wrapped in a `<div data-novan-uid data-novan-block>`, which the visual
  * editor's bridge outlines and measures. Other visitors get the blocks without wrappers.
@@ -71,6 +74,7 @@ export class NovanBlocks {
   private readonly inputNames = new Map<Type<unknown>, ReadonlySet<string>>();
   private readonly injector = inject(Injector);
   private readonly outer = inject(NOVAN_BLOCK_CONTEXT, { optional: true });
+  private readonly adapter = inject(NOVAN_CLASS_ADAPTER);
   /** One injector per block and page, kept so a live update does not re-create the block's component. */
   private injectors = new Map<string, Injector>();
 
@@ -88,15 +92,30 @@ export class NovanBlocks {
       if (!isBlockNode(node) || node._hidden === true || seen.has(node._uid)) continue;
       seen.add(node._uid);
       const key = `${node._uid}\u0000${node._block}\u0000${entryId ?? ''}`;
-      const context: NovanBlockContext = { uid: node._uid, block: node._block, entryId };
       const injector =
-        this.injectors.get(key) ?? Injector.create({ providers: [{ provide: NOVAN_BLOCK_CONTEXT, useValue: context }], parent: this.injector });
+        this.injectors.get(key) ??
+        Injector.create({ providers: [{ provide: NOVAN_BLOCK_CONTEXT, useValue: this.context(node, entryId) }], parent: this.injector });
       injectors.set(key, injector);
       rendered.push(this.render(node, injector));
     }
     this.injectors = injectors;
     return rendered;
   });
+
+  /**
+   * A block's context. Its overrides are read from the current blocks each time, so an edit in the visual editor
+   * reaches the block's parts without re-creating its component.
+   */
+  private context(node: NovanBlockNode, entryId: string | null): NovanBlockContext {
+    const overrides = computed(() => this.blocks()?.find((candidate) => isBlockNode(candidate) && candidate._uid === node._uid)?._overrides);
+    return {
+      uid: node._uid,
+      block: node._block,
+      entryId,
+      parts: computed(() => mergeOverrides(null, overrides(), this.adapter), { equal: sameParts }),
+      tokens: computed(() => overrideTokens(overrides()), { equal: sameTokens }),
+    };
+  }
 
   private render(node: NovanBlockNode, injector: Injector): RenderedBlock {
     const component = this.registry.get(node._block) ?? null;
@@ -124,6 +143,15 @@ export class NovanBlocks {
     }
     return names;
   }
+}
+
+function sameParts(a: Readonly<Record<string, readonly string[]>>, b: Readonly<Record<string, readonly string[]>>): boolean {
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every((key) => b[key]?.join(' ') === a[key].join(' '));
+}
+
+function sameTokens(a: readonly (readonly [string, string])[], b: readonly (readonly [string, string])[]): boolean {
+  return a.length === b.length && a.every(([name, value], index) => b[index][0] === name && b[index][1] === value);
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

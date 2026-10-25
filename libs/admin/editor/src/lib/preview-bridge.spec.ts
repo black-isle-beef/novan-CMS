@@ -35,6 +35,15 @@ describe('PreviewBridge', () => {
     expect(bridge.rects()).toEqual({ b: { x: 1, y: 2, width: 3, height: 4 } });
   });
 
+  it('keeps the parts the selected block rendered, and forgets them on disconnect', () => {
+    receive(wrap('parts', { uid: 'b', parts: ['root', 'heading'] }));
+    expect(bridge.parts()).toEqual({ uid: 'b', parts: ['root', 'heading'] });
+    receive(wrap('parts', { uid: 'b', parts: ['Not A Part'] }));
+    expect(bridge.parts()).toEqual({ uid: 'b', parts: ['root', 'heading'] });
+    bridge.disconnect();
+    expect(bridge.parts()).toBeNull();
+  });
+
   it('ignores messages from other origins, other windows and anything malformed', () => {
     const select = wrap('select', { uid: 'x' });
     receive(select, { origin: 'https://evil.example' });

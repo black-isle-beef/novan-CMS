@@ -143,6 +143,47 @@ describe('the bridge', () => {
     expect(overlay?.lastElementChild?.textContent).toBe('Hero');
   });
 
+  describe('parts', () => {
+    beforeEach(() => {
+      document.body.innerHTML = `
+        <div data-novan-uid="grid-1" data-novan-block="cardGrid">
+          <novan-card-grid-block data-novan-part="root">
+            <h2 data-novan-part="heading">Cards</h2>
+            <p data-novan-part="title">One</p><p data-novan-part="title">Two</p><p data-novan-part="Bad Part">x</p>
+            <div data-novan-uid="cta-1" data-novan-block="cta"><a data-novan-part="action">Go</a></div>
+          </novan-card-grid-block>
+        </div>`;
+    });
+    const outlines = () => [...document.querySelectorAll<HTMLElement>('[data-novan-part-outline]')].filter((el) => el.style.display !== 'none');
+
+    it("reports the selected block's own parts, once per change", async () => {
+      fromAdmin(admin('select', { uid: 'grid-1' }));
+      await frame();
+      expect(messages('parts').map((m) => m.payload)).toEqual([{ uid: 'grid-1', parts: ['root', 'heading', 'title'] }]);
+      window.dispatchEvent(new Event('resize'));
+      await frame();
+      expect(messages('parts')).toHaveLength(1);
+      document.querySelector('h2')?.remove();
+      await frame();
+      expect(last('parts').payload).toEqual({ uid: 'grid-1', parts: ['root', 'title'] });
+      fromAdmin(admin('select', { uid: 'cta-1' }));
+      await frame();
+      expect(last('parts').payload).toEqual({ uid: 'cta-1', parts: ['action'] });
+    });
+
+    it('outlines every element of the part the admin points at, and stops when told', async () => {
+      fromAdmin(admin('part', { uid: 'grid-1', part: 'title' }));
+      await frame();
+      expect(outlines()).toHaveLength(2);
+      fromAdmin(admin('part', { uid: 'grid-1', part: 'action' }));
+      await frame();
+      expect(outlines()).toHaveLength(0);
+      fromAdmin(admin('part', { uid: null, part: null }));
+      await frame();
+      expect(outlines()).toHaveLength(0);
+    });
+  });
+
   describe('once the admin says what can change', () => {
     const editable = (uid: string | null, fields = [{ field: 'heading', value: 'Welcome', multiline: false }], insert = true) =>
       fromAdmin(admin('editable', { uid, fields, insert }));

@@ -10,6 +10,7 @@ export {
   cascadeLayers,
   createTemplateAdapter,
   mergeOverrides,
+  overrideTokens,
   PART_NAME,
   plainAdapter,
   ROOT_PART,
@@ -24,6 +25,7 @@ export {
   type PartBuckets,
   type State,
 } from './lib/overrides';
+export { NOVAN_CLASS_ADAPTER, NovanBlockRoot, NovanPart } from './lib/parts';
 export { NovanForms, type NovanFormSubmission } from './lib/forms';
 export { NovanSearch } from './lib/search/search.component';
 export {

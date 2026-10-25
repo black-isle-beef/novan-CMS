@@ -1,0 +1,57 @@
+@if (disabled()) {
+  <p class="form-label mb-1">{{ label() }}</p>
+  @if (!classes().length) {
+    <p class="form-text mt-0">None.</p>
+  }
+} @else {
+  <label class="form-label" [for]="inputId()">{{ label() }}</label>
+  <p class="form-text mt-0" [id]="inputId() + '-hint'">
+    @if (full()) {
+      This has as many classes as it can take. Remove one to add another.
+    } @else {
+      Type a class name and press Enter. Separate several with spaces.
+    }
+  </p>
+}
+
+@if (classes().length) {
+  <ul class="nv-class-chips" [attr.aria-label]="label()">
+    @for (name of classes(); track name) {
+      <li class="nv-class-chip">
+        <span class="nv-class-chip__name">{{ name }}</span>
+        @if (!disabled()) {
+          <button type="button" class="nv-class-chip__remove" (click)="remove(name)">
+            <i class="bi bi-x" aria-hidden="true"></i><span class="visually-hidden">Remove {{ name }}</span>
+          </button>
+        }
+      </li>
+    }
+  </ul>
+}
+
+@if (!disabled()) {
+  <div class="input-group input-group-sm">
+    <input
+      #box
+      class="form-control font-monospace"
+      type="text"
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+      [id]="inputId()"
+      [value]="draft()"
+      [disabled]="full()"
+      [class.is-invalid]="error()"
+      [attr.aria-invalid]="error() ? true : null"
+      [attr.aria-describedby]="describedBy()"
+      (input)="typed($event)"
+      (keydown)="keydown($event)"
+    />
+    <button type="button" class="btn btn-secondary" [disabled]="full()" (click)="add()">Add</button>
+  </div>
+  @if (error(); as message) {
+    <div class="invalid-feedback d-block" [id]="inputId() + '-error'">{{ message }}</div>
+  }
+}
+
+<div class="visually-hidden" role="status" aria-live="polite">{{ announcement() }}</div>

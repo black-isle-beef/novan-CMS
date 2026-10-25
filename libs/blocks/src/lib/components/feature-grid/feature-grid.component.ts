@@ -1,6 +1,6 @@
 // components/feature-grid/feature-grid.component.ts — styles: src/styles/_feature-grid.scss.
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import type { NovanBlock } from '@black-isle-beef/cms-angular';
+import { type NovanBlock, NovanBlockRoot, NovanPart } from '@black-isle-beef/cms-angular';
 
 import { blockId, blockText } from '../../block-text';
 import { type CmsStoredSettings, modifierClasses, resolveSettings } from '../../cms-schema';
@@ -28,8 +28,10 @@ const ITEM_LEVEL = { h2: 'h3', h3: 'h4', h4: 'h5' } as const;
  */
 @Component({
   selector: 'novan-feature-grid-block',
+  imports: [NovanPart],
   templateUrl: './feature-grid.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [NovanBlockRoot],
   host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class FeatureGridBlock implements NovanBlock<FeatureGridFields> {

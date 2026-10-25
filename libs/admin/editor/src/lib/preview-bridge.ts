@@ -34,6 +34,8 @@ export class PreviewBridge {
   readonly rects = signal<Readonly<Record<string, BridgeRect>>>({});
   /** The page's headings as the site last drew them; null until it says. */
   readonly headings = signal<readonly PageHeading[] | null>(null);
+  /** The parts the selected block rendered, as the site last said; null until it says. */
+  readonly parts = signal<{ uid: string; parts: readonly string[] } | null>(null);
   /** Told about clicks, inserts and typing on the page; set by the editor page. */
   listener: BridgeListener | null = null;
 
@@ -56,6 +58,7 @@ export class PreviewBridge {
     this.hovered.set(null);
     this.rects.set({});
     this.headings.set(null);
+    this.parts.set(null);
   }
 
   /** Sends a message to the site, once it is ready; false when there is nobody to send it to. */
@@ -92,6 +95,9 @@ export class PreviewBridge {
         break;
       case 'headings':
         this.headings.set(message.payload.headings);
+        break;
+      case 'parts':
+        this.parts.set(message.payload);
         break;
     }
   }
