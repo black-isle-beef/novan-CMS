@@ -3,8 +3,6 @@ import { TestBed } from '@angular/core/testing';
 import { type BlockOverrides, bootstrapAdapter } from '@novan/shared-design-system';
 import axe from 'axe-core';
 import { EditorClassIndex } from '../class-index';
-import type { BlockOverrides } from '@novan/shared-design-system';
-import axe from 'axe-core';
 import { ClassOverrides, partLabel } from './class-overrides';
 
 @Component({

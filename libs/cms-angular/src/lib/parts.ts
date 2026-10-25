@@ -18,13 +18,6 @@ export const NOVAN_CLASS_ADAPTER = new InjectionToken<() => ClassAdapter>('NOVAN
     return () => designSystems.adapter();
   },
 });
-import { type ClassAdapter, plainAdapter, ROOT_PART } from './overrides';
-
-/**
- * How the site writes breakpoints and states (`md:px-8`, `px-md-8`, ...). Plain CSS, the default, has the base
- * bucket only; a site with a design system attached gets that design system's adapter.
- */
-export const NOVAN_CLASS_ADAPTER = new InjectionToken<ClassAdapter>('NOVAN_CLASS_ADAPTER', { factory: () => plainAdapter });
 
 /**
  * A block's part: an element in a block's template with `data-novan-part="<part>"`. Import it in the block

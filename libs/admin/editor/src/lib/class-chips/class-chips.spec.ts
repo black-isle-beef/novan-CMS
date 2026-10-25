@@ -16,7 +16,6 @@ import { ClassChips } from './class-chips';
     [warnings]="warnings()"
     (classesChange)="changed($event)"
   />`,
-  template: `<nv-class-chips label="Classes on heading" inputId="chips" [classes]="classes()" [disabled]="disabled()" (classesChange)="changed($event)" />`,
 })
 class Host {
   readonly classes = signal<string[]>([]);

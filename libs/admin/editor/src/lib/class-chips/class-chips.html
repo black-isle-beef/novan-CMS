@@ -21,7 +21,6 @@
         @if (warnings()[name]) {
           <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
         }
-      <li class="nv-class-chip">
         <span class="nv-class-chip__name">{{ name }}</span>
         @if (!disabled()) {
           <button type="button" class="nv-class-chip__remove" (click)="remove(name)">
@@ -88,27 +87,6 @@
       }
     </ul>
     }
-}
-
-@if (!disabled()) {
-  <div class="input-group input-group-sm">
-    <input
-      #box
-      class="form-control font-monospace"
-      type="text"
-      autocomplete="off"
-      autocapitalize="off"
-      spellcheck="false"
-      [id]="inputId()"
-      [value]="draft()"
-      [disabled]="full()"
-      [class.is-invalid]="error()"
-      [attr.aria-invalid]="error() ? true : null"
-      [attr.aria-describedby]="describedBy()"
-      (input)="typed($event)"
-      (keydown)="keydown($event)"
-    />
-    <button type="button" class="btn btn-secondary" [disabled]="full()" (click)="add()">Add</button>
   </div>
   @if (error(); as message) {
     <div class="invalid-feedback d-block" [id]="inputId() + '-error'">{{ message }}</div>

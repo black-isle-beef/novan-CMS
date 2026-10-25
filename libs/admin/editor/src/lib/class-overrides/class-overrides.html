@@ -36,12 +36,6 @@
     [disabled]="readonly()"
     [suggest]="suggest()"
     [warnings]="warnings()"
-<div class="mb-3" (focusin)="point(part())" (focusout)="point(null)">
-  <nv-class-chips
-    [classes]="classes()"
-    [label]="'Classes on ' + label()"
-    [inputId]="idPrefix() + '-base'"
-    [disabled]="readonly()"
     (classesChange)="setClasses($event)"
   />
 </div>
@@ -49,7 +43,6 @@
 @if (!readonly() && anyClasses()) {
   <div class="d-flex flex-wrap gap-2">
     @if (count(part())) {
-    @if (classes().length) {
       <button type="button" class="btn btn-sm btn-secondary" (click)="clearPart()">Clear classes on {{ label().toLowerCase() }}</button>
     }
     <button type="button" class="btn btn-sm btn-secondary" (click)="clearAll()">Clear all classes</button>
