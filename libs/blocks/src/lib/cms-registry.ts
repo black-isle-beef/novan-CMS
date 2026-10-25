@@ -35,6 +35,11 @@ export interface CmsComponentDefinition<TSettings = unknown, TContent extends ob
   readonly settingsSchema: CmsStyleSchema<TSettings>;
   /** Realistic field values, used by the editor preview and tests. */
   readonly sampleContent: TContent;
+  /**
+   * The elements editors can add classes to (docs/build/24-design-systems.md), each marked `data-novan-part` in the
+   * template; `root` is the host. Never rename a part once pages use it: their classes are stored under its name.
+   */
+  readonly parts: readonly string[];
 }
 
 /** A definition of whatever shape; the registry and editor panel hold many. */

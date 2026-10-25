@@ -58,6 +58,7 @@ const DEFINITION = defineCmsComponent<FakeSettings, { text: string }>({
   fields: { text: 'text' },
   settingsSchema: SCHEMA,
   sampleContent: { text: 'Sample text' },
+  parts: ['root'],
 });
 
 describe('CmsStylePanelComponent', () => {

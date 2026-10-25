@@ -3,6 +3,27 @@ export * from './lib/types';
 export { defineBlocks, type NovanBlock, type NovanBlockMeta, type NovanBlockRegistry, type NovanBlockType } from './lib/blocks';
 export { NovanBlocks } from './lib/blocks.component';
 export { NOVAN_BLOCK_CONTEXT, type NovanBlockContext } from './lib/block-context';
+export {
+  BREAKPOINTS,
+  BUCKETS,
+  CASCADE_LAYERS,
+  cascadeLayers,
+  createTemplateAdapter,
+  mergeOverrides,
+  PART_NAME,
+  plainAdapter,
+  ROOT_PART,
+  STATES,
+  type BlockOverrides,
+  type Breakpoint,
+  type Bucket,
+  type CascadeLayer,
+  type ClassAdapter,
+  type ClassIndex,
+  type ClassTemplates,
+  type PartBuckets,
+  type State,
+} from './lib/overrides';
 export { NovanForms, type NovanFormSubmission } from './lib/forms';
 export { NovanSearch } from './lib/search/search.component';
 export {

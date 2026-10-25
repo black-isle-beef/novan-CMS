@@ -13,7 +13,7 @@ import { CTA_SCHEMA, type CtaFields, type CtaSettings } from './cta.schema';
   imports: [BlockActionComponent],
   templateUrl: './cta.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class]': 'hostClasses()' },
+  host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class CtaBlock implements NovanBlock<CtaFields> {
   static readonly novanBlock = { apiId: 'cta', schemaVersion: 1 };

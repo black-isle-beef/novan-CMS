@@ -1,7 +1,7 @@
 <section class="novan-hero-block__inner" [attr.aria-labelledby]="headingText() ? headingId : null">
   @if (imageUrl(); as src) {
     <img
-      class="novan-hero-block__image"
+      class="novan-hero-block__image" data-novan-part="image"
       [src]="src"
       alt="{{ imageAlt() }}"
       [attr.width]="image()?.width ?? null"
@@ -11,19 +11,19 @@
     />
   }
 
-  <div class="novan-hero-block__content container">
+  <div class="novan-hero-block__content container" data-novan-part="content">
     @if (headingText(); as heading) {
       @switch (resolved().headingLevel) {
         @case ('h2') {
-          <h2 class="novan-hero-block__heading" [id]="headingId">{{ heading }}</h2>
+          <h2 class="novan-hero-block__heading" data-novan-part="heading" [id]="headingId">{{ heading }}</h2>
         }
         @default {
-          <h1 class="novan-hero-block__heading" [id]="headingId">{{ heading }}</h1>
+          <h1 class="novan-hero-block__heading" data-novan-part="heading" [id]="headingId">{{ heading }}</h1>
         }
       }
     }
     @if (subheadingText(); as subheading) {
-      <p class="novan-hero-block__subheading lead">{{ subheading }}</p>
+      <p class="novan-hero-block__subheading lead" data-novan-part="subheading">{{ subheading }}</p>
     }
     @if (link(); as link) {
       <novan-block-action [link]="link" [on]="actionOn()" />

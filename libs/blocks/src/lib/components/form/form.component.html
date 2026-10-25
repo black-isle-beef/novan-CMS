@@ -1,14 +1,14 @@
-<section class="novan-form-block__inner container" [attr.aria-labelledby]="headingText() ? headingId : null">
+<section class="novan-form-block__inner container" data-novan-part="inner" [attr.aria-labelledby]="headingText() ? headingId : null">
   @if (headingText(); as heading) {
     @switch (resolved().headingLevel) {
       @case ('h3') {
-        <h3 class="novan-form-block__heading" [id]="headingId">{{ heading }}</h3>
+        <h3 class="novan-form-block__heading" data-novan-part="heading" [id]="headingId">{{ heading }}</h3>
       }
       @case ('h4') {
-        <h4 class="novan-form-block__heading" [id]="headingId">{{ heading }}</h4>
+        <h4 class="novan-form-block__heading" data-novan-part="heading" [id]="headingId">{{ heading }}</h4>
       }
       @default {
-        <h2 class="novan-form-block__heading" [id]="headingId">{{ heading }}</h2>
+        <h2 class="novan-form-block__heading" data-novan-part="heading" [id]="headingId">{{ heading }}</h2>
       }
     }
   }
@@ -19,7 +19,7 @@
     </div>
   } @else {
     @if (introText(); as text) {
-      <p class="novan-form-block__intro">{{ text }}</p>
+      <p class="novan-form-block__intro" data-novan-part="intro">{{ text }}</p>
     }
     @if (preview.active()) {
       <p class="novan-form-block__note alert alert-info" role="note">Visitors can send this form. It does not send while you are previewing.</p>
@@ -44,12 +44,12 @@
       }
     </div>
 
-    <form class="novan-form-block__form" novalidate (submit)="send($event)" [attr.aria-labelledby]="headingText() ? headingId : null">
+    <form class="novan-form-block__form" data-novan-part="form" novalidate (submit)="send($event)" [attr.aria-labelledby]="headingText() ? headingId : null">
       @for (field of items(); track field.name) {
         @let error = errors()[field.name];
         @switch (field.type) {
           @case ('checkbox') {
-            <div class="novan-form-block__field form-check">
+            <div class="novan-form-block__field form-check" data-novan-part="field">
               <input
                 class="form-check-input"
                 type="checkbox"
@@ -66,7 +66,7 @@
             </div>
           }
           @case ('consent') {
-            <div class="novan-form-block__field form-check">
+            <div class="novan-form-block__field form-check" data-novan-part="field">
               <input
                 class="form-check-input"
                 type="checkbox"
@@ -94,7 +94,7 @@
             </div>
           }
           @default {
-            <div class="novan-form-block__field">
+            <div class="novan-form-block__field" data-novan-part="field">
               <label class="form-label" [for]="field.id">
                 {{ field.label }}
                 @if (field.required) {
@@ -173,7 +173,7 @@
         <div #check class="novan-form-block__check"></div>
       }
 
-      <button type="submit" class="btn btn-primary novan-form-block__submit" [attr.aria-disabled]="state() === 'sending' ? true : null">
+      <button type="submit" class="btn btn-primary novan-form-block__submit" data-novan-part="submit" [attr.aria-disabled]="state() === 'sending' ? true : null">
         {{ state() === 'sending' ? 'Sending…' : buttonText() }}
       </button>
     </form>

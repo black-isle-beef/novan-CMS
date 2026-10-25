@@ -10,4 +10,5 @@ export const HERO_DEFINITION = defineCmsComponent({
   fields: { heading: 'text', subheading: 'text', image: 'media', action: 'link' },
   settingsSchema: HERO_SCHEMA,
   sampleContent: HERO_SAMPLE_CONTENT,
+  parts: ['root', 'image', 'content', 'heading', 'subheading', 'action'],
 });

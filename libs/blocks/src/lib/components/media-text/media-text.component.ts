@@ -21,7 +21,7 @@ const SIZES = '(min-width: 80rem) 37rem, (min-width: 48rem) 50vw, 100vw';
   imports: [BlockActionComponent],
   templateUrl: './media-text.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class]': 'hostClasses()' },
+  host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class MediaTextBlock implements NovanBlock<MediaTextFields> {
   static readonly novanBlock = { apiId: 'mediaText', schemaVersion: 1 };

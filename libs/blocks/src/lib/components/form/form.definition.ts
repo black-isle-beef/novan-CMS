@@ -20,4 +20,5 @@ export const FORM_DEFINITION = defineCmsComponent({
   },
   settingsSchema: FORM_SCHEMA,
   sampleContent: FORM_SAMPLE_CONTENT,
+  parts: ['root', 'inner', 'heading', 'intro', 'form', 'field', 'submit'],
 });

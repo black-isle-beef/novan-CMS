@@ -1,44 +1,44 @@
-<section class="novan-listing-block__inner container" [attr.aria-labelledby]="headingText() ? headingId : null">
+<section class="novan-listing-block__inner container" data-novan-part="inner" [attr.aria-labelledby]="headingText() ? headingId : null">
   @if (headingText(); as heading) {
     @switch (resolved().headingLevel) {
       @case ('h3') {
-        <h3 class="novan-listing-block__heading" [id]="headingId">{{ heading }}</h3>
+        <h3 class="novan-listing-block__heading" data-novan-part="heading" [id]="headingId">{{ heading }}</h3>
       }
       @case ('h4') {
-        <h4 class="novan-listing-block__heading" [id]="headingId">{{ heading }}</h4>
+        <h4 class="novan-listing-block__heading" data-novan-part="heading" [id]="headingId">{{ heading }}</h4>
       }
       @default {
-        <h2 class="novan-listing-block__heading" [id]="headingId">{{ heading }}</h2>
+        <h2 class="novan-listing-block__heading" data-novan-part="heading" [id]="headingId">{{ heading }}</h2>
       }
     }
   }
   @if (introText(); as intro) {
-    <p class="novan-listing-block__intro lead">{{ intro }}</p>
+    <p class="novan-listing-block__intro lead" data-novan-part="intro">{{ intro }}</p>
   }
 
   @if (items().length) {
-    <ul class="novan-listing-block__list">
+    <ul class="novan-listing-block__list" data-novan-part="list">
       @for (item of items(); track item.id) {
-        <li class="novan-listing-block__item">
+        <li class="novan-listing-block__item" data-novan-part="item">
           @switch (itemLevel()) {
             @case ('h2') {
-              <h2 class="novan-listing-block__title h5"><ng-container *ngTemplateOutlet="link; context: { $implicit: item }" /></h2>
+              <h2 class="novan-listing-block__title h5" data-novan-part="title"><ng-container *ngTemplateOutlet="link; context: { $implicit: item }" /></h2>
             }
             @case ('h4') {
-              <h4 class="novan-listing-block__title h5"><ng-container *ngTemplateOutlet="link; context: { $implicit: item }" /></h4>
+              <h4 class="novan-listing-block__title h5" data-novan-part="title"><ng-container *ngTemplateOutlet="link; context: { $implicit: item }" /></h4>
             }
             @case ('h5') {
-              <h5 class="novan-listing-block__title h5"><ng-container *ngTemplateOutlet="link; context: { $implicit: item }" /></h5>
+              <h5 class="novan-listing-block__title h5" data-novan-part="title"><ng-container *ngTemplateOutlet="link; context: { $implicit: item }" /></h5>
             }
             @default {
-              <h3 class="novan-listing-block__title h5"><ng-container *ngTemplateOutlet="link; context: { $implicit: item }" /></h3>
+              <h3 class="novan-listing-block__title h5" data-novan-part="title"><ng-container *ngTemplateOutlet="link; context: { $implicit: item }" /></h3>
             }
           }
           @if (item.dateLabel) {
-            <time class="novan-listing-block__date small" [attr.datetime]="item.date">{{ item.dateLabel }}</time>
+            <time class="novan-listing-block__date small" data-novan-part="date" [attr.datetime]="item.date">{{ item.dateLabel }}</time>
           }
           @if (item.summary) {
-            <p class="novan-listing-block__summary">{{ item.summary }}</p>
+            <p class="novan-listing-block__summary" data-novan-part="summary">{{ item.summary }}</p>
           }
         </li>
       }

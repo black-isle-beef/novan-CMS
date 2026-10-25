@@ -13,11 +13,11 @@ import { RICH_TEXT_SCHEMA, type RichTextFields, type RichTextSettings } from './
   selector: 'novan-rich-text-block',
   imports: [NovanRichText],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class]': 'hostClasses()' },
+  host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
   template: `
     @if (hasContent()) {
-      <div class="novan-rich-text-block__inner container">
-        <novan-rich-text class="novan-rich-text-block__body" [doc]="body()" />
+      <div class="novan-rich-text-block__inner container" data-novan-part="inner">
+        <novan-rich-text class="novan-rich-text-block__body" data-novan-part="body" [doc]="body()" />
       </div>
     }
   `,

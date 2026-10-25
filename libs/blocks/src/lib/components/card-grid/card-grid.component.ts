@@ -33,7 +33,7 @@ const SIZES: Record<CardGridSettings['columns'], string> = {
   selector: 'novan-card-grid-block',
   templateUrl: './card-grid.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class]': 'hostClasses()' },
+  host: { 'data-novan-part': 'root', '[class]': 'hostClasses()' },
 })
 export class CardGridBlock implements NovanBlock<CardGridFields> {
   static readonly novanBlock = { apiId: 'cardGrid', schemaVersion: 1 };

@@ -1,28 +1,28 @@
-<section class="novan-card-grid-block__inner container" [attr.aria-labelledby]="headingText() ? headingId : null">
+<section class="novan-card-grid-block__inner container" data-novan-part="inner" [attr.aria-labelledby]="headingText() ? headingId : null">
   @if (headingText(); as heading) {
     @switch (resolved().headingLevel) {
       @case ('h3') {
-        <h3 class="novan-card-grid-block__heading" [id]="headingId">{{ heading }}</h3>
+        <h3 class="novan-card-grid-block__heading" data-novan-part="heading" [id]="headingId">{{ heading }}</h3>
       }
       @case ('h4') {
-        <h4 class="novan-card-grid-block__heading" [id]="headingId">{{ heading }}</h4>
+        <h4 class="novan-card-grid-block__heading" data-novan-part="heading" [id]="headingId">{{ heading }}</h4>
       }
       @default {
-        <h2 class="novan-card-grid-block__heading" [id]="headingId">{{ heading }}</h2>
+        <h2 class="novan-card-grid-block__heading" data-novan-part="heading" [id]="headingId">{{ heading }}</h2>
       }
     }
   }
   @if (introText(); as intro) {
-    <p class="novan-card-grid-block__intro lead">{{ intro }}</p>
+    <p class="novan-card-grid-block__intro lead" data-novan-part="intro">{{ intro }}</p>
   }
 
   @if (items().length) {
-    <ul class="novan-card-grid-block__list">
+    <ul class="novan-card-grid-block__list" data-novan-part="list">
       @for (item of items(); track $index) {
-        <li class="novan-card-grid-block__card">
+        <li class="novan-card-grid-block__card" data-novan-part="card">
           @if (item.picture; as picture) {
             <img
-              class="novan-card-grid-block__image"
+              class="novan-card-grid-block__image" data-novan-part="image"
               [src]="picture.src"
               [attr.srcset]="picture.srcset"
               [attr.sizes]="picture.srcset ? picture.sizes : null"
@@ -34,28 +34,28 @@
             />
           }
           @if (item.title || item.subtitle || item.tag) {
-            <div class="novan-card-grid-block__body">
+            <div class="novan-card-grid-block__body" data-novan-part="body">
               @if (item.title) {
                 @switch (itemLevel()) {
                   @case ('h2') {
-                    <h2 class="novan-card-grid-block__title h5">{{ item.title }}</h2>
+                    <h2 class="novan-card-grid-block__title h5" data-novan-part="title">{{ item.title }}</h2>
                   }
                   @case ('h4') {
-                    <h4 class="novan-card-grid-block__title h5">{{ item.title }}</h4>
+                    <h4 class="novan-card-grid-block__title h5" data-novan-part="title">{{ item.title }}</h4>
                   }
                   @case ('h5') {
-                    <h5 class="novan-card-grid-block__title h5">{{ item.title }}</h5>
+                    <h5 class="novan-card-grid-block__title h5" data-novan-part="title">{{ item.title }}</h5>
                   }
                   @default {
-                    <h3 class="novan-card-grid-block__title h5">{{ item.title }}</h3>
+                    <h3 class="novan-card-grid-block__title h5" data-novan-part="title">{{ item.title }}</h3>
                   }
                 }
               }
               @if (item.subtitle) {
-                <p class="novan-card-grid-block__subtitle">{{ item.subtitle }}</p>
+                <p class="novan-card-grid-block__subtitle" data-novan-part="subtitle">{{ item.subtitle }}</p>
               }
               @if (item.tag) {
-                <p class="novan-card-grid-block__tag">
+                <p class="novan-card-grid-block__tag" data-novan-part="tag">
                   <span class="ds-badge ds-badge--neutral">{{ item.tag }}</span>
                 </p>
               }

@@ -10,4 +10,5 @@ export const CTA_DEFINITION = defineCmsComponent({
   fields: { heading: 'text', text: 'text', action: 'link' },
   settingsSchema: CTA_SCHEMA,
   sampleContent: CTA_SAMPLE_CONTENT,
+  parts: ['root', 'inner', 'heading', 'text', 'action'],
 });

@@ -43,6 +43,7 @@ Packages are sized at 2–6 days for one developer. If one is running much longe
 | 21 | `21-testing-strategy.md` | Reference for every package | — | |
 | 22 | `22-phase-4-backlog.md` | 4 Grow | 20+ | Built only when a client asks |
 | 23 | `23-admin-charcoal-copper-redesign.md` | 2 polish | — | Prerequisites: 11, 12, 13 |
+| 24 | `24-design-systems.md` | 4 Grow | — | Prerequisites: 12, 19, 23 |
 
 `20-deployment.md` is not a one-off: set up staging during phase 0 (after 04), production before the pilot (15), and follow its release checklist on every deploy.
 
