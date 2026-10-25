@@ -89,8 +89,8 @@ describe('design systems API', () => {
       expect(res.body.errors['url']).toEqual(['Use an https address.']);
     });
 
-    it('serves no file for a made-up version or path', async () => {
-      expect((await request(app.getHttpServer()).get(`/v1/design-system-files/${uid(1)}/a.css`)).status).toBe(404);
+    // Refused before the database is asked; a made-up version is checked with the database below.
+    it('serves no file for a made-up path', async () => {
       expect((await request(app.getHttpServer()).get(`/v1/design-system-files/${uid(1)}/..%2F..%2Fsecret.css`)).status).toBe(404);
       expect((await request(app.getHttpServer()).get('/v1/design-system-files/not-an-id/a.css')).status).toBe(400);
     });
@@ -254,6 +254,7 @@ describe('design systems API', () => {
 
     it('serves files only once the site loads them, then tells the site to load them', async () => {
       const file = `/v1/design-system-files/${ready.id}/acme.css`;
+      expect((await request(server()).get(`/v1/design-system-files/${uid(1)}/acme.css`)).status).toBe(404);
       expect((await request(server()).get(file)).status).toBe(404);
 
       const invalidAttach = await call(spaceA, adminA).put('/site/design-systems', { items: [{ versionId: (await call(spaceA, adminA).get('/design-systems')).body[0].versions.find((v: DesignSystemVersion) => v.status === 'invalid').id }] });
