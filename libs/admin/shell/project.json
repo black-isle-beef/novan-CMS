@@ -13,9 +13,6 @@
         "buildTarget": "admin:build:development",
         "tsConfig": "libs/admin/shell/tsconfig.spec.json"
       }
-    },
-    "lint": {
-      "executor": "@nx/eslint:lint"
     }
   }
 }
