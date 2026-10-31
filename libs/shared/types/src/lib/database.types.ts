@@ -545,14 +545,14 @@ isOneToOne: false
                   ]
                 },"published_content": {
                   Row: {
-                    "cache_tags": (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"published_at": string,"search": unknown,"space_id": string
+                    "cache_tags": (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"has_custom_html": boolean,"published_at": string,"search": unknown,"space_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "cache_tags"?: (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"published_at": string,"search"?: never,"space_id": string
+                    "cache_tags"?: (string)[],"content_type_api_id": string,"data": NonNullable<Json>,"entry_id": string,"environment_id": string,"full_path": string,"has_custom_html"?: never,"published_at": string,"search"?: never,"space_id": string
                   }
                   Update: {
-                    "cache_tags"?: (string)[],"content_type_api_id"?: string,"data"?: NonNullable<Json>,"entry_id"?: string,"environment_id"?: string,"full_path"?: string,"published_at"?: string,"search"?: never,"space_id"?: string
+                    "cache_tags"?: (string)[],"content_type_api_id"?: string,"data"?: NonNullable<Json>,"entry_id"?: string,"environment_id"?: string,"full_path"?: string,"has_custom_html"?: never,"published_at"?: string,"search"?: never,"space_id"?: string
                   }
                   Relationships: [
                     {

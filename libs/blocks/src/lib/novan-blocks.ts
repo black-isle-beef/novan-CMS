@@ -3,6 +3,7 @@ import { defineBlocks } from '@black-isle-beef/cms-angular';
 import { BadgeListBlock } from './components/badge-list';
 import { CardGridBlock } from './components/card-grid';
 import { CtaBlock } from './components/cta';
+import { CustomHtmlBlock } from './components/custom-html';
 import { FeatureGridBlock } from './components/feature-grid';
 import { FormBlock } from './components/form';
 import { HeroBlock } from './components/hero';
@@ -27,4 +28,5 @@ export const novanBlocks = defineBlocks({
   cta: CtaBlock,
   form: FormBlock,
   listing: ListingBlock,
+  customHtml: CustomHtmlBlock,
 });

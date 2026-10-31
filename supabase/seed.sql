@@ -123,7 +123,7 @@ select e.space_id, e.id, 'page', 'Page', 'page', 'A web page built from blocks.'
      "required": false, "localised": false, "default": false}
   ]},
   {"id": "body", "apiId": "body", "label": "Content", "type": "blocks", "required": false, "localised": false,
-   "allowedBlocks": ["hero", "richText", "image", "featureGrid", "cta", "form"]}
+   "allowedBlocks": ["hero", "richText", "image", "featureGrid", "cta", "form", "customHtml"]}
 ]$json$::jsonb
 from public.environments e
 join public.spaces s on s.id = e.space_id
@@ -250,6 +250,18 @@ cross join (
         "options": [{"value": "narrow", "label": "Narrow"}, {"value": "wide", "label": "Wide"}]},
       "headingLevel": {"kind": "select", "label": "Heading level", "hint": "Keep headings in order on the page.",
         "default": "h2", "options": [{"value": "h2", "label": "H2"}, {"value": "h3", "label": "H3"}, {"value": "h4", "label": "H4"}]}
+    }$json$::jsonb),
+    ('customHtml', 'Custom HTML', 'code-square', $json$[
+      {"id": "html", "apiId": "html", "label": "HTML",
+       "help": "Scripts, event handlers, frames, forms, ids and style attributes are removed when the page shows. Use classes, and style them in the CSS field.",
+       "type": "text", "required": true, "localised": true, "multiline": true, "max": 50000},
+      {"id": "css", "apiId": "css", "label": "CSS",
+       "help": "Styles this block only, and is added to the site's stylesheet when the page is published. Use & for the block itself, e.g. & { background: #f5f5f5; }.",
+       "type": "text", "required": false, "localised": false, "multiline": true, "max": 20000}
+    ]$json$::jsonb, $json${
+      "width": {"kind": "radio", "label": "Width",
+        "hint": "Contained lines the block up with the page; full width runs edge to edge.", "default": "contained",
+        "options": [{"value": "contained", "label": "Contained"}, {"value": "full", "label": "Full width"}]}
     }$json$::jsonb)
 ) as b (api_id, name, icon, fields, style_options)
 where s.slug = 'demo-site' and e.is_main;

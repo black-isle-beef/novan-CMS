@@ -17,6 +17,7 @@ import { ContentReader, DELIVERY_CONFIG, deliveryConfigFromEnv } from './content
 import { PREVIEW_SIGNER_CONFIG, PreviewSigner, previewSignerConfigFromEnv } from './preview-signer';
 import { PreviewDataController, PreviewSessionController, PreviewSessions, PreviewTokensController } from './preview-sessions';
 import { ApiTokenThrottlerGuard, rateLimitsFromEnv, throttlerOptions } from './rate-limit';
+import { SiteCss, SiteCssController } from './site-css';
 import { SiteReader } from './site-reader.service';
 
 @Module({
@@ -31,7 +32,17 @@ import { SiteReader } from './site-reader.service';
     FormsModule,
     ThrottlerModule.forRootAsync({ useFactory: () => throttlerOptions(rateLimitsFromEnv()) }),
   ],
-  controllers: [DeliveryController, NotFoundReportsController, FormSubmitController, PreviewController, PreviewSessionController, ApiTokensController, PreviewTokensController, PreviewDataController],
+  controllers: [
+    DeliveryController,
+    NotFoundReportsController,
+    FormSubmitController,
+    PreviewController,
+    PreviewSessionController,
+    ApiTokensController,
+    PreviewTokensController,
+    PreviewDataController,
+    SiteCssController,
+  ],
   providers: [
     { provide: DELIVERY_CONFIG, useFactory: () => deliveryConfigFromEnv() },
     { provide: CLOUDFLARE_CONFIG, useFactory: () => cloudflareConfigFromEnv() },
@@ -46,6 +57,7 @@ import { SiteReader } from './site-reader.service';
     CachePurge,
     CloudflareClient,
     ContentReader,
+    SiteCss,
     SiteReader,
   ],
   exports: [CachePurge, CloudflareClient, CLOUDFLARE_CONFIG],

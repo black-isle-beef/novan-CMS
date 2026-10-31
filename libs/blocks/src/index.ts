@@ -14,3 +14,4 @@ export * from './lib/components/badge-list';
 export * from './lib/components/cta';
 export * from './lib/components/form';
 export * from './lib/components/listing';
+export * from './lib/components/custom-html';

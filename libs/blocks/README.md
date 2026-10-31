@@ -7,6 +7,14 @@ cards) and `badgeList` (short labels such as qualifications), added for the pilo
 (docs/build/15-pilot-launch.md). No starter kit uses those three yet: a site adds them with `novan blocks sync <name>`
 and lists them in its page type's `allowedBlocks`. Each was made with the `create-angular-cms-component` skill.
 
+`customHtml` takes hand-written markup and CSS. The markup goes through Angular's HTML sanitiser (no scripts, event
+handlers, frames, forms, ids or `style` attributes). The CSS is scoped to the block (`[data-novan-custom-html="<_uid>"]`,
+with `&` for the block itself) in the `novan-overrides` layer. On published pages it comes from the site's stylesheet,
+`GET /v1/site-css/:environmentId/blocks.css`, which Delivery `site-styles` lists so the SDK links it in `<head>`. The
+API cleans it as it cleans uploaded stylesheets and removes at-rules that cannot be nested (`@import`, `@font-face`,
+`@keyframes`). In preview the block adds its current CSS to `<head>` itself, so the editor sees changes before they
+are published.
+
 ## Use in a site
 
 ```ts

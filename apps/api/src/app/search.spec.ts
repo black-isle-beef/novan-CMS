@@ -329,9 +329,10 @@ describe.skipIf(!hasDatabase)('search', () => {
       await db.serviceDb.execute(sql`analyze public.published_content, public.entry_search`);
     }, 300_000);
 
+    // Deleting the space cascades through its 10,000 pages: tens of seconds on a local database.
     afterAll(async () => {
       if (big) await db.serviceDb.delete(spaces).where(eq(spaces.id, big));
-    });
+    }, 300_000);
 
     /** The median of five timed requests, after one to warm up. */
     const timed = async (send: () => request.Test): Promise<{ ms: number; body: unknown }> => {
