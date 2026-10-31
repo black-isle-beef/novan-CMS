@@ -47,7 +47,8 @@ The Delivery and Preview APIs client sites read content from, and the API tokens
   (`designSystem: '_custom-html'`) when a published block has CSS; Preview never does.
 - `GET /v1/site-css/:environmentId/blocks.css` (`site-css.ts`, no token): every published `customHtml` block's CSS,
   cleaned by `processBlockCss` (`@novan/api-design-systems`) and nested in `[data-novan-custom-html="<_uid>"]` inside
-  `@layer novan-overrides`. Hidden blocks are left out. Cached by the CDN under `space:`, `entries:<env>` and
+  `@layer novan-overrides`. Hidden blocks are left out. It reads only the pages flagged `has_custom_html`, a column
+  Postgres works out from `data` with a partial index (0025_published_custom_html.sql). Cached by the CDN under `space:`, `entries:<env>` and
   `site-styles:<env>`, so any publish or unpublish in the environment purges it.
 - Locales (package 16, docs/build/16-localisation.md): every response is in one locale, the `locale` parameter or the
   space's default (404 `locale_not_found` for one the space lacks). Data is read with `localiseEntryData` before

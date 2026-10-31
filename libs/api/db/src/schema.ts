@@ -537,6 +537,10 @@ export const publishedContent = pgTable(
     search: tsvector('search')
       .notNull()
       .generatedAlwaysAs(sql`search_document(data)`),
+    /** Whether `data` holds a `customHtml` block at any depth (0025); kept by Postgres. */
+    hasCustomHtml: boolean('has_custom_html')
+      .notNull()
+      .generatedAlwaysAs(sql`jsonb_path_exists(data, '$.** ? (@._block == "customHtml")'::jsonpath)`),
   },
   (table): PgTableExtraConfigValue[] => [
     uniqueIndex('published_content_address_idx').using(
@@ -544,6 +548,9 @@ export const publishedContent = pgTable(
       table.environmentId.asc().nullsLast().op('uuid_ops'),
       table.fullPath.asc().nullsLast().op('text_ops'),
     ),
+    index('published_content_custom_html_idx')
+      .using('btree', table.spaceId.asc().nullsLast().op('uuid_ops'), table.environmentId.asc().nullsLast().op('uuid_ops'))
+      .where(sql`has_custom_html`),
     index('published_content_search_idx').using('gin', table.search.asc().nullsLast().op('tsvector_ops')),
     index('published_content_space_id_idx').using('btree', table.spaceId.asc().nullsLast().op('uuid_ops')),
     foreignKey({

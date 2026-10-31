@@ -8,7 +8,7 @@ import { cacheTag, notFound, ZodValidationPipe } from '@novan/api-common';
 import { DbService, environments, publishedContent } from '@novan/api-db';
 import { processBlockCss } from '@novan/api-design-systems';
 import { cascadeLayers } from '@novan/shared-design-system';
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { DELIVERY_CACHE_CONTROL } from './cache-headers.interceptor';
@@ -102,7 +102,8 @@ export class SiteCss {
         and(
           eq(publishedContent.spaceId, spaceId),
           eq(publishedContent.environmentId, environmentId),
-          sql`${publishedContent.data} @? ${`$.** ? (@._block == "${CUSTOM_HTML_BLOCK}")`}::jsonpath`,
+          // Kept by Postgres from `data` and indexed (0025_published_custom_html.sql).
+          eq(publishedContent.hasCustomHtml, true),
         ),
       )
       .orderBy(asc(publishedContent.entryId));
