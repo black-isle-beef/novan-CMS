@@ -1175,6 +1175,55 @@
           ]
         }
       }
+    },
+    {
+      "apiId": "customHtml",
+      "name": "Custom HTML",
+      "icon": "code-square",
+      "previewImagePath": null,
+      "allowedChildren": [],
+      "fields": [
+        {
+          "id": "html",
+          "apiId": "html",
+          "label": "HTML",
+          "help": "Scripts, event handlers, frames, forms, ids and style attributes are removed when the page shows. Use classes, and style them in the CSS field.",
+          "type": "text",
+          "required": true,
+          "localised": true,
+          "multiline": true,
+          "max": 50000
+        },
+        {
+          "id": "css",
+          "apiId": "css",
+          "label": "CSS",
+          "help": "Styles this block only, and is added to the site's stylesheet when the page is published. Use & for the block itself, e.g. & { background: #f5f5f5; }.",
+          "type": "text",
+          "required": false,
+          "localised": false,
+          "multiline": true,
+          "max": 20000
+        }
+      ],
+      "styleOptions": {
+        "width": {
+          "kind": "radio",
+          "label": "Width",
+          "hint": "Contained lines the block up with the page; full width runs edge to edge.",
+          "default": "contained",
+          "options": [
+            {
+              "value": "contained",
+              "label": "Contained"
+            },
+            {
+              "value": "full",
+              "label": "Full width"
+            }
+          ]
+        }
+      }
     }
   ]
 }

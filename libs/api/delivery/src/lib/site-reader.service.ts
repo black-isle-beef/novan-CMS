@@ -6,6 +6,10 @@ import type { DeliveryRedirects, RedirectStatus, SiteStyles } from '@novan/share
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import type { ApiTokenAccess } from './api-token-resolver';
 import { DELIVERY_CONFIG, type DeliveryConfig, type Delivered } from './content-reader.service';
+import { SiteCss } from './site-css';
+
+/** The `designSystem` of the custom HTML blocks' stylesheet in `site-styles`: no design system slug starts with `_`. */
+export const CUSTOM_HTML_STYLESHEET = '_custom-html';
 
 /** A space keeps at most this many redirects in one response; more is a sign something is wrong. */
 const REDIRECTS_LIMIT = 50_000;
@@ -20,6 +24,7 @@ export class SiteReader {
   constructor(
     private readonly db: DbService,
     @Inject(DELIVERY_CONFIG) private readonly config: DeliveryConfig,
+    private readonly siteCss: SiteCss,
   ) {}
 
   /** Every redirect of the space, cached by the CDN under `redirects:<space>` until one changes. */
@@ -39,6 +44,10 @@ export class SiteReader {
   /**
    * The stylesheets of the design systems attached to the token's environment, in load order, and the first one's
    * framework for the site's class adapter. Drafts and live pages load the same: attaching is a site setting.
+   *
+   * For Delivery, last, the site's stylesheet of custom HTML blocks' CSS (`designSystem: '_custom-html'`, its version a
+   * fingerprint) when any published block has some. Any publish can change it, so the answer is purged with entry lists.
+   * Preview leaves it out: there each block adds its own current CSS.
    */
   async siteStyles(access: ApiTokenAccess): Promise<Delivered<SiteStyles>> {
     const rows = await this.db.serviceDb
@@ -64,12 +73,18 @@ export class SiteReader {
       .orderBy(asc(spaceDesignSystems.loadOrder));
     const first = rows[0];
     const templates = (first?.manifest ?? {}) as { breakpoints?: Record<string, string>; states?: Record<string, string> };
+    const blockCss = access.scope === 'delivery' ? await this.siteCss.css(access.spaceId, access.environmentId) : '';
     return {
       body: {
         layers: cascadeLayers(),
-        stylesheets: rows.flatMap((row) =>
-          row.cssEntry.map((path) => ({ href: this.fileUrl(row.versionId, path), designSystem: row.slug, version: row.version })),
-        ),
+        stylesheets: [
+          ...rows.flatMap((row) =>
+            row.cssEntry.map((path) => ({ href: this.fileUrl(row.versionId, path), designSystem: row.slug, version: row.version })),
+          ),
+          ...(blockCss
+            ? [{ href: this.siteCss.href(access.environmentId), designSystem: CUSTOM_HTML_STYLESHEET, version: SiteCss.version(blockCss) }]
+            : []),
+        ],
         adapter: first
           ? {
               framework: first.framework,
@@ -78,7 +93,7 @@ export class SiteReader {
             }
           : null,
       },
-      tags: [cacheTag.space(access.spaceId), cacheTag.siteStyles(access.environmentId)],
+      tags: [cacheTag.space(access.spaceId), cacheTag.siteStyles(access.environmentId), cacheTag.entries(access.environmentId)],
     };
   }
 

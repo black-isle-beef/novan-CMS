@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"name": "novan-CMS",
+			"path": "../../.."
+		},
+		{
+			"name": "docs",
+			"path": "../../../../../Users/black/Downloads/novan-CMS-main/novan-CMS-main/docs"
+		}
+	],
+	"settings": {
+		"nxConsole.nxWorkspacePath": ""
+	}
+}

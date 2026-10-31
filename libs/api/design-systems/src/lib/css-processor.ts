@@ -66,30 +66,7 @@ export function processStylesheet(source: string, options: StylesheetOptions): P
     }
   });
 
-  let important = 0;
-  const origins = new Set<string>();
-  root.walkDecls((decl) => {
-    if (DANGEROUS_PROPERTIES.has(decl.prop.toLowerCase())) {
-      warn(decl, `${decl.prop} was removed: it runs code in old browsers.`);
-      decl.remove();
-      return;
-    }
-    if (/expression\s*\(/i.test(decl.value)) {
-      warn(decl, `${decl.prop}: expression() was removed: it runs code in old browsers.`);
-      decl.remove();
-      return;
-    }
-    if (/url\s*\(/i.test(decl.value)) {
-      const rewritten = rewriteUrls(decl.value, options.baseUrl, origins);
-      if (rewritten.problem) {
-        warn(decl, `${decl.prop} was removed: ${rewritten.problem}`);
-        decl.remove();
-        return;
-      }
-      decl.value = rewritten.value;
-    }
-    if (decl.important) important++;
-  });
+  const { important, origins } = cleanDeclarations(root, options.baseUrl, warn, (href) => `${href} is a file inside the package; upload a zip with the stylesheet and its files.`);
   if (important) {
     warnings.push({
       file,
@@ -123,6 +100,85 @@ export function processStylesheet(source: string, options: StylesheetOptions): P
   return { css: out.toString(), classes: classes.slice(0, MAX_INDEXED_CLASSES), errors, warnings };
 }
 
+/** The block's CSS, ready to nest in its scope, and what was taken out of it. Empty when there is nothing usable. */
+export interface ProcessedBlockCss {
+  css: string;
+  warnings: ValidationIssue[];
+}
+
+/**
+ * At-rules that may sit inside a style rule (CSS nesting). Anything else (`@font-face`, `@keyframes`, `@import`...) would
+ * be ignored by browsers once the CSS is nested in the block's scope, so it is removed, and so it is in preview.
+ */
+const NESTABLE_AT_RULES = new Set(['media', 'supports', 'container', 'layer', 'scope', 'starting-style']);
+
+/**
+ * A custom HTML block's CSS (docs/build/24-design-systems.md), for the site's stylesheet: parsed, with what could run
+ * code or load from where it should not removed, as for uploads, and with the at-rules that cannot be nested removed.
+ * The caller nests the result in the block's scope; parsing first means its braces always balance, so no rule can
+ * escape. A stylesheet that cannot be parsed gives no CSS and a warning.
+ */
+export function processBlockCss(source: string, file: string): ProcessedBlockCss {
+  const warnings: ValidationIssue[] = [];
+  const warn = (node: Node, message: string) => warnings.push({ file, line: node.source?.start?.line, message });
+
+  let root: Root;
+  try {
+    root = postcss.parse(source, { from: file });
+  } catch (error) {
+    if (!(error instanceof CssSyntaxError)) throw error;
+    return { css: '', warnings: [{ file, line: error.line, message: `The CSS cannot be read: ${error.reason}.` }] };
+  }
+
+  root.walkAtRules((rule) => {
+    if (NESTABLE_AT_RULES.has(rule.name.toLowerCase())) return;
+    warn(rule, `@${rule.name} was removed: it cannot be used in a block's CSS.`);
+    rule.remove();
+  });
+  cleanDeclarations(root, null, warn, (href) => `${href} is not a full address; use one starting with https://.`);
+  root.walkComments((comment) => {
+    comment.remove();
+  });
+  return { css: root.nodes.length ? root.toString().trim() : '', warnings };
+}
+
+/**
+ * Removes declarations that run code in old browsers or load from where they should not, makes the rest's `url()`s
+ * absolute, and counts `!important` and the origins files are loaded from.
+ */
+function cleanDeclarations(
+  root: Root,
+  baseUrl: string | null,
+  warn: (node: Node, message: string) => void,
+  relative: (href: string) => string,
+): { important: number; origins: Set<string> } {
+  let important = 0;
+  const origins = new Set<string>();
+  root.walkDecls((decl) => {
+    if (DANGEROUS_PROPERTIES.has(decl.prop.toLowerCase())) {
+      warn(decl, `${decl.prop} was removed: it runs code in old browsers.`);
+      decl.remove();
+      return;
+    }
+    if (/expression\s*\(/i.test(decl.value)) {
+      warn(decl, `${decl.prop}: expression() was removed: it runs code in old browsers.`);
+      decl.remove();
+      return;
+    }
+    if (/url\s*\(/i.test(decl.value)) {
+      const rewritten = rewriteUrls(decl.value, baseUrl, origins, relative);
+      if (rewritten.problem) {
+        warn(decl, `${decl.prop} was removed: ${rewritten.problem}`);
+        decl.remove();
+        return;
+      }
+      decl.value = rewritten.value;
+    }
+    if (decl.important) important++;
+  });
+  return { important, origins };
+}
+
 /** An `@import` from an allowed origin, rewritten into the layer; null for any other. */
 function keptImport(rule: AtRule, options: StylesheetOptions): AtRule | null {
   const parsed = valueParser(rule.params);
@@ -146,7 +202,12 @@ function keptImport(rule: AtRule, options: StylesheetOptions): AtRule | null {
 }
 
 /** The declaration's value with each `url()` checked and made absolute, or why it cannot be kept. */
-function rewriteUrls(value: string, baseUrl: string | null, origins: Set<string>): { value: string; problem?: string } {
+function rewriteUrls(
+  value: string,
+  baseUrl: string | null,
+  origins: Set<string>,
+  relative: (href: string) => string,
+): { value: string; problem?: string } {
   const parsed = valueParser(value);
   let problem: string | undefined;
   parsed.walk((node) => {
@@ -165,7 +226,7 @@ function rewriteUrls(value: string, baseUrl: string | null, origins: Set<string>
     try {
       url = baseUrl ? new URL(href, baseUrl) : new URL(href);
     } catch {
-      problem = `${href} is a file inside the package; upload a zip with the stylesheet and its files.`;
+      problem = relative(href);
       return;
     }
     if (url.protocol !== 'https:') {

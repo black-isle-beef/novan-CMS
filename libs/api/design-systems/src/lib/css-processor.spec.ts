@@ -1,4 +1,4 @@
-import { processStylesheet, type StylesheetOptions } from './css-processor';
+import { processBlockCss, processStylesheet, type StylesheetOptions } from './css-processor';
 
 const upload: StylesheetOptions = { file: 'acme.css', allowedOrigins: [], baseUrl: null };
 const fromCdn: StylesheetOptions = { file: 'bootstrap.min.css', allowedOrigins: [], baseUrl: 'https://cdn.example.com/npm/bootstrap@5/dist/css/bootstrap.min.css' };
@@ -94,5 +94,39 @@ describe('processing a stylesheet', () => {
   it('cannot be broken out of its layer', () => {
     const { css } = process('} .evil { color: red } @layer x {', {});
     expect(css === '' || css.indexOf('.evil') > css.indexOf('@layer ds-vendor {')).toBe(true);
+  });
+});
+
+describe("processing a custom HTML block's CSS", () => {
+  const block = (css: string) => processBlockCss(css, 'block 1');
+
+  it('keeps rules, nesting and the at-rules that can be nested, without comments', () => {
+    const { css, warnings } = block('/* card */ h2 { color: red } & { padding: 1rem } @media (min-width: 40rem) { .a { display: grid } }');
+    expect(warnings).toEqual([]);
+    expect(css).toBe('h2 { color: red } & { padding: 1rem } @media (min-width: 40rem) { .a { display: grid } }');
+  });
+
+  it('removes at-rules that cannot be nested, imports among them', () => {
+    const { css, warnings } = block('@import url("https://evil.example/x.css"); @font-face { font-family: X } @keyframes spin { to { opacity: 1 } } .a { color: red }');
+    expect(css).toBe('.a { color: red }');
+    expect(messages(warnings)).toEqual([
+      '@import was removed: it cannot be used in a block\'s CSS.',
+      '@font-face was removed: it cannot be used in a block\'s CSS.',
+      '@keyframes was removed: it cannot be used in a block\'s CSS.',
+    ]);
+  });
+
+  it('removes what runs code or loads from where it should not, as for uploads', () => {
+    const { css, warnings } = block(
+      '.a { behavior: url(x.htc); background: url(javascript:alert(1)) } .b { background: url(/logo.png) } .c { background: url("https://cdn.example.com/a.png"); color: red }',
+    );
+    expect(css).not.toMatch(/behavior|javascript|logo/);
+    expect(css).toContain('url("https://cdn.example.com/a.png")');
+    expect(messages(warnings)).toContain('background was removed: /logo.png is not a full address; use one starting with https://.');
+  });
+
+  it('gives nothing for CSS it cannot read, so no rule can escape the block', () => {
+    expect(block('} body { display: none } .a {')).toEqual({ css: '', warnings: [expect.objectContaining({ file: 'block 1', line: 1 })] });
+    expect(block('/* only a comment */').css).toBe('');
   });
 });

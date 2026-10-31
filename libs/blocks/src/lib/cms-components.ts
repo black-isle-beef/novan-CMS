@@ -1,6 +1,7 @@
 import { BADGE_LIST_DEFINITION } from './components/badge-list';
 import { CARD_GRID_DEFINITION } from './components/card-grid';
 import { CTA_DEFINITION } from './components/cta';
+import { CUSTOM_HTML_DEFINITION } from './components/custom-html';
 import { FEATURE_GRID_DEFINITION } from './components/feature-grid';
 import { FORM_DEFINITION } from './components/form';
 import { HERO_DEFINITION } from './components/hero';
@@ -21,4 +22,5 @@ export const CMS_COMPONENT_DEFINITIONS = [
   CTA_DEFINITION,
   FORM_DEFINITION,
   LISTING_DEFINITION,
+  CUSTOM_HTML_DEFINITION,
 ] as const;
