@@ -53,7 +53,7 @@
     "@vitest/coverage-v8": "~5.0.5",
     "angular-eslint": "^22.6.0",
     "autocannon": "^8.0.0",
-    "autoprefixer": "^10.6.1",
+    "autoprefixer": "^10.6.2",
     "axe-core": "^4.14.0",
     "drizzle-kit": "^0.31.11",
     "esbuild": "^0.28.2",
