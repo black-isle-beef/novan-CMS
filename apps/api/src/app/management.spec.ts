@@ -346,6 +346,39 @@ describe('management API', () => {
       expect(admin.body.code).toBe('agency_staff_only');
     });
 
+    it('agency staff take the design system out of the site build, keeping the other settings, audited', async () => {
+      const staff = await agencyStaff();
+      const before = await request(app.getHttpServer()).get('/v1/management/spaces').auth(staff, { type: 'bearer' });
+      expect(before.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: spaceId, novanStyles: true })]));
+
+      const res = await request(app.getHttpServer())
+        .patch(`/v1/management/spaces/${spaceId}`)
+        .auth(staff, { type: 'bearer' })
+        .send({ novanStyles: false });
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ id: spaceId, novanStyles: false, allowSvg: true });
+      const [row] = await db.serviceDb.select({ settings: spaces.settings }).from(spaces).where(eq(spaces.id, spaceId));
+      expect(row.settings).toMatchObject({ media: { allowSvg: true }, site: { novanStyles: false } });
+      const audit = await db.serviceDb
+        .select({ diff: auditEvents.diff })
+        .from(auditEvents)
+        .where(and(eq(auditEvents.spaceId, spaceId), eq(auditEvents.action, 'space.updated')));
+      expect(audit.map((event) => event.diff)).toContainEqual({ novanStyles: { from: true, to: false } });
+
+      const admin = await request(app.getHttpServer())
+        .patch(`/v1/management/spaces/${spaceId}`)
+        .auth(await token({ sub: clientId, spaces: [{ id: spaceId, role: 'admin' }] }), { type: 'bearer' })
+        .send({ novanStyles: true });
+      expect(admin.status).toBe(403);
+      expect(admin.body.code).toBe('agency_staff_only');
+
+      const back = await request(app.getHttpServer())
+        .patch(`/v1/management/spaces/${spaceId}`)
+        .auth(staff, { type: 'bearer' })
+        .send({ novanStyles: true });
+      expect(back.body).toMatchObject({ id: spaceId, novanStyles: true });
+    });
+
     it('agency staff viewing as a role is audited, and grants nothing', async () => {
       const staff = await agencyStaff();
       const start = await request(app.getHttpServer())

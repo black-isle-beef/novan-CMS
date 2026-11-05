@@ -57,7 +57,7 @@ novan schema diff --kit blog               # "The space matches ..."
 
 `schema push` makes the space match the files: it creates and updates content types and block types. It refuses to delete a type, remove a field or change a field's type unless you add `--force`, and the API still refuses a change that would make existing pages invalid unless forced.
 
-**Or from the admin**, when the site's repo already has its `novan/schema` (an existing site moving to a new space, or a copy of the starter site): as agency staff, open the space's **Schema > Set up from GitHub**, paste the repo's address (private repos work when the API's `SCHEMA_GITHUB_TOKEN` may read them), **Check**, and apply. It runs the same diff and push as the CLI, as you; destructive changes need **Restore** and the space's short name.
+**Or from the admin**, when the site's repo already has its `novan/schema` (an existing site moving to a new space, or a copy of the starter site): as agency staff, open the space's **Schema > Set up from GitHub**, paste the repo's address (private repos work when the API's `SCHEMA_GITHUB_TOKEN` may read them), **Check**, and apply. It runs the same diff and push as the CLI, as you; destructive changes need **Restore** and the space's short name. The same page has the **Build this site without the Novan design system and Bootstrap** tick box: see [Building without the design system](#building-without-the-design-system).
 
 ## 3. Seed the kit's pages
 
@@ -103,6 +103,19 @@ Follow `docs/ops/add-client-domain.md`: add the site's image, container and host
 - Invite the client's editors (admin, **Members**); they choose their own passwords.
 - Walk them through editing and publishing one page in the visual editor.
 - Replace or delete the sample posts or projects together.
+
+## Building without the design system
+
+By default a site built from the starter includes the Novan design system and Bootstrap. For a client with their own front end, tick **Build this site without the Novan design system and Bootstrap** on **Schema > Set up from GitHub** (agency staff). It saves straight away, on the space, and untick it to go back. Novan does not build sites, so the tick box takes effect the next time the site's own build runs, and only through the build below.
+
+Build with `npx nx run starter-site:build-site` (`apps/starter-site/tools/build-site.mjs`). Set `NOVAN_API_URL` and `NOVAN_DELIVERY_TOKEN` and it asks the space; if it should ask and cannot, it fails rather than shipping the design system. Set `NOVAN_STYLES=omit` or `include` to decide without asking. With none of these, the design system stays in. In Docker, pass the token as a BuildKit secret, never a build argument (the commands are at the top of `apps/starter-site/Dockerfile`).
+
+An opted-out build uses `src/styles/plain.scss`, where the client's CSS goes, and `site-chrome.plain.ts`, a plain header and footer with `site-chrome__*` classes. Know what it leaves:
+
+- **Blocks** have layout and the browser's own neutral colours only (`libs/blocks/src/styles/_novan-blocks-plain.scss`). Restyle them by setting the same custom properties and classes in the site's CSS. Their style options in the editor still work, within those colours.
+- **Feature grid icons** are empty, because Bootstrap Icons are not loaded. Load that font in the site, or leave icons out.
+- **The npm package stays a build dependency.** Block styles read spacing from its Sass tokens and the starter uses its types, but none of its CSS or components reach the site. `starter-site:test-plain-bundle` checks that.
+- **Sites made before this option** need `site-chrome`, `styles/plain.scss`, the `production-plain` configuration and the build step from `apps/starter-site` before the tick box does anything. Until then the box stays ticked in the admin while the site carries on building with the design system.
 
 ## Keeping code and model in sync
 

@@ -1,0 +1,184 @@
+// _novan-blocks-plain.scss — for a site built without the Novan design system and Bootstrap (docs/clients/new-site.md):
+//
+//   @include meta.load-css('novan-blocks-plain');
+//   @include meta.load-css('novan-blocks');
+//
+// Blocks are written against the design system, so this gives them just what they read from it: the custom properties
+// and the framework classes in their markup, styled for layout and legibility only. The colours are the browser's own
+// (`Canvas`, `CanvasText` and mixes of them), so there is no brand to undo and forced-colours mode works; only the
+// danger colour comes from the design system's Sass tokens, which leave nothing in the stylesheet but that value. A
+// site changes the look by setting these properties and classes in its own CSS. Bootstrap Icons are not included, so a
+// feature grid's icons stay empty unless the site loads that font.
+@use '@black-isle-beef/novan-design-system/styles/tokens' as ds;
+
+:root {
+  --ds-color-surface-body: Canvas;
+  --ds-color-surface-muted: color-mix(in srgb, CanvasText 6%, Canvas);
+  --ds-color-text-body: CanvasText;
+  --ds-color-text-muted: color-mix(in srgb, CanvasText 72%, Canvas);
+  --ds-color-text-inverse: Canvas;
+  --ds-color-brand-primary: CanvasText;
+  --ds-color-neutral-gray-300: color-mix(in srgb, CanvasText 30%, Canvas);
+  --ds-color-neutral-gray-900: color-mix(in srgb, CanvasText 90%, Canvas);
+  --ds-color-semantic-danger: #{ds.$ds-color-semantic-danger};
+  --bs-danger-text-emphasis: #{ds.$ds-color-semantic-danger};
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  background-color: var(--ds-color-surface-body);
+  color: var(--ds-color-text-body);
+}
+
+// Dark tones set `--bs-link-color` for the design system's link rule to read, so without this rule their links would
+// keep the browser's blue and fail contrast.
+a[href]:not(.btn) {
+  color: var(--bs-link-color, LinkText);
+}
+
+img {
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+.container {
+  inline-size: 100%;
+  max-inline-size: 72rem;
+  padding-inline: 1rem;
+  margin-inline: auto;
+}
+
+// Hidden on screen and kept for screen readers: this one is not cosmetic.
+.visually-hidden {
+  position: absolute;
+  inline-size: 0.0625rem;
+  block-size: 0.0625rem;
+  padding: 0;
+  margin: -0.0625rem;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.lead {
+  font-size: 1.25rem;
+}
+
+.fw-bold {
+  font-weight: 700;
+}
+
+.mb-0 {
+  margin-block-end: 0;
+}
+
+.mb-2 {
+  margin-block-end: 0.5rem;
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  background-color: var(--ds-color-surface-body);
+  color: var(--ds-color-text-body);
+  border: 0.0625rem solid currentcolor;
+  border-radius: 0.25rem;
+}
+
+.btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1.125rem;
+}
+
+.btn-primary,
+.btn-hero-dark {
+  background-color: var(--ds-color-brand-primary);
+  color: var(--ds-color-text-inverse);
+  border-color: var(--ds-color-brand-primary);
+}
+
+.btn-hero-light {
+  background-color: var(--ds-color-surface-body);
+  color: var(--ds-color-text-body);
+  border-color: var(--ds-color-surface-body);
+}
+
+.form-label {
+  display: block;
+  margin-block-end: 0.25rem;
+}
+
+.form-control,
+.form-select {
+  display: block;
+  inline-size: 100%;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  color: var(--ds-color-text-body);
+  background-color: var(--ds-color-surface-body);
+  border: 0.0625rem solid var(--ds-color-text-muted);
+  border-radius: 0.25rem;
+}
+
+.form-control.is-invalid,
+.form-select.is-invalid,
+.form-check-input.is-invalid {
+  border-color: var(--ds-color-semantic-danger);
+}
+
+.form-text {
+  margin-block-start: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--ds-color-text-muted);
+}
+
+.form-check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.form-check-inline {
+  display: inline-flex;
+  margin-inline-end: 1rem;
+}
+
+.alert {
+  padding: 0.75rem 1rem;
+  margin-block-end: 1rem;
+  background-color: var(--ds-color-surface-muted);
+  border: 0.0625rem solid var(--ds-color-neutral-gray-300);
+  border-radius: 0.25rem;
+}
+
+.alert-danger {
+  color: var(--ds-color-semantic-danger);
+  border-color: var(--ds-color-semantic-danger);
+}
+
+.card {
+  background-color: var(--ds-color-surface-body);
+  border: 0.0625rem solid var(--ds-color-neutral-gray-300);
+  border-radius: 0.25rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.875rem;
+  background-color: var(--ds-color-surface-muted);
+  color: var(--ds-color-text-body);
+  border-radius: 0.25rem;
+}

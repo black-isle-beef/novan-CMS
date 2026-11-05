@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { cacheTag } from '@novan/api-common';
-import { DbService, designSystems, designSystemVersions, redirects, spaceDesignSystems } from '@novan/api-db';
+import { DbService, designSystems, designSystemVersions, redirects, spaceDesignSystems, spaces } from '@novan/api-db';
 import { cascadeLayers } from '@novan/shared-design-system';
 import type { DeliveryRedirects, RedirectStatus, SiteStyles } from '@novan/shared-schemas';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
@@ -43,7 +43,8 @@ export class SiteReader {
 
   /**
    * The stylesheets of the design systems attached to the token's environment, in load order, and the first one's
-   * framework for the site's class adapter. Drafts and live pages load the same: attaching is a site setting.
+   * framework for the site's class adapter. Drafts and live pages load the same: attaching is a site setting. Also
+   * whether the site's build takes the Novan design system and Bootstrap, which the starter's build reads.
    *
    * For Delivery, last, the site's stylesheet of custom HTML blocks' CSS (`designSystem: '_custom-html'`, its version a
    * fingerprint) when any published block has some. Any publish can change it, so the answer is purged with entry lists.
@@ -74,9 +75,14 @@ export class SiteReader {
     const first = rows[0];
     const templates = (first?.manifest ?? {}) as { breakpoints?: Record<string, string>; states?: Record<string, string> };
     const blockCss = access.scope === 'delivery' ? await this.siteCss.css(access.spaceId, access.environmentId) : '';
+    const [space] = await this.db.serviceDb
+      .select({ novanStyles: sql<boolean>`coalesce((${spaces.settings} #>> '{site,novanStyles}')::boolean, true)` })
+      .from(spaces)
+      .where(eq(spaces.id, access.spaceId));
     return {
       body: {
         layers: cascadeLayers(),
+        novanStyles: space?.novanStyles ?? true,
         stylesheets: [
           ...rows.flatMap((row) =>
             row.cssEntry.map((path) => ({ href: this.fileUrl(row.versionId, path), designSystem: row.slug, version: row.version })),

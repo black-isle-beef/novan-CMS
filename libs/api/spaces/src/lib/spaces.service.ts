@@ -1,10 +1,12 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { conflict, forbidden, notFound, ProblemException } from '@novan/api-common';
 import { type AuthUser, hasStaffAccess } from '@novan/api-auth';
+import { ContentEvents } from '@novan/api-content';
 import {
   DbService,
   type DbTransaction,
   dismissOnboarding,
+  environments,
   isInsufficientPrivilege,
   isUniqueViolation,
   members,
@@ -38,12 +40,16 @@ const summaryColumns = {
   requireApproval: spaces.requireApproval,
   allowSvg: sql<boolean>`coalesce((${spaces.settings} #>> '{media,allowSvg}')::boolean, false)`,
   designSystems: sql<boolean>`coalesce((${spaces.settings} #>> '{designSystems,enabled}')::boolean, false)`,
+  novanStyles: sql<boolean>`coalesce((${spaces.settings} #>> '{site,novanStyles}')::boolean, true)`,
   createdAt: spaces.createdAt,
 };
 
 @Injectable()
 export class SpacesService {
-  constructor(private readonly db: DbService) {}
+  constructor(
+    private readonly db: DbService,
+    private readonly events: ContentEvents,
+  ) {}
 
   /** Spaces the caller can see under RLS: their memberships, or every space for agency staff. */
   async list(user: AuthUser): Promise<SpaceSummary[]> {
@@ -96,8 +102,9 @@ export class SpacesService {
   }
 
   /**
-   * Renames the space, changes its site address, turns approval on or off, or (agency staff only) allows SVG uploads.
-   * RLS lets only its admins and agency staff (0004); a trigger keeps the media settings to agency staff (0023).
+   * Renames the space, changes its site address, turns approval on or off, or (agency staff only) allows SVG uploads,
+   * allows design systems, or takes the Novan design system and Bootstrap out of the site's build. RLS lets only its
+   * admins and agency staff (0004); triggers keep the staff-only settings to agency staff (0023, 0024, 0026).
    */
   async update(user: AuthUser, spaceId: string, body: UpdateSpaceBody): Promise<SpaceSummary> {
     if (body.allowSvg !== undefined && !hasStaffAccess(user)) {
@@ -105,6 +112,9 @@ export class SpacesService {
     }
     if (body.designSystems !== undefined && !hasStaffAccess(user)) {
       throw forbidden('agency_staff_only', 'Only agency staff can turn design systems on or off.');
+    }
+    if (body.novanStyles !== undefined && !hasStaffAccess(user)) {
+      throw forbidden('agency_staff_only', 'Only agency staff can change how the site is built.');
     }
     try {
       return await this.db.userDb(user.claims, async (tx) => {
@@ -115,8 +125,8 @@ export class SpacesService {
           ...(body.previewUrl !== undefined ? { previewUrl: body.previewUrl } : {}),
           ...(body.requireApproval !== undefined ? { requireApproval: body.requireApproval } : {}),
         };
-        // Only `settings.media.allowSvg` and `settings.designSystems.enabled` change: the rest of the settings (the
-        // onboarding checklist) stay as they are.
+        // Only `settings.media.allowSvg`, `settings.designSystems.enabled` and `settings.site.novanStyles` change: the
+        // rest of the settings (the onboarding checklist) stay as they are.
         const patches = [
           ...(body.allowSvg === undefined
             ? []
@@ -126,6 +136,9 @@ export class SpacesService {
             : [
                 sql`jsonb_build_object('designSystems', coalesce(${spaces.settings} -> 'designSystems', '{}'::jsonb) || jsonb_build_object('enabled', ${body.designSystems}::boolean))`,
               ]),
+          ...(body.novanStyles === undefined
+            ? []
+            : [sql`jsonb_build_object('site', coalesce(${spaces.settings} -> 'site', '{}'::jsonb) || jsonb_build_object('novanStyles', ${body.novanStyles}::boolean))`]),
         ];
         const settings = patches.length ? { settings: sql`${spaces.settings} || ${sql.join(patches, sql` || `)}` } : {};
         const [space] = await tx
@@ -138,6 +151,7 @@ export class SpacesService {
           ...changes,
           ...(body.allowSvg !== undefined ? { allowSvg: body.allowSvg } : {}),
           ...(body.designSystems !== undefined ? { designSystems: body.designSystems } : {}),
+          ...(body.novanStyles !== undefined ? { novanStyles: body.novanStyles } : {}),
         };
         await recordAudit(tx, {
           spaceId,
@@ -149,6 +163,14 @@ export class SpacesService {
             Object.entries(changed).map(([key, value]) => [key, { from: before[key as keyof typeof changed], to: value }]),
           ),
         });
+        // A build reads this through Delivery `site-styles`, which the CDN caches: a stale answer would build the wrong site.
+        if (space.novanStyles !== before.novanStyles) {
+          const [environment] = await tx
+            .select({ id: environments.id })
+            .from(environments)
+            .where(and(eq(environments.spaceId, spaceId), eq(environments.isMain, true)));
+          if (environment) await this.events.emit(tx, { type: 'site-styles.changed', spaceId, environmentId: environment.id, actorId: user.id });
+        }
         return { ...space, role: roleIn(user, space.id) };
       });
     } catch (error) {

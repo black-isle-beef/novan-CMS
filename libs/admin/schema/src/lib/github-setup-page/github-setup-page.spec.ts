@@ -3,7 +3,7 @@ import { signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { DsToastService } from '@black-isle-beef/novan-design-system';
-import { SpaceContext } from '@novan/admin-spaces';
+import { ManagementApi, SpaceContext } from '@novan/admin-spaces';
 import { toBlockTypeFile, toContentTypeFile } from '@novan/schema-sync';
 import type { BlockType, ContentType, GithubSchemaSource } from '@novan/shared-schemas';
 import axe from 'axe-core';
@@ -39,15 +39,19 @@ async function settle(fixture: ComponentFixture<GithubSetupPage>): Promise<void>
 describe('GithubSetupPage', () => {
   let api: Record<string, ReturnType<typeof vi.fn>>;
   let toasts: { success: ReturnType<typeof vi.fn> };
+  let updateSpace: ReturnType<typeof vi.fn>;
 
-  async function render() {
+  async function render(novanStyles = true) {
+    const currentSpace = signal({ name: 'Acme', slug: 'acme-ltd', novanStyles });
+    updateSpace = vi.fn((_id: string, body: { novanStyles: boolean }) => of({ ...currentSpace(), ...body }));
     TestBed.configureTestingModule({
       imports: [GithubSetupPage],
       providers: [
         provideRouter([]),
         { provide: SchemaApi, useValue: api },
+        { provide: ManagementApi, useValue: { get updateSpace() { return updateSpace; } } },
         { provide: DsToastService, useValue: toasts },
-        { provide: SpaceContext, useValue: { currentSpaceId: signal(null), currentSpace: signal({ name: 'Acme', slug: 'acme-ltd' }) } },
+        { provide: SpaceContext, useValue: { currentSpaceId: signal(null), currentSpace, replace: (space: { name: string; slug: string; novanStyles: boolean }) => currentSpace.set(space) } },
       ],
     });
     const fixture = TestBed.createComponent(GithubSetupPage);
@@ -89,6 +93,64 @@ describe('GithubSetupPage', () => {
       updateBlockType: vi.fn().mockReturnValue(of({})),
       deleteBlockType: vi.fn().mockReturnValue(of(undefined)),
     };
+  });
+
+  describe('building without the design system', () => {
+    const BOX = '#github-no-novan-styles';
+
+    it('starts unticked, so a new site keeps the design system', async () => {
+      const { el } = await render();
+
+      expect(el.querySelector<HTMLInputElement>(BOX)?.checked).toBe(false);
+      expect(el.querySelector(`label[for="${BOX.slice(1)}"]`)?.textContent).toContain('without the Novan design system and Bootstrap');
+      expect(updateSpace).not.toHaveBeenCalled();
+    });
+
+    it('shows a space that already opted out as ticked', async () => {
+      const { el } = await render(false);
+
+      expect(el.querySelector<HTMLInputElement>(BOX)?.checked).toBe(true);
+    });
+
+    it('saves the opt-out straight away, and unticking undoes it', async () => {
+      const { el, fixture, tick } = await render();
+
+      await tick(BOX);
+      await settle(fixture);
+      expect(updateSpace).toHaveBeenLastCalledWith(spaceId, { novanStyles: false });
+      expect(toasts.success).toHaveBeenLastCalledWith(expect.stringContaining('leave out'));
+      expect(el.querySelector<HTMLInputElement>(BOX)?.checked).toBe(true);
+
+      await tick(BOX);
+      await settle(fixture);
+      expect(updateSpace).toHaveBeenLastCalledWith(spaceId, { novanStyles: true });
+      expect(el.querySelector<HTMLInputElement>(BOX)?.checked).toBe(false);
+    });
+
+    it('does not check the repo or change the schema', async () => {
+      const { fixture, tick } = await render();
+
+      await tick(BOX);
+      await settle(fixture);
+      expect(api['readGithubSchema']).not.toHaveBeenCalled();
+    });
+
+    it('puts the box back and says why when saving fails', async () => {
+      const { el, fixture, tick } = await render();
+      updateSpace.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403, error: { title: 'Only agency staff can change how the site is built.' } })));
+
+      await tick(BOX);
+      await settle(fixture);
+      expect(el.querySelector<HTMLInputElement>(BOX)?.checked).toBe(false);
+      expect(el.querySelector('ds-alert')?.textContent).toContain('Only agency staff');
+      expect(toasts.success).not.toHaveBeenCalled();
+    });
+
+    it('is accessible', async () => {
+      const { el } = await render();
+
+      expect((await axe.run(el)).violations).toEqual([]);
+    });
   });
 
   it('refuses an address that is not a GitHub repo without calling the API', async () => {
