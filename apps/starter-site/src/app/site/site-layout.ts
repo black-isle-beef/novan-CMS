@@ -14,11 +14,11 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { applyNovanJsonLd, novanImage, novanOrganizationJsonLd, NovanPreview } from '@black-isle-beef/cms-angular';
-import { DsFooterComponent, DsHeaderComponent } from '@black-isle-beef/novan-design-system';
 import { filter, map } from 'rxjs';
 import { startAnalytics } from './analytics';
+import { SiteChrome } from './site-chrome';
 import { FALLBACK_SITE_NAME, type SiteContent, withActive } from './site-content';
 import { SITE_URL } from './site-url';
 
@@ -26,15 +26,15 @@ import { SITE_URL } from './site-url';
 export const LOGO_HEIGHT = 40;
 
 /**
- * The frame around every page: the design-system header (with the menu from the `navigation` singleton and the
- * logo from site settings) and footer (with the contact details and social links), and the `main` landmark that
+ * The frame around every page: the header (with the menu from the `navigation` singleton and the logo from site
+ * settings) and footer (with the contact details and social links) in `SiteChrome`, and the `main` landmark that
  * the header's skip link targets. It also puts the site's icon and `Organization` structured data in the head, and
  * starts analytics in the browser. After each navigation to another page, focus moves to `main`, so keyboard and
  * screen-reader users start at the new content.
  */
 @Component({
   selector: 'site-layout',
-  imports: [DsFooterComponent, DsHeaderComponent, RouterLink, RouterOutlet],
+  imports: [RouterOutlet, SiteChrome],
   templateUrl: './site-layout.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(click)': 'followInPageLink($event)' },

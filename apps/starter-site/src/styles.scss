@@ -24,4 +24,9 @@
   );
   // The CMS blocks (libs/blocks/src/styles, on the build's stylePreprocessorOptions.includePaths).
   @include meta.load-css('novan-blocks');
+
+  // `SiteChrome` adds no box of its own: the design-system header, `main` and footer lay out as the page's children.
+  site-chrome {
+    display: contents;
+  }
 }

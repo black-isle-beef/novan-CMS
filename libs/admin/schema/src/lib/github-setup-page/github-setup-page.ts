@@ -14,7 +14,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { type AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, type ValidationErrors, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DsAlertComponent, DsBadgeComponent, DsToastService } from '@black-isle-beef/novan-design-system';
-import { problemFieldErrors, problemMessage, SpaceContext } from '@novan/admin-spaces';
+import { ManagementApi, problemFieldErrors, problemMessage, SpaceContext } from '@novan/admin-spaces';
 import { applyChanges, type Change, describe, diffSchemas, fromRemote, SchemaSyncError } from '@novan/schema-sync';
 import { type GithubSchemaSource, githubRepoUrlSchema } from '@novan/shared-schemas';
 import { firstValueFrom } from 'rxjs';
@@ -48,6 +48,7 @@ function githubAddress(control: AbstractControl<string>): ValidationErrors | nul
 })
 export class GithubSetupPage {
   private readonly api = inject(SchemaApi);
+  private readonly management = inject(ManagementApi);
   private readonly toasts = inject(DsToastService);
   protected readonly context = inject(SpaceContext);
   protected readonly actionLabel = actionLabel;
@@ -80,6 +81,11 @@ export class GithubSetupPage {
   /** The commit the space was made to match. */
   protected readonly applied = signal<string | null>(null);
 
+  /** The tick box is the opposite of the setting: ticked leaves the Novan design system and Bootstrap out of the build. */
+  protected readonly optedOut = computed(() => this.context.currentSpace()?.novanStyles === false);
+  private readonly savingBuild = signal(false);
+  protected readonly buildError = signal<string | null>(null);
+
   protected readonly slug = computed(() => this.context.currentSpace()?.slug ?? '');
   protected readonly restore = computed(() => this.confirmValue().restore === true);
   /** Destructive changes need Restore; Restore needs the space's short name typed. */
@@ -101,6 +107,30 @@ export class GithubSetupPage {
         this.reset();
       });
     });
+  }
+
+  /**
+   * Saved at once rather than on Apply, because a repo that already matches has nothing to apply. The box stays enabled
+   * while saving, so a keyboard user keeps their place; a change made meanwhile is undone.
+   */
+  protected async setOptOut(event: Event): Promise<void> {
+    const box = event.target as HTMLInputElement;
+    if (this.savingBuild()) {
+      box.checked = this.optedOut();
+      return;
+    }
+    const optedOut = box.checked;
+    this.savingBuild.set(true);
+    this.buildError.set(null);
+    try {
+      this.context.replace(await firstValueFrom(this.management.updateSpace(this.spaceId(), { novanStyles: !optedOut })));
+      this.toasts.success(optedOut ? 'New builds of this site leave out the Novan design system and Bootstrap.' : 'New builds of this site include the Novan design system and Bootstrap.');
+    } catch (error) {
+      box.checked = this.optedOut();
+      this.buildError.set(problemMessage(error));
+    } finally {
+      this.savingBuild.set(false);
+    }
   }
 
   protected invalid(name: 'repoUrl' | 'ref' | 'path'): boolean {

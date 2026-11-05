@@ -1,0 +1,81 @@
+// The stylesheet of a site built without the Novan design system and Bootstrap: the `production-plain` configuration uses
+// this in place of styles.scss (docs/clients/new-site.md). The site's own CSS goes in `novan-base` here, as it does in
+// styles.scss, so the classes editors add to blocks can still change it.
+@use 'sass:meta';
+
+// Cascade layers, lowest first (docs/build/24-design-systems.md). This must be the first `@layer` in the page.
+@layer novan-base, ds-vendor, ds-components, novan-overrides;
+@layer novan-base {
+  // What the blocks need from a framework, and nothing more.
+  @include meta.load-css('novan-blocks-plain');
+  @include meta.load-css('novan-blocks');
+
+  // `SiteChrome` adds no box of its own: the header, `main` and footer lay out as the page's children.
+  site-chrome {
+    display: contents;
+  }
+
+  .site-chrome__header {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 2rem;
+    align-items: center;
+    padding: 1rem;
+    border-block-end: 0.0625rem solid var(--ds-color-neutral-gray-300);
+  }
+
+  .site-chrome__skip-link {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    padding: 0.5rem 1rem;
+    background-color: var(--ds-color-surface-body);
+    transform: translateY(-100%);
+
+    &:focus {
+      transform: none;
+    }
+  }
+
+  .site-chrome__brand {
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .site-chrome__nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .site-chrome__footer {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    padding: 2rem 1rem;
+    border-block-start: 0.0625rem solid var(--ds-color-neutral-gray-300);
+
+    h2 {
+      margin-block-start: 0;
+      font-size: 1rem;
+    }
+
+    ul {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+
+    address {
+      font-style: normal;
+    }
+
+    address > * {
+      display: block;
+    }
+  }
+}

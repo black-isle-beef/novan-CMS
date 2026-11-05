@@ -55,7 +55,7 @@ describe('DesignSystemsPage', () => {
 
   async function render(enabled = true) {
     const spaces = signal<SpaceSummary[] | null>([
-      { id: spaceId, name: 'Demo site', slug: 'demo-site', organisationId: spaceId, previewUrl: null, requireApproval: false, allowSvg: false, designSystems: enabled, role: 'developer', createdAt: '' },
+      { id: spaceId, name: 'Demo site', slug: 'demo-site', organisationId: spaceId, previewUrl: null, requireApproval: false, allowSvg: false, designSystems: enabled, novanStyles: true, role: 'developer', createdAt: '' },
     ]);
     const currentSpaceId = signal<string | null>(null);
     TestBed.configureTestingModule({

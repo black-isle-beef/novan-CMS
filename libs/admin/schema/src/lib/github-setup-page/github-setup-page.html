@@ -75,6 +75,25 @@
       </div>
     </div>
 
+    @if (buildError(); as message) {
+      <ds-alert variant="danger" class="mb-3">{{ message }}</ds-alert>
+    }
+    <div class="form-check mb-4">
+      <input
+        id="github-no-novan-styles"
+        type="checkbox"
+        class="form-check-input"
+        [checked]="optedOut()"
+        (change)="setOptOut($event)"
+        aria-describedby="github-no-novan-styles-hint"
+      />
+      <label for="github-no-novan-styles" class="form-check-label">Build this site without the Novan design system and Bootstrap</label>
+      <div id="github-no-novan-styles-hint" class="form-text">
+        Saved straight away, for this space's next build. Blocks keep only simple layout styles, so the site brings its own
+        CSS. Sites made before this option need the build step in docs/clients/new-site.md.
+      </div>
+    </div>
+
     <button type="submit" class="btn btn-primary" [disabled]="checking() || applying()" [attr.aria-busy]="checking()">
       {{ checking() ? 'Checking the repo...' : 'Check' }}
     </button>

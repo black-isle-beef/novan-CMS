@@ -278,6 +278,12 @@ describe('design systems API', () => {
       expect(styles.status).toBe(200);
       const body = styles.body as SiteStyles;
       expect(body.layers).toBe('@layer novan-base, ds-vendor, ds-components, novan-overrides;');
+      expect(body.novanStyles).toBe(true);
+      // The answer a site's build reads when the space opts out of the design system (apps/starter-site/tools/build-site.mjs).
+      await db.serviceDb.update(spaces).set({ settings: sql`${spaces.settings} || '{"site": {"novanStyles": false}}'::jsonb` }).where(eq(spaces.id, spaceA));
+      const optedOut = await request(server()).get('/v1/delivery/site-styles').auth(delivery.token, { type: 'bearer' });
+      expect((optedOut.body as SiteStyles).novanStyles).toBe(false);
+      await db.serviceDb.update(spaces).set({ settings: sql`${spaces.settings} - 'site'` }).where(eq(spaces.id, spaceA));
       expect(body.stylesheets).toEqual([{ href: expect.stringMatching(new RegExp(`/v1/design-system-files/${ready.id}/acme\\.css$`)), designSystem: 'acme', version: '1.0.0' }]);
       expect(body.adapter).toEqual({ framework: 'bootstrap' });
       expect(styles.headers['cache-tag']).toContain('site-styles:');
