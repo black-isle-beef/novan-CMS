@@ -1,0 +1,73 @@
+<ng-template #link let-item>
+  @if (internal(item.href)) {
+    <a [routerLink]="item.href" [attr.aria-current]="item.active ? 'page' : null">{{ item.label }}</a>
+  } @else {
+    <a [href]="item.href" [attr.aria-current]="item.active ? 'page' : null">{{ item.label }}</a>
+  }
+</ng-template>
+
+<header class="site-chrome__header">
+  <a class="site-chrome__skip-link" href="#ds-main-content">Skip to main content</a>
+  <a class="site-chrome__brand" routerLink="/">
+    @if (logo(); as image) {
+      <img [src]="image.src" [attr.width]="image.width" [height]="image.height" alt="{{ siteName() }}" />
+    } @else {
+      {{ siteName() }}
+    }
+  </a>
+  @if (navItems().length) {
+    <nav aria-label="Main">
+      <ul class="site-chrome__nav">
+        @for (item of navItems(); track item.href) {
+          <li>
+            <ng-container [ngTemplateOutlet]="link" [ngTemplateOutletContext]="{ $implicit: item }" />
+            @if (item.children?.length) {
+              <ul>
+                @for (child of item.children; track child.href) {
+                  <li><ng-container [ngTemplateOutlet]="link" [ngTemplateOutletContext]="{ $implicit: child }" /></li>
+                }
+              </ul>
+            }
+          </li>
+        }
+      </ul>
+    </nav>
+  }
+</header>
+
+<ng-content />
+
+@let details = contact();
+<footer class="site-chrome__footer">
+  @for (group of footerGroups(); track group.title) {
+    <div>
+      <h2>{{ group.title }}</h2>
+      <ul>
+        @for (item of group.links; track item.label) {
+          <li><ng-container [ngTemplateOutlet]="link" [ngTemplateOutletContext]="{ $implicit: item }" /></li>
+        }
+      </ul>
+    </div>
+  }
+  @if (details.email || details.phone || details.address.length) {
+    <address>
+      @for (line of details.address; track $index) {
+        <span>{{ line }}</span>
+      }
+      @if (details.email) {
+        <a [href]="'mailto:' + details.email">{{ details.email }}</a>
+      }
+      @if (details.tel) {
+        <a [href]="details.tel">{{ details.phone }}</a>
+      }
+    </address>
+  }
+  @if (social().length) {
+    <ul aria-label="Social media">
+      @for (profile of social(); track profile.href) {
+        <li><a [href]="profile.href" rel="me noopener">{{ profile.label }}</a></li>
+      }
+    </ul>
+  }
+  <p>{{ organisationName() }}</p>
+</footer>

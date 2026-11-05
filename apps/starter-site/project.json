@@ -59,7 +59,59 @@
           "optimization": false,
           "extractLicenses": false,
           "sourceMap": true
+        },
+        "production-plain": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "850kb",
+              "maximumError": "1.5mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kb",
+              "maximumError": "8kb"
+            }
+          ],
+          "outputHashing": "all",
+          "optimization": {
+            "scripts": true,
+            "styles": {
+              "minify": true,
+              "inlineCritical": true
+            },
+            "fonts": false
+          },
+          "styles": ["apps/starter-site/src/styles/plain.scss"],
+          "fileReplacements": [
+            {
+              "replace": "apps/starter-site/src/app/site/site-chrome.ts",
+              "with": "apps/starter-site/src/app/site/site-chrome.plain.ts"
+            }
+          ]
         }
+      }
+    },
+    "build-site": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "node apps/starter-site/tools/build-site.mjs"
+      }
+    },
+    "test-build-site": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "node --test apps/starter-site/tools/build-site.test.mjs"
+      }
+    },
+    "test-plain-bundle": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "commands": ["npx nx build starter-site --configuration=production-plain","node --test apps/starter-site/tools/plain-bundle.test.mjs"],
+        "parallel": false
       }
     },
     "serve": {

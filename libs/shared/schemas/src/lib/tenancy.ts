@@ -51,6 +51,8 @@ export const spaceSummarySchema = z.object({
   allowSvg: z.boolean(),
   /** Developers may upload design systems for the site (`settings.designSystems.enabled`, docs/build/24-design-systems.md). */
   designSystems: z.boolean(),
+  /** The site's build includes the Novan design system and Bootstrap (`settings.site.novanStyles`, docs/clients/new-site.md). */
+  novanStyles: z.boolean(),
   /** The caller's role, or null when they see the space as agency staff without being a member. */
   role: spaceRoleSchema.nullable(),
   createdAt: z.string(),
@@ -74,13 +76,16 @@ export const updateSpaceRequestSchema = z
     allowSvg: z.boolean().optional(),
     /** Agency staff only (0024_design_systems.sql): let the space's developers upload design systems. */
     designSystems: z.boolean().optional(),
+    /** Agency staff only (0026_space_site_settings.sql): false builds the site without the Novan design system and Bootstrap. */
+    novanStyles: z.boolean().optional(),
   })
   .refine(
     (body) =>
       body.name !== undefined || body.previewUrl !== undefined || body.requireApproval !== undefined ||
       body.allowSvg !== undefined ||
-      body.designSystems !== undefined,
-    'Change the name, the site address, approval, SVG uploads or design systems.',
+      body.designSystems !== undefined ||
+      body.novanStyles !== undefined,
+    'Change the name, the site address, approval, SVG uploads, design systems or the site build.',
   );
 export type UpdateSpaceRequest = z.input<typeof updateSpaceRequestSchema>;
 

@@ -15,6 +15,7 @@ const styles = (hrefs: string[], framework: string | null = 'bootstrap'): NovanS
   layers: '@layer novan-base, ds-vendor, ds-components, novan-overrides;',
   stylesheets: hrefs.map((href) => ({ href, designSystem: 'acme', version: '1.0.0' })),
   adapter: framework ? { framework } : null,
+  novanStyles: true,
 });
 
 @Component({

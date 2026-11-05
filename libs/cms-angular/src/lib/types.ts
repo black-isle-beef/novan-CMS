@@ -119,6 +119,8 @@ export interface NovanSiteStyles {
   stylesheets: { href: string; designSystem: string; version: string }[];
   /** The first design system's framework and class templates; null without one. */
   adapter: { framework: string; breakpoints?: Record<string, string>; states?: Record<string, string> } | null;
+  /** False when the site's build should leave out the Novan design system and Bootstrap. */
+  novanStyles: boolean;
 }
 
 /** A `link` field's value. Internal links carry the `path` of the page (null when it is not published). */

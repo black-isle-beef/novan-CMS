@@ -152,6 +152,8 @@ export const siteStylesSchema = z.object({
       states: z.record(z.string(), z.string()).optional(),
     })
     .nullable(),
+  /** False when the site's build should leave out the Novan design system and Bootstrap (docs/clients/new-site.md). */
+  novanStyles: z.boolean(),
 });
 export type SiteStyles = z.output<typeof siteStylesSchema>;
 

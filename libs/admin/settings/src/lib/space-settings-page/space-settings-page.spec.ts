@@ -14,7 +14,7 @@ const space: SpaceSummary = {
   organisationId: '00000000-0000-4000-8000-000000000100',
   previewUrl: 'http://localhost:4300',
   requireApproval: false,
-  allowSvg: false, designSystems: false,
+  allowSvg: false, designSystems: false, novanStyles: true,
   role: 'admin',
   createdAt: '2026-10-01T00:00:00Z',
 };
